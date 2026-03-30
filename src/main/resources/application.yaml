@@ -1,3 +1,13 @@
 spring:
   application:
     name: catchtable
+  datasource:
+    url: jdbc:postgresql://localhost:5432/catchtable
+    username: teamE
+    password: teamE
+  jpa:
+    hibernate:
+      ddl-auto: create
+    properties:
+      hibernate:
+        dialect: org.hibernate.spatial.dialect.postgis.PostgisPG10Dialect
