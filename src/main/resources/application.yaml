@@ -14,6 +14,4 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create
-    properties:
-      hibernate:
-        dialect: org.hibernate.spatial.dialect.postgis.PostgisPG10Dialect
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
