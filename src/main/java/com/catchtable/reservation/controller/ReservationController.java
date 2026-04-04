@@ -7,8 +7,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.catchtable.reservation.dto.ReservationCreateRequestDto;
-import com.catchtable.reservation.dto.ReservationCreateResponseDto;
+import com.catchtable.reservation.dto.create.ReservationCreateRequestDto;
+import com.catchtable.reservation.dto.create.ReservationCreateResponseDto;
 import com.catchtable.reservation.service.ReservationService;
 
 import jakarta.validation.Valid;

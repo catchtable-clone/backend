@@ -1,4 +1,4 @@
-package com.catchtable.reservation.dto;
+package com.catchtable.reservation.dto.create;
 
 import com.catchtable.reservation.entity.ReservationStatus;
 

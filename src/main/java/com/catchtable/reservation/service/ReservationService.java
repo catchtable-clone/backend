@@ -2,8 +2,8 @@ package com.catchtable.reservation.service;
 
 import org.springframework.stereotype.Service;
 
-import com.catchtable.reservation.dto.ReservationCreateRequestDto;
-import com.catchtable.reservation.dto.ReservationCreateResponseDto;
+import com.catchtable.reservation.dto.create.ReservationCreateRequestDto;
+import com.catchtable.reservation.dto.create.ReservationCreateResponseDto;
 import com.catchtable.reservation.entity.Reservation;
 import com.catchtable.reservation.repository.ReservationRepository;
 
