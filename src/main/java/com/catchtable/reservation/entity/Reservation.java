@@ -60,5 +60,9 @@ public class Reservation {
     protected void Update() {
         this.updatedAt = LocalDateTime.now();
     }
-    
+
+    public void changeStatus(ReservationStatus status) {
+        this.status = status;
+    }
+
 }

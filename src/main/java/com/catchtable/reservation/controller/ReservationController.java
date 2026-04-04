@@ -48,4 +48,12 @@ public class ReservationController {
         return ResponseEntity.ok(response);
     }
 
+    @DeleteMapping("/{reservationId}/cancel")
+    public ResponseEntity<Void> cancel(
+            @RequestParam Long userId,
+            @PathVariable Long reservationId
+    ) {
+        reservationService.cancelReservation(reservationId, userId);
+        return ResponseEntity.noContent().build();
+    }
 }

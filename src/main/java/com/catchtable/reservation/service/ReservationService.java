@@ -2,6 +2,8 @@ package com.catchtable.reservation.service;
 
 import com.catchtable.reservation.dto.read.ReservationDetailResponseDto;
 import com.catchtable.reservation.dto.read.ReservationListResponseDto;
+import com.catchtable.reservation.entity.ReservationStatus;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import com.catchtable.reservation.dto.create.ReservationCreateRequestDto;
@@ -89,5 +91,16 @@ public class ReservationService {
         );
     }
 
+    // 예약 취소
+    @Transactional
+    public void cancelReservation(Long reservationId, Long userId) {
+
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 예약입니다."));
+
+        // 매장, 리메인 연동하면 취소 진행
+        // @Transactional 묶어서
+        System.out.println("예약 ID " + reservationId + " 취소 및 테이블 롤백");
+    }
 }
 
