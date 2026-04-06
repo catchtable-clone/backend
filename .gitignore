@@ -4,6 +4,7 @@ build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
+application.yaml
 
 ### STS ###
 .apt_generated
@@ -38,3 +39,10 @@ out/
 
 ### Environment ###
 .env
+
+### Claude Code ###
+CLAUDE.md
+PRD.md
+
+### Data ###
+*.csv
