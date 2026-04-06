@@ -8,7 +8,7 @@ spring:
   application:
     name: catchtable
   datasource:
-    url: jdbc:postgresql://localhost:5432/catchtable
+    url: jdbc:postgresql://localhost:5433/catchtable
     username: teamE
     password: teamE
   jpa:
