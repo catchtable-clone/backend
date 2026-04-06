@@ -1,4 +1,4 @@
-package com.catchtable.store.dto;
+package com.catchtable.store.dto.read;
 
 import com.catchtable.store.entity.Store;
 import lombok.AllArgsConstructor;
