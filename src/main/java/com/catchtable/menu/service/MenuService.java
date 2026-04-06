@@ -1,8 +1,10 @@
 package com.catchtable.menu.service;
 
 import com.catchtable.menu.dto.MenuActionResponse;
+import com.catchtable.menu.dto.MenuCreateRequest;
 import com.catchtable.menu.dto.MenuCreateResponse;
 import com.catchtable.menu.dto.MenuResponse;
+import com.catchtable.menu.dto.MenuUpdateRequest;
 import com.catchtable.menu.entity.Menu;
 import com.catchtable.menu.repository.MenuRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,15 +24,14 @@ public class MenuService {
 
     //메뉴 생성 메서드
     @Transactional
-    public MenuCreateResponse create(Long storeId, List<String> menuNames, List<MultipartFile> menuImages,
-                                     List<Integer> prices, List<String> descriptions) {
+    public MenuCreateResponse create(Long storeId, MenuCreateRequest request, List<MultipartFile> menuImages) {
         List<Long> menuIds = new ArrayList<>();
-        for (int i = 0; i < menuNames.size(); i++) {
+        List<MenuCreateRequest.MenuItemRequest> menus = request.menus();
+        for (int i = 0; i < menus.size(); i++) {
+            MenuCreateRequest.MenuItemRequest item = menus.get(i);
             String menuImage = (menuImages != null && i < menuImages.size())
                     ? menuImages.get(i).getOriginalFilename() : null;
-            String description = (descriptions != null && i < descriptions.size())
-                    ? descriptions.get(i) : null;
-            Menu menu = Menu.create(storeId, menuNames.get(i), menuImage, prices.get(i), description);
+            Menu menu = Menu.create(storeId, item.menuName(), menuImage, item.price(), item.description());
             menuIds.add(menuRepository.save(menu).getId());
         }
         return new MenuCreateResponse(menuIds);
@@ -45,12 +46,11 @@ public class MenuService {
 
     //메뉴 수정 메서드
     @Transactional
-    public MenuActionResponse update(Long menuId, String menuName, MultipartFile menuImage,
-                                     Integer price, String description) {
+    public MenuActionResponse update(Long menuId, MenuUpdateRequest request, MultipartFile menuImage) {
         Menu menu = menuRepository.findByIdAndIsDeletedFalse(menuId)
                 .orElseThrow(() -> new RuntimeException("Menu not found: " + menuId));
         String menuImageName = menuImage != null ? menuImage.getOriginalFilename() : menu.getMenuImage();
-        menu.update(menuName, description, price, menuImageName);
+        menu.update(request.menuName(), request.description(), request.price(), menuImageName);
         return new MenuActionResponse(menuId, "메뉴 수정 완료");
     }
 
