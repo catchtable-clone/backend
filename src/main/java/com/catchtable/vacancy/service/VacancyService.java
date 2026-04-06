@@ -1,8 +1,8 @@
 package com.catchtable.vacancy.service;
 
 import com.catchtable.store.entity.Store;
-import com.catchtable.store.entity.StoreRemain;
-import com.catchtable.store.repository.StoreRemainRepository;
+import com.catchtable.remain.StoreRemain;
+import com.catchtable.remain.StoreRemainRepository;
 import com.catchtable.store.repository.StoreRepository;
 import com.catchtable.vacancy.dto.VacancyListResponse;
 import com.catchtable.vacancy.entity.Vacancy;
