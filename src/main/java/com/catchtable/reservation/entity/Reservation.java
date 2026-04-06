@@ -64,5 +64,4 @@ public class Reservation {
     public void changeStatus(ReservationStatus status) {
         this.status = status;
     }
-
 }

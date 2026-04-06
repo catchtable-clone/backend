@@ -1,13 +1,13 @@
 package com.catchtable.reservation.controller;
 
+import com.catchtable.reservation.dto.create.ReservationCreateRequestDto;
+import com.catchtable.reservation.dto.create.ReservationCreateResponseDto;
 import com.catchtable.reservation.dto.read.ReservationDetailResponseDto;
 import com.catchtable.reservation.dto.read.ReservationListResponseDto;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import com.catchtable.reservation.dto.create.ReservationCreateRequestDto;
-import com.catchtable.reservation.dto.create.ReservationCreateResponseDto;
 import com.catchtable.reservation.service.ReservationService;
 
 import jakarta.validation.Valid;
@@ -38,7 +38,6 @@ public class ReservationController {
         return ResponseEntity.ok(response);
     }
 
-    // 예약 상세 조회
     @GetMapping("/{reservationId}")
     public ResponseEntity<ReservationDetailResponseDto> getReservationDetail(
             @PathVariable Long reservationId,
@@ -48,10 +47,10 @@ public class ReservationController {
         return ResponseEntity.ok(response);
     }
 
-    @DeleteMapping("/{reservationId}/cancel")
+    @PatchMapping("/{reservationId}/cancel")
     public ResponseEntity<Void> cancel(
-            @RequestParam Long userId,
-            @PathVariable Long reservationId
+            @PathVariable Long reservationId,
+            @RequestParam Long userId
     ) {
         reservationService.cancelReservation(reservationId, userId);
         return ResponseEntity.noContent().build();

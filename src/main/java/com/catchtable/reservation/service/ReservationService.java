@@ -1,13 +1,13 @@
 package com.catchtable.reservation.service;
 
+import com.catchtable.reservation.dto.create.ReservationCreateRequestDto;
+import com.catchtable.reservation.dto.create.ReservationCreateResponseDto;
 import com.catchtable.reservation.dto.read.ReservationDetailResponseDto;
 import com.catchtable.reservation.dto.read.ReservationListResponseDto;
 import com.catchtable.reservation.entity.ReservationStatus;
-import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import com.catchtable.reservation.dto.create.ReservationCreateRequestDto;
-import com.catchtable.reservation.dto.create.ReservationCreateResponseDto;
 import com.catchtable.reservation.entity.Reservation;
 import com.catchtable.reservation.repository.ReservationRepository;
 
@@ -24,8 +24,8 @@ public class ReservationService {
 
     private final ReservationRepository reservationRepository;
 
+    @Transactional
     public ReservationCreateResponseDto create(ReservationCreateRequestDto request) {
-        // 상태는 PENDING 으로 고정
         Reservation reservation = Reservation.builder()
                 .userId(request.userId())
                 .remainId(request.remainId())
@@ -36,13 +36,12 @@ public class ReservationService {
         return new ReservationCreateResponseDto(saved.getReservationId(), saved.getStatus());
     }
 
-    //내 예약 리스트 조회
+    @Transactional(readOnly = true)
     public List<ReservationListResponseDto> getUserReservations(Long userId) {
         List<Reservation> reservations = reservationRepository.findAllByUserId(userId);
 
         return reservations.stream().map(reservation -> {
 
-            //일단 목킹
             String mockStoreName = (reservation.getReservationId() % 2 == 0) ? "식당네오" : "모수 서울";
             String mockStoreImage = "https://s3.amazonaws.com/bucket/image.png";
             LocalDate mockDate = LocalDate.of(2026, 1, 1);
@@ -51,7 +50,7 @@ public class ReservationService {
             return new ReservationListResponseDto(
                     reservation.getReservationId(),
                     reservation.getRemainId(),
-                    reservation.getStatus().name(),
+                    reservation.getStatus().name().toLowerCase(), // "PENDING" -> "pending"
                     mockStoreName,
                     mockStoreImage,
                     mockDate,
@@ -62,12 +61,11 @@ public class ReservationService {
         }).collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public ReservationDetailResponseDto getReservationDetail(Long reservationId, Long userId) {
-
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 예약입니다."));
 
-        //목킹
         ReservationDetailResponseDto.StoreInfo mockStoreInfo = new ReservationDetailResponseDto.StoreInfo(
                 1L,
                 "모수 서울",
@@ -83,7 +81,7 @@ public class ReservationService {
 
         return new ReservationDetailResponseDto(
                 reservation.getReservationId(),
-                reservation.getStatus().name(),
+                reservation.getStatus().name().toLowerCase(),
                 reservation.getMember(),
                 mockStoreInfo,
                 mockRemainInfo,
@@ -91,16 +89,15 @@ public class ReservationService {
         );
     }
 
-    // 예약 취소
     @Transactional
     public void cancelReservation(Long reservationId, Long userId) {
 
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 예약입니다."));
 
-        // 매장, 리메인 연동하면 취소 진행
-        // @Transactional 묶어서
-        System.out.println("예약 ID " + reservationId + " 취소 및 테이블 롤백");
+        reservation.changeStatus(ReservationStatus.CANCELED);
+
+        System.out.println("LOG: 예약 ID " + reservationId + " 취소 및 재고 반납 로직 실행 예정");
     }
 }
 
