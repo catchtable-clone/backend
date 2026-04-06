@@ -75,4 +75,32 @@ public class Store {
     @Column(name = "is_deleted", nullable = false)
     @Builder.Default
     private Boolean isDeleted = false;
+
+    public void update(String storeName, String storeImage, Category category,
+                       Double latitude, Double longitude, String address,
+                       District district, Integer team, String openTime, String closeTime) {
+        this.storeName = storeName;
+        this.storeImage = storeImage;
+        this.category = category;
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.address = address;
+        this.district = district;
+        this.team = team;
+        this.openTime = openTime;
+        this.closeTime = closeTime;
+    }
+
+    public void changeStatus(StoreStatus newStatus) {
+        if (this.status == StoreStatus.INACTIVE) {
+            throw new IllegalArgumentException("비활성화된 매장의 상태는 변경할 수 없습니다.");
+        }
+        if (this.status == newStatus) {
+            throw new IllegalArgumentException("현재 상태와 동일한 상태로 변경할 수 없습니다.");
+        }
+        this.status = newStatus;
+        if (newStatus == StoreStatus.INACTIVE) {
+            this.isDeleted = true;
+        }
+    }
 }

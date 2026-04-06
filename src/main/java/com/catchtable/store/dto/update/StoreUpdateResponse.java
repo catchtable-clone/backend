@@ -1,4 +1,4 @@
-package com.catchtable.store.dto;
+package com.catchtable.store.dto.update;
 
 import com.catchtable.store.entity.Store;
 import lombok.AllArgsConstructor;
@@ -6,7 +6,7 @@ import lombok.Getter;
 
 @Getter
 @AllArgsConstructor
-public class StoreDetailResponse {
+public class StoreUpdateResponse {
 
     private Long storeId;
     private String storeName;
@@ -19,12 +19,9 @@ public class StoreDetailResponse {
     private Integer team;
     private String openTime;
     private String closeTime;
-    private String status;
-    private Integer reviewCount;
-    private Integer bookmarkCount;
 
-    public static StoreDetailResponse from(Store store) {
-        return new StoreDetailResponse(
+    public static StoreUpdateResponse from(Store store) {
+        return new StoreUpdateResponse(
                 store.getId(),
                 store.getStoreName(),
                 store.getStoreImage(),
@@ -35,10 +32,7 @@ public class StoreDetailResponse {
                 store.getLongitude(),
                 store.getTeam(),
                 store.getOpenTime(),
-                store.getCloseTime(),
-                store.getStatus().name(),
-                store.getReviewCount(),
-                store.getBookmarkCount()
+                store.getCloseTime()
         );
     }
 }

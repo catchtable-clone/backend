@@ -1,14 +1,13 @@
-package com.catchtable.store.dto;
+package com.catchtable.store.dto.update;
 
 import com.catchtable.store.entity.Category;
 import com.catchtable.store.entity.District;
-import com.catchtable.store.entity.Store;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 
 @Getter
-public class StoreCreateRequest {
+public class StoreUpdateRequest {
 
     @NotBlank
     private String storeName;
@@ -38,19 +37,4 @@ public class StoreCreateRequest {
 
     @NotBlank
     private String closeTime;
-
-    public Store toEntity() {
-        return Store.builder()
-                .storeName(storeName)
-                .storeImage(storeImage)
-                .category(category)
-                .latitude(latitude)
-                .longitude(longitude)
-                .address(address)
-                .district(district)
-                .team(team)
-                .openTime(openTime)
-                .closeTime(closeTime)
-                .build();
-    }
 }
