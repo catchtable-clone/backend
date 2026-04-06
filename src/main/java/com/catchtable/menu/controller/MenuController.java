@@ -1,8 +1,10 @@
 package com.catchtable.menu.controller;
 
 import com.catchtable.menu.dto.MenuActionResponse;
+import com.catchtable.menu.dto.MenuCreateRequest;
 import com.catchtable.menu.dto.MenuCreateResponse;
 import com.catchtable.menu.dto.MenuResponse;
+import com.catchtable.menu.dto.MenuUpdateRequest;
 import com.catchtable.menu.service.MenuService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -16,7 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
-@Tag(name = "메뉴", description = "가게 메뉴 관련 API")
+@Tag(name = "메뉴 컨트롤러", description = "가게 메뉴 관련 API")
 @RestController
 @RequestMapping("/api/v1/stores/{storeId}/menu")
 @RequiredArgsConstructor
@@ -31,28 +33,20 @@ public class MenuController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<MenuCreateResponse> create(
 
-            @Parameter(description = "가게 ID", required = true) 
-            @PathVariable 
+            @Parameter(description = "가게 ID", required = true)
+            @PathVariable
             Long storeId,
 
-            @Parameter(description = "메뉴 이름 목록", required = true) 
-            @RequestParam 
-            List<String> menuNames,
+            @Parameter(description = "메뉴 정보 JSON")
+            @RequestPart("request")
+            MenuCreateRequest request,
 
-            @Parameter(description = "메뉴 이미지 파일 목록 (선택)") 
-            @RequestParam(required = false) 
-            List<MultipartFile> menuImages,
-
-            @Parameter(description = "가격 목록 (원 단위)", required = true) 
-            @RequestParam 
-            List<Integer> prices,
-
-            @Parameter(description = "메뉴 설명 목록 (선택)") 
-            @RequestParam(required = false) 
-            List<String> descriptions
+            @Parameter(description = "메뉴 이미지 파일 목록 (선택)")
+            @RequestPart(value = "menuImages", required = false)
+            List<MultipartFile> menuImages
         ) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(menuService.create(storeId, menuNames, menuImages, prices, descriptions));
+                .body(menuService.create(storeId, request, menuImages));
     }
 
     @Operation(
@@ -74,31 +68,23 @@ public class MenuController {
     )
     @PatchMapping(value = "/{menuId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<MenuActionResponse> update(
-            @Parameter(description = "가게 ID", required = true) 
-            @PathVariable 
+            @Parameter(description = "가게 ID", required = true)
+            @PathVariable
             Long storeId,
 
-            @Parameter(description = "메뉴 ID", required = true) 
-            @PathVariable 
+            @Parameter(description = "메뉴 ID", required = true)
+            @PathVariable
             Long menuId,
 
-            @Parameter(description = "메뉴 이름", required = true) 
-            @RequestParam 
-            String menuName,
+            @Parameter(description = "메뉴 수정 정보 JSON")
+            @RequestPart("request")
+            MenuUpdateRequest request,
 
-            @Parameter(description = "메뉴 이미지 파일 (선택)") 
-            @RequestParam(required = false) 
-            MultipartFile menuImage,
-
-            @Parameter(description = "가격 (원 단위)", required = true) 
-            @RequestParam 
-            Integer price,
-
-            @Parameter(description = "메뉴 설명 (선택)") 
-            @RequestParam(required = false) 
-            String description
+            @Parameter(description = "메뉴 이미지 파일 (선택)")
+            @RequestPart(value = "menuImage", required = false)
+            MultipartFile menuImage
         ) {
-        return ResponseEntity.ok(menuService.update(menuId, menuName, menuImage, price, description));
+        return ResponseEntity.ok(menuService.update(menuId, request, menuImage));
     }
 
     @Operation(
