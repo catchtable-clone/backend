@@ -4,6 +4,8 @@ import com.catchtable.reservation.dto.create.ReservationCreateRequestDto;
 import com.catchtable.reservation.dto.create.ReservationCreateResponseDto;
 import com.catchtable.reservation.dto.read.ReservationDetailResponseDto;
 import com.catchtable.reservation.dto.read.ReservationListResponseDto;
+import com.catchtable.reservation.dto.update.ReservationUpdateRequestDto;
+import com.catchtable.reservation.dto.update.ReservationUpdateResponseDto;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -54,5 +56,15 @@ public class ReservationController {
     ) {
         reservationService.cancelReservation(reservationId, userId);
         return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{reservationId}")
+    public ResponseEntity<ReservationUpdateResponseDto> updateReservation(
+            @PathVariable Long reservationId,
+            @RequestParam Long userId,
+            @Valid @RequestBody ReservationUpdateRequestDto request
+    ) {
+        ReservationUpdateResponseDto response = reservationService.updateReservation(reservationId, userId, request);
+        return ResponseEntity.ok(response);
     }
 }

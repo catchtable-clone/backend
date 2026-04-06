@@ -2,6 +2,8 @@ package com.catchtable.reservation.service;
 
 import com.catchtable.reservation.dto.create.ReservationCreateRequestDto;
 import com.catchtable.reservation.dto.create.ReservationCreateResponseDto;
+import com.catchtable.reservation.dto.update.ReservationUpdateRequestDto;
+import com.catchtable.reservation.dto.update.ReservationUpdateResponseDto;
 import com.catchtable.reservation.dto.read.ReservationDetailResponseDto;
 import com.catchtable.reservation.dto.read.ReservationListResponseDto;
 import com.catchtable.reservation.entity.ReservationStatus;
@@ -97,7 +99,38 @@ public class ReservationService {
 
         reservation.changeStatus(ReservationStatus.CANCELED);
 
-        System.out.println("LOG: 예약 ID " + reservationId + " 취소 및 재고 반납 로직 실행 예정");
+        // remain 롤백 로직 필요
+
+        System.out.println("예약 ID " + reservationId + " 취소 및 재고 반납 로직 실행 예정");
+    }
+
+    @Transactional
+    public ReservationUpdateResponseDto updateReservation(Long reservationId, Long userId, ReservationUpdateRequestDto request) {
+
+        Reservation oldReservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 예약입니다."));
+
+        // 기존 예약 취소
+        oldReservation.changeStatus(ReservationStatus.CANCELED);
+        // remain 롤백 로직 필요
+
+        // 새로운 예약 생성
+        // 새로운 예약에 대한 remain 차감
+        Reservation newReservation = Reservation.builder()
+                .userId(userId)
+                .remainId(request.newRemainId())
+                .member(request.newMember())
+                .status(ReservationStatus.CONFIRMED) // CONFIRMED 혹은 PENDING
+                .build();
+
+        Reservation savedReservation = reservationRepository.save(newReservation);
+
+        return new ReservationUpdateResponseDto(
+                savedReservation.getReservationId(),
+                savedReservation.getRemainId(),
+                savedReservation.getMember(),
+                savedReservation.getStatus().name().toLowerCase(),
+                savedReservation.getUpdatedAt() != null ? savedReservation.getUpdatedAt() : java.time.LocalDateTime.now()
+        );
     }
 }
-
