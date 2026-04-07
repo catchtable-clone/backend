@@ -2,12 +2,17 @@ package com.catchtable.reservation.entity;
 
 import java.time.LocalDateTime;
 
+import com.catchtable.remain.entity.StoreRemain;
+import com.catchtable.user.entity.User;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import lombok.AccessLevel;
@@ -24,9 +29,15 @@ public class Reservation {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long reservationId; //예약 아이디
 
-    private Long userId; //예약자
+    // 기존: private Long userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user; // 예약자
 
-    private Long remainId; //남은 테이블 아이디
+    // 기존: private Long remainId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "remain_id", nullable = false)
+    private StoreRemain storeRemain; // 예약 시간대 및 재고 정보
 
     private Integer member; //예약 인원
 
@@ -38,9 +49,9 @@ public class Reservation {
     private LocalDateTime updatedAt; //수정
 
     @Builder
-    public Reservation(Long userId, Long remainId, Integer member, ReservationStatus status) {
-        this.userId = userId;
-        this.remainId = remainId;
+    public Reservation(User user, StoreRemain storeRemain, Integer member, ReservationStatus status) {
+        this.user = user;
+        this.storeRemain = storeRemain;
         this.member = member;
         this.status = status;
     }
