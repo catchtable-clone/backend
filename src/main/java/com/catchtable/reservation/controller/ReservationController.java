@@ -49,7 +49,7 @@ public class ReservationController {
         return ResponseEntity.ok(response);
     }
 
-    @PatchMapping("/{reservationId}/cancel")
+    @DeleteMapping("/{reservationId}/cancel")
     public ResponseEntity<Void> cancel(
             @PathVariable Long reservationId,
             @RequestParam Long userId
