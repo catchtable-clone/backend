@@ -51,7 +51,7 @@ public class ReservationService {
                 .build();
 
         Reservation saved = reservationRepository.save(reservation);
-        return new ReservationCreateResponseDto(saved.getReservationId(), saved.getStatus());
+        return new ReservationCreateResponseDto(saved.getId(), saved.getStatus());
     }
 
     @Transactional(readOnly = true)
@@ -67,7 +67,7 @@ public class ReservationService {
             Store store = storeRemain.getStore();
 
             return new ReservationListResponseDto(
-                    reservation.getReservationId(),
+                    reservation.getId(),
                     storeRemain.getId(),
                     reservation.getStatus().name().toLowerCase(),
                     store.getStoreName(),
@@ -106,7 +106,7 @@ public class ReservationService {
         );
 
         return new ReservationDetailResponseDto(
-                reservation.getReservationId(),
+                reservation.getId(),
                 reservation.getStatus().name().toLowerCase(),
                 reservation.getMember(),
                 storeInfo,
@@ -175,7 +175,7 @@ public class ReservationService {
         Reservation savedReservation = reservationRepository.save(newReservation);
 
         return new ReservationUpdateResponseDto(
-                savedReservation.getReservationId(),
+                savedReservation.getId(),
                 savedReservation.getStoreRemain().getId(),
                 savedReservation.getMember(),
                 savedReservation.getStatus().name().toLowerCase(),

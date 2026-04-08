@@ -27,26 +27,24 @@ public class Reservation {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long reservationId; //예약 아이디
+    private Long id;
 
-    // 기존: private Long userId;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user; // 예약자
 
-    // 기존: private Long remainId;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "remain_id", nullable = false)
-    private StoreRemain storeRemain; // 예약 시간대 및 재고 정보
+    private StoreRemain storeRemain;
 
     private Integer member; //예약 인원
 
     @Enumerated(EnumType.STRING)
-    private ReservationStatus status; //예약 상태
+    private ReservationStatus status;
 
-    private LocalDateTime createdAt; //생성
+    private LocalDateTime createdAt;
 
-    private LocalDateTime updatedAt; //수정
+    private LocalDateTime updatedAt;
 
     @Builder
     public Reservation(User user, StoreRemain storeRemain, Integer member, ReservationStatus status) {
