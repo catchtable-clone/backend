@@ -18,7 +18,15 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.success(400, e.getMessage()));
     }
 
-    // 400 - 입력값 검증 실패
+    // 400 - 비즈니스 상태/규칙 위반
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ApiResponse<Void>> handleIllegalState(IllegalStateException e) {
+        return ResponseEntity
+                .badRequest()
+                .body(ApiResponse.success(400, e.getMessage()));
+    }
+
+    // 400 - 입력값 검증 실패 (@Valid 에러)
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Void>> handleValidation(MethodArgumentNotValidException e) {
         String message = e.getBindingResult().getFieldErrors().stream()
@@ -44,6 +52,14 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
                 .body(ApiResponse.success(404, e.getMessage()));
+    }
+
+    // 409 - 데이터 충돌
+    @ExceptionHandler(jakarta.persistence.OptimisticLockException.class)
+    public ResponseEntity<ApiResponse<Void>> handleOptimisticLock(jakarta.persistence.OptimisticLockException e) {
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(ApiResponse.success(409, "이미 마감된 요청입니다."));
     }
 
     // 500 - 서버 내부 오류
