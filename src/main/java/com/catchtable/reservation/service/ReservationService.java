@@ -40,7 +40,7 @@ public class ReservationService {
         StoreRemain storeRemain = storeRemainRepository.findById(request.remainId())
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 예약 시간대입니다."));
 
-        // 1. 재고 차감 (이 안에서 remainTeam <= 0 인지 검증하고 차감함)
+        // 재고 차감 (remainTeam <= 0 검증 포함)
         storeRemain.decreaseRemainTeam();
 
         // 2. 예약 생성
@@ -62,7 +62,7 @@ public class ReservationService {
         List<Reservation> reservations = reservationRepository.findAllByUser(user);
 
         return reservations.stream().map(reservation -> {
-            // Lazy Loading을 통해 DB에서 실제 데이터를 가져옵니다. (여기서 N+1 쿼리 발생)
+
             StoreRemain storeRemain = reservation.getStoreRemain();
             Store store = storeRemain.getStore();
 
@@ -89,7 +89,6 @@ public class ReservationService {
             throw new IllegalArgumentException("본인의 예약만 조회할 수 있습니다.");
         }
 
-        // Lazy Loading으로 실제 데이터를 가져옵니다. (여기서 N+1 쿼리 발생 가능성)
         StoreRemain storeRemain = reservation.getStoreRemain();
         Store store = storeRemain.getStore();
 
@@ -130,10 +129,10 @@ public class ReservationService {
             throw new IllegalArgumentException("이미 취소된 예약입니다.");
         }
 
-        // 1. 예약 상태 취소로 변경
+        // 예약 상태 취소로 변경
         reservation.changeStatus(ReservationStatus.CANCELED);
 
-        // 2. 예약했던 시간대의 재고 복구 (+1)
+        // 예약했던 시간대의 재고 복구
         StoreRemain storeRemain = reservation.getStoreRemain();
         storeRemain.increaseRemainTeam();
     }
@@ -158,19 +157,19 @@ public class ReservationService {
         StoreRemain newStoreRemain = storeRemainRepository.findById(request.newRemainId())
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 예약 시간대입니다."));
 
-        // 1. 기존 예약 취소 및 재고 복구 (+1)
+        // 기존 예약 취소 및 재고 복구
         oldReservation.changeStatus(ReservationStatus.CANCELED);
         oldReservation.getStoreRemain().increaseRemainTeam();
 
-        // 2. 새로운 예약 시간에 대한 재고 차감 (-1)
+        // 새로운 예약 시간에 대한 재고 차감
         newStoreRemain.decreaseRemainTeam();
 
-        // 3. 새로운 예약 생성
+        // 새로운 예약 생성
         Reservation newReservation = Reservation.builder()
                 .user(user)
                 .storeRemain(newStoreRemain)
                 .member(request.newMember())
-                .status(ReservationStatus.CONFIRMED) // CONFIRMED 혹은 PENDING
+                .status(ReservationStatus.PENDING)
                 .build();
 
         Reservation savedReservation = reservationRepository.save(newReservation);
