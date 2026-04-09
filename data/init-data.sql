@@ -1,3 +1,23 @@
+CREATE TABLE IF NOT EXISTS stores (
+    id BIGSERIAL PRIMARY KEY,
+    store_name VARCHAR(255) NOT NULL,
+    store_image VARCHAR(255),
+    category VARCHAR(255) NOT NULL,
+    latitude DOUBLE PRECISION NOT NULL,
+    longitude DOUBLE PRECISION NOT NULL,
+    address VARCHAR(255) NOT NULL,
+    district VARCHAR(255) NOT NULL,
+    team INTEGER NOT NULL,
+    open_time VARCHAR(255) NOT NULL,
+    close_time VARCHAR(255) NOT NULL,
+    status VARCHAR(255) NOT NULL,
+    review_count INTEGER NOT NULL,
+    bookmark_count INTEGER NOT NULL,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP,
+    is_deleted BOOLEAN NOT NULL
+);
+
 CREATE TEMP TABLE temp_stores (
     store_name text, store_image text, category text,
     latitude double precision, longitude double precision,

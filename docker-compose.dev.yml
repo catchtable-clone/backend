@@ -12,6 +12,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - catchtable-data:/var/lib/postgresql/data
+      - ./data/init-data.sql:/docker-entrypoint-initdb.d/init-data.sql
       - ./data:/tmp/data
 
 volumes:
