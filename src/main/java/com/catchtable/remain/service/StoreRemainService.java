@@ -1,5 +1,6 @@
 package com.catchtable.remain.service;
 
+import com.catchtable.remain.dto.read.StoreRemainResponseDto;
 import com.catchtable.remain.dto.create.StoreRemainCreateRequestDto;
 import com.catchtable.remain.entity.StoreRemain;
 import com.catchtable.remain.repository.StoreRemainRepository;
@@ -16,6 +17,7 @@ import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -81,5 +83,20 @@ public class StoreRemainService {
         // 저장
         storeRemainRepository.saveAll(remainsToSave);
 
+    }
+
+    @Transactional(readOnly = true)
+    public List<StoreRemainResponseDto> getStoreRemains(Long storeId, LocalDate date) {
+
+        List<StoreRemain> remains = storeRemainRepository.findAllByStoreIdAndDate(storeId, date);
+
+        return remains.stream()
+                .map(remain -> new StoreRemainResponseDto(
+                        remain.getId(),
+                        remain.getRemainDate(),
+                        remain.getRemainTime(),
+                        remain.getRemainTeam()
+                ))
+                .collect(Collectors.toList());
     }
 }
