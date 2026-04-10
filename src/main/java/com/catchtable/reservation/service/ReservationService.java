@@ -36,7 +36,7 @@ public class ReservationService {
         User user = userRepository.findById(request.userId())
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        StoreRemain storeRemain = storeRemainRepository.findById(request.remainId())
+        StoreRemain storeRemain = storeRemainRepository.findByIdWithStore(request.remainId())
                 .orElseThrow(() -> new CustomException(ErrorCode.REMAIN_NOT_FOUND));
 
         // 재고 차감 (remainTeam <= 0 검증 포함)
@@ -145,11 +145,8 @@ public class ReservationService {
         if (oldReservation.getStatus() == ReservationStatus.CANCELED) {
             throw new CustomException(ErrorCode.ALREADY_CANCELED);
         }
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
                 
-        StoreRemain newStoreRemain = storeRemainRepository.findById(request.newRemainId())
+        StoreRemain newStoreRemain = storeRemainRepository.findByIdWithStore(request.newRemainId())
                 .orElseThrow(() -> new CustomException(ErrorCode.REMAIN_NOT_FOUND));
 
         // 기존 예약 취소 및 재고 복구
@@ -161,7 +158,7 @@ public class ReservationService {
 
         // 새로운 예약 생성
         Reservation newReservation = Reservation.builder()
-                .user(user)
+                .user(oldReservation.getUser()) // 기존 User 재사용
                 .storeRemain(newStoreRemain)
                 .member(request.newMember())
                 .status(ReservationStatus.PENDING)

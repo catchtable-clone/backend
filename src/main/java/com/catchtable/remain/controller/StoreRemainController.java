@@ -1,7 +1,7 @@
 package com.catchtable.remain.controller;
 
 import com.catchtable.global.common.ApiResponse;
-import com.catchtable.global.exception.SuccessCode;
+import com.catchtable.global.common.SuccessCode;
 import com.catchtable.remain.dto.create.StoreRemainCreateRequestDto;
 import com.catchtable.remain.service.StoreRemainService;
 import jakarta.validation.Valid;

@@ -69,7 +69,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleOptimisticLock(jakarta.persistence.OptimisticLockException e) {
         return ResponseEntity
                 .status(HttpStatus.CONFLICT)
-                .body(ApiResponse.success(409, "이미 마감된 요청입니다."));
+                .body(ApiResponse.error(ErrorCode.OPTIMISTIC_LOCK_CONFLICT));
     }
 
     // 500 - 서버 내부 오류

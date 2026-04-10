@@ -1,7 +1,6 @@
 package com.catchtable.global.common;
 
 import com.catchtable.global.exception.ErrorCode;
-import com.catchtable.global.exception.SuccessCode;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -33,6 +32,11 @@ public class ApiResponse<T> {
         return new ApiResponse<>(code.getHttpStatus().value(), code.getMessage(), null);
     }
 
+    // 실패 (데이터 포함)
+    public static <T> ApiResponse<T> error(ErrorCode code, T data) {
+        return new ApiResponse<>(code.getHttpStatus().value(), code.getMessage(), data);
+    }
+    
     // 실패 (데이터 없음)
     public static ApiResponse<Void> error(ErrorCode code) {
         return new ApiResponse<>(code.getHttpStatus().value(), code.getMessage(), null);

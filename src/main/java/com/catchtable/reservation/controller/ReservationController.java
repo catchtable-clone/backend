@@ -1,7 +1,7 @@
 package com.catchtable.reservation.controller;
 
 import com.catchtable.global.common.ApiResponse;
-import com.catchtable.global.exception.SuccessCode;
+import com.catchtable.global.common.SuccessCode;
 import com.catchtable.reservation.dto.create.ReservationCreateRequestDto;
 import com.catchtable.reservation.dto.create.ReservationCreateResponseDto;
 import com.catchtable.reservation.dto.read.ReservationDetailResponseDto;
@@ -55,7 +55,7 @@ public class ReservationController {
                 .body(ApiResponse.success(SuccessCode.RESERVATION_LOOKUP_SUCCESS, responseData));
     }
 
-    @DeleteMapping("/{reservationId}/cancel")
+    @DeleteMapping("/{reservationId}")
     public ResponseEntity<ApiResponse<Void>> cancel(
             @PathVariable Long reservationId,
             @RequestParam Long userId

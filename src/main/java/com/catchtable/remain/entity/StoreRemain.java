@@ -1,5 +1,7 @@
 package com.catchtable.remain.entity;
 
+import com.catchtable.global.exception.CustomException;
+import com.catchtable.global.exception.ErrorCode;
 import com.catchtable.store.entity.Store;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -61,7 +63,7 @@ public class StoreRemain {
 
     public void decreaseRemainTeam() {
         if (this.remainTeam <= 0) {
-            throw new IllegalStateException("해당 시간대의 예약이 마감되었습니다.");
+            throw new CustomException(ErrorCode.REMAIN_EXHAUSTED);
         }
         this.remainTeam--;
     }

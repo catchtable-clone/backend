@@ -1,6 +1,5 @@
-package com.catchtable.global.exception;
+package com.catchtable.global.common;
 
-import com.catchtable.global.common.ResponseCode;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.springframework.http.HttpStatus;
