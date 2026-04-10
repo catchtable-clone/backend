@@ -1,8 +1,8 @@
 CREATE TEMP TABLE temp_stores (
-    store_name text, store_image text, category text,
-    latitude double precision, longitude double precision,
-    address text, district text, team integer,
-    open_time text, close_time text
+                                  store_name text, store_image text, category text,
+                                  latitude double precision, longitude double precision,
+                                  address text, district text, team integer,
+                                  open_time text, close_time text
 );
 
 COPY temp_stores FROM '/tmp/data/store_data.csv' WITH (FORMAT csv, HEADER true);
