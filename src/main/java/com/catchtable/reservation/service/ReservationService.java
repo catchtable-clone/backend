@@ -1,5 +1,7 @@
 package com.catchtable.reservation.service;
 
+import com.catchtable.global.exception.CustomException;
+import com.catchtable.global.exception.ErrorCode;
 import com.catchtable.remain.entity.StoreRemain;
 import com.catchtable.remain.repository.StoreRemainRepository;
 import com.catchtable.reservation.dto.create.ReservationCreateRequestDto;
@@ -8,17 +10,15 @@ import com.catchtable.reservation.dto.update.ReservationUpdateRequestDto;
 import com.catchtable.reservation.dto.update.ReservationUpdateResponseDto;
 import com.catchtable.reservation.dto.read.ReservationDetailResponseDto;
 import com.catchtable.reservation.dto.read.ReservationListResponseDto;
+import com.catchtable.reservation.entity.Reservation;
 import com.catchtable.reservation.entity.ReservationStatus;
+import com.catchtable.reservation.repository.ReservationRepository;
 import com.catchtable.store.entity.Store;
 import com.catchtable.user.entity.User;
 import com.catchtable.user.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import com.catchtable.reservation.entity.Reservation;
-import com.catchtable.reservation.repository.ReservationRepository;
-
-import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -34,16 +34,14 @@ public class ReservationService {
     @Transactional
     public ReservationCreateResponseDto create(ReservationCreateRequestDto request) {
         User user = userRepository.findById(request.userId())
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        // 잔여 재고 조회
         StoreRemain storeRemain = storeRemainRepository.findById(request.remainId())
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 예약 시간대입니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.REMAIN_NOT_FOUND));
 
         // 재고 차감 (remainTeam <= 0 검증 포함)
         storeRemain.decreaseRemainTeam();
 
-        // 2. 예약 생성
         Reservation reservation = Reservation.builder()
                 .user(user)
                 .storeRemain(storeRemain)
@@ -57,12 +55,11 @@ public class ReservationService {
     @Transactional(readOnly = true)
     public List<ReservationListResponseDto> getUserReservations(Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
         List<Reservation> reservations = reservationRepository.findAllByUser(user);
 
         return reservations.stream().map(reservation -> {
-
             StoreRemain storeRemain = reservation.getStoreRemain();
             Store store = storeRemain.getStore();
 
@@ -83,10 +80,10 @@ public class ReservationService {
     @Transactional(readOnly = true)
     public ReservationDetailResponseDto getReservationDetail(Long reservationId, Long userId) {
         Reservation reservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 예약입니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
         
         if (!reservation.getUser().getId().equals(userId)) {
-            throw new IllegalArgumentException("본인의 예약만 조회할 수 있습니다.");
+            throw new CustomException(ErrorCode.NOT_RESERVATION_OWNER);
         }
 
         StoreRemain storeRemain = reservation.getStoreRemain();
@@ -117,16 +114,15 @@ public class ReservationService {
 
     @Transactional
     public void cancelReservation(Long reservationId, Long userId) {
-
         Reservation reservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 예약입니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
 
         if (!reservation.getUser().getId().equals(userId)) {
-            throw new IllegalArgumentException("본인의 예약만 취소할 수 있습니다.");
+            throw new CustomException(ErrorCode.NOT_RESERVATION_OWNER);
         }
 
         if (reservation.getStatus() == ReservationStatus.CANCELED) {
-            throw new IllegalArgumentException("이미 취소된 예약입니다.");
+            throw new CustomException(ErrorCode.ALREADY_CANCELED);
         }
 
         // 예약 상태 취소로 변경
@@ -139,23 +135,22 @@ public class ReservationService {
 
     @Transactional
     public ReservationUpdateResponseDto updateReservation(Long reservationId, Long userId, ReservationUpdateRequestDto request) {
-
         Reservation oldReservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 예약입니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
 
         if (!oldReservation.getUser().getId().equals(userId)) {
-            throw new IllegalArgumentException("본인의 예약만 변경할 수 있습니다.");
+            throw new CustomException(ErrorCode.NOT_RESERVATION_OWNER);
         }
 
         if (oldReservation.getStatus() == ReservationStatus.CANCELED) {
-            throw new IllegalArgumentException("이미 취소된 예약은 변경할 수 없습니다.");
+            throw new CustomException(ErrorCode.ALREADY_CANCELED);
         }
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
                 
         StoreRemain newStoreRemain = storeRemainRepository.findById(request.newRemainId())
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 예약 시간대입니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.REMAIN_NOT_FOUND));
 
         // 기존 예약 취소 및 재고 복구
         oldReservation.changeStatus(ReservationStatus.CANCELED);

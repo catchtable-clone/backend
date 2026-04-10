@@ -3,8 +3,7 @@ package com.catchtable.reservation.dto.create;
 import com.catchtable.reservation.entity.ReservationStatus;
 
 public record ReservationCreateResponseDto(
-        Long reservationId,
-        
+        Long id,
         ReservationStatus status
 ) {
 }
