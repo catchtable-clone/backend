@@ -1,5 +1,6 @@
 package com.catchtable.store.controller;
 
+import com.catchtable.global.common.ResponseCode;
 import com.catchtable.global.exception.AccessDeniedException;
 import com.catchtable.global.exception.GlobalExceptionHandler;
 import com.catchtable.global.exception.ResourceNotFoundException;
@@ -83,7 +84,7 @@ class StoreControllerTest {
     void createStoreAccessDenied() throws Exception {
         // given
         given(storeService.createStore(eq(2L), any()))
-                .willThrow(new AccessDeniedException("관리자만 매장을 등록할 수 있습니다."));
+                .willThrow(new AccessDeniedException(ResponseCode.ADMIN_ONLY_STORE_CREATE));
 
         String requestBody = """
                 {
@@ -198,7 +199,7 @@ class StoreControllerTest {
     void getStoreNotFound() throws Exception {
         // given
         given(storeService.getStore(999L))
-                .willThrow(new ResourceNotFoundException("매장을 찾을 수 없습니다."));
+                .willThrow(new ResourceNotFoundException(ResponseCode.STORE_NOT_FOUND));
 
         // when & then
         mockMvc.perform(get("/api/v1/stores/999"))

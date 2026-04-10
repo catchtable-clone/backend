@@ -13,6 +13,7 @@ import com.catchtable.store.repository.StoreRepository;
 import com.catchtable.user.entity.User;
 import com.catchtable.user.entity.UserRole;
 import com.catchtable.user.repository.UserRepository;
+import com.catchtable.global.common.ResponseCode;
 import com.catchtable.global.exception.AccessDeniedException;
 import com.catchtable.global.exception.ResourceNotFoundException;
 import org.junit.jupiter.api.DisplayName;
@@ -118,7 +119,7 @@ class StoreServiceTest {
         // when & then
         assertThatThrownBy(() -> storeService.createStore(2L, request))
                 .isInstanceOf(AccessDeniedException.class)
-                .hasMessage("관리자만 매장을 등록할 수 있습니다.");
+                .hasMessage(ResponseCode.ADMIN_ONLY_STORE_CREATE.getMessage());
     }
 
     @Test
@@ -164,7 +165,7 @@ class StoreServiceTest {
         // when & then
         assertThatThrownBy(() -> storeService.updateStore(1L, 999L, request))
                 .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessage("매장을 찾을 수 없습니다.");
+                .hasMessage(ResponseCode.STORE_NOT_FOUND.getMessage());
     }
 
     @Test
@@ -239,7 +240,7 @@ class StoreServiceTest {
         // when & then
         assertThatThrownBy(() -> storeService.updateStoreStatus(1L, 1L, request))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("비활성화된 매장의 상태는 변경할 수 없습니다.");
+                .hasMessage(ResponseCode.INACTIVE_STORE.getMessage());
     }
 
     @Test
@@ -258,7 +259,7 @@ class StoreServiceTest {
         // when & then
         assertThatThrownBy(() -> storeService.updateStoreStatus(1L, 1L, request))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("현재 상태와 동일한 상태로 변경할 수 없습니다.");
+                .hasMessage(ResponseCode.SAME_STATUS.getMessage());
     }
 
     @Test
@@ -307,7 +308,7 @@ class StoreServiceTest {
         // when & then
         assertThatThrownBy(() -> storeService.getStore(999L))
                 .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessage("매장을 찾을 수 없습니다.");
+                .hasMessage(ResponseCode.STORE_NOT_FOUND.getMessage());
     }
 
     @Test
@@ -320,7 +321,7 @@ class StoreServiceTest {
         // when & then
         assertThatThrownBy(() -> storeService.getStore(1L))
                 .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessage("매장을 찾을 수 없습니다.");
+                .hasMessage(ResponseCode.STORE_NOT_FOUND.getMessage());
     }
 
     private void setField(Object target, String fieldName, Object value) {

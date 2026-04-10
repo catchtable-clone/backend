@@ -1,5 +1,6 @@
 package com.catchtable.store.entity;
 
+import com.catchtable.global.common.ResponseCode;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -93,10 +94,10 @@ public class Store {
 
     public void changeStatus(StoreStatus newStatus) {
         if (this.status == StoreStatus.INACTIVE) {
-            throw new IllegalArgumentException("비활성화된 매장의 상태는 변경할 수 없습니다.");
+            throw new IllegalArgumentException(ResponseCode.INACTIVE_STORE.getMessage());
         }
         if (this.status == newStatus) {
-            throw new IllegalArgumentException("현재 상태와 동일한 상태로 변경할 수 없습니다.");
+            throw new IllegalArgumentException(ResponseCode.SAME_STATUS.getMessage());
         }
         this.status = newStatus;
         if (newStatus == StoreStatus.INACTIVE) {

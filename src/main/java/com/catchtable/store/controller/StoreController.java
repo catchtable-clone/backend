@@ -1,6 +1,7 @@
 package com.catchtable.store.controller;
 
 import com.catchtable.global.common.ApiResponse;
+import com.catchtable.global.common.ResponseCode;
 import com.catchtable.store.dto.create.StoreCreateRequest;
 import com.catchtable.store.dto.create.StoreCreateResponse;
 import com.catchtable.store.dto.read.StoreDetailResponse;
@@ -32,7 +33,7 @@ public class StoreController {
         StoreCreateResponse response = storeService.createStore(userId, request);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(ApiResponse.success(201, "매장이 등록되었습니다.", response));
+                .body(ApiResponse.success(ResponseCode.STORE_CREATED, response));
     }
 
     @GetMapping
@@ -40,7 +41,7 @@ public class StoreController {
             @RequestParam String name) {
         List<StoreListResponse> stores = storeService.searchStores(name);
         return ResponseEntity
-                .ok(ApiResponse.success(200, "매장 목록을 조회했습니다.", stores));
+                .ok(ApiResponse.success(ResponseCode.STORE_LIST_OK, stores));
     }
 
     @GetMapping("/{storeId}")
@@ -48,7 +49,7 @@ public class StoreController {
             @PathVariable Long storeId) {
         StoreDetailResponse store = storeService.getStore(storeId);
         return ResponseEntity
-                .ok(ApiResponse.success(200, "매장 정보를 조회했습니다.", store));
+                .ok(ApiResponse.success(ResponseCode.STORE_DETAIL_OK, store));
     }
 
     @PutMapping("/{storeId}")
@@ -58,7 +59,7 @@ public class StoreController {
             @Valid @RequestBody StoreUpdateRequest request) {
         StoreUpdateResponse response = storeService.updateStore(userId, storeId, request);
         return ResponseEntity
-                .ok(ApiResponse.success(200, "매장 정보가 수정되었습니다.", response));
+                .ok(ApiResponse.success(ResponseCode.STORE_UPDATED, response));
     }
 
     @PatchMapping("/{storeId}")
@@ -68,6 +69,6 @@ public class StoreController {
             @Valid @RequestBody StoreStatusUpdateRequest request) {
         StoreStatusUpdateResponse response = storeService.updateStoreStatus(userId, storeId, request);
         return ResponseEntity
-                .ok(ApiResponse.success(200, "매장 상태가 변경되었습니다.", response));
+                .ok(ApiResponse.success(ResponseCode.STORE_STATUS_UPDATED, response));
     }
 }

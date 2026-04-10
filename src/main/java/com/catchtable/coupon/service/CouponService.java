@@ -6,6 +6,7 @@ import com.catchtable.coupon.entity.Coupon;
 import com.catchtable.coupon.entity.CouponTemplate;
 import com.catchtable.coupon.repository.CouponRepository;
 import com.catchtable.coupon.repository.CouponTemplateRepository;
+import com.catchtable.global.common.ResponseCode;
 import com.catchtable.global.exception.ResourceNotFoundException;
 import com.catchtable.user.entity.User;
 import com.catchtable.user.repository.UserRepository;
@@ -26,13 +27,13 @@ public class CouponService {
     @Transactional
     public CouponIssueResponse issueCoupon(Long templateId, Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException(ResponseCode.USER_NOT_FOUND));
 
         CouponTemplate template = couponTemplateRepository.findByIdWithLock(templateId)
-                .orElseThrow(() -> new ResourceNotFoundException("쿠폰 템플릿을 찾을 수 없습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException(ResponseCode.COUPON_TEMPLATE_NOT_FOUND));
 
         if (couponRepository.existsByUserIdAndCouponTemplateId(userId, templateId)) {
-            throw new IllegalArgumentException("이미 발급받은 쿠폰입니다.");
+            throw new IllegalArgumentException(ResponseCode.DUPLICATE_COUPON.getMessage());
         }
 
         template.decreaseRemain();
@@ -56,10 +57,10 @@ public class CouponService {
     @Transactional
     public void useCoupon(Long couponId, Long userId) {
         Coupon coupon = couponRepository.findById(couponId)
-                .orElseThrow(() -> new ResourceNotFoundException("쿠폰을 찾을 수 없습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException(ResponseCode.COUPON_NOT_FOUND));
 
         if (!coupon.getUser().getId().equals(userId)) {
-            throw new IllegalArgumentException("본인의 쿠폰만 사용할 수 있습니다.");
+            throw new IllegalArgumentException(ResponseCode.OWN_COUPON_ONLY.getMessage());
         }
 
         coupon.use();
@@ -68,7 +69,7 @@ public class CouponService {
     @Transactional
     public void returnCoupon(Long couponId) {
         Coupon coupon = couponRepository.findById(couponId)
-                .orElseThrow(() -> new ResourceNotFoundException("쿠폰을 찾을 수 없습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException(ResponseCode.COUPON_NOT_FOUND));
 
         coupon.returnCoupon();
     }

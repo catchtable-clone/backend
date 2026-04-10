@@ -1,6 +1,7 @@
 package com.catchtable.global.exception;
 
 import com.catchtable.global.common.ApiResponse;
+import com.catchtable.global.common.ResponseCode;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -15,7 +16,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleIllegalArgument(IllegalArgumentException e) {
         return ResponseEntity
                 .badRequest()
-                .body(ApiResponse.success(400, e.getMessage()));
+                .body(ApiResponse.error(ResponseCode.BAD_REQUEST, e.getMessage()));
     }
 
     // 400 - 입력값 검증 실패
@@ -27,7 +28,7 @@ public class GlobalExceptionHandler {
                 .orElse("입력값이 올바르지 않습니다.");
         return ResponseEntity
                 .badRequest()
-                .body(ApiResponse.success(400, message));
+                .body(ApiResponse.error(ResponseCode.BAD_REQUEST, message));
     }
 
     // 403 - 권한 없음
@@ -35,7 +36,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleAccessDenied(AccessDeniedException e) {
         return ResponseEntity
                 .status(HttpStatus.FORBIDDEN)
-                .body(ApiResponse.success(403, e.getMessage()));
+                .body(ApiResponse.error(e.getResponseCode()));
     }
 
     // 404 - 리소스 없음
@@ -43,7 +44,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleResourceNotFound(ResourceNotFoundException e) {
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
-                .body(ApiResponse.success(404, e.getMessage()));
+                .body(ApiResponse.error(e.getResponseCode()));
     }
 
     // 500 - 서버 내부 오류
@@ -51,6 +52,6 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleException(Exception e) {
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.success(500, "서버 내부 오류가 발생했습니다."));
+                .body(ApiResponse.error(ResponseCode.INTERNAL_ERROR));
     }
 }

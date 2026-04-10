@@ -4,6 +4,7 @@ import com.catchtable.coupon.dto.issue.CouponIssueResponse;
 import com.catchtable.coupon.dto.read.CouponReadResponse;
 import com.catchtable.coupon.service.CouponService;
 import com.catchtable.global.common.ApiResponse;
+import com.catchtable.global.common.ResponseCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,7 +24,7 @@ public class CouponController {
             @PathVariable Long templateId) {
         CouponIssueResponse response = couponService.issueCoupon(templateId, userId);
         return ResponseEntity
-                .ok(ApiResponse.success(200, "발급되었습니다.", response));
+                .ok(ApiResponse.success(ResponseCode.COUPON_ISSUED, response));
     }
 
     @GetMapping("/me")
@@ -31,6 +32,6 @@ public class CouponController {
             @RequestHeader("X-User-Id") Long userId) {
         List<CouponReadResponse> response = couponService.getMyCoupons(userId);
         return ResponseEntity
-                .ok(ApiResponse.success(200, "내 쿠폰 목록을 조회했습니다.", response));
+                .ok(ApiResponse.success(ResponseCode.COUPON_LIST_OK, response));
     }
 }
