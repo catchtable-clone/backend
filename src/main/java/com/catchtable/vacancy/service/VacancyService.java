@@ -1,8 +1,8 @@
 package com.catchtable.vacancy.service;
 
 import com.catchtable.store.entity.Store;
-import com.catchtable.remain.StoreRemain;
-import com.catchtable.remain.StoreRemainRepository;
+import com.catchtable.remain.entity.StoreRemain;
+import com.catchtable.remain.repository.StoreRemainRepository;
 import com.catchtable.store.repository.StoreRepository;
 import com.catchtable.vacancy.dto.VacancyListResponse;
 import com.catchtable.vacancy.entity.Vacancy;
@@ -41,7 +41,7 @@ public class VacancyService {
                 .map(vacancy -> {
                     StoreRemain storeRemain = storeRemainRepository.findById(vacancy.getRemainId())
                             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "잔여 좌석 정보를 찾을 수 없습니다."));
-                    Store store = storeRepository.findById(storeRemain.getStoreId())
+                    Store store = storeRepository.findById(storeRemain.getStore().getId())
                             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "매장 정보를 찾을 수 없습니다."));
                     return new VacancyListResponse(vacancy, storeRemain, store);
                 })
