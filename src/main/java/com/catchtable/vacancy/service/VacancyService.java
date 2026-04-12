@@ -4,7 +4,7 @@ import com.catchtable.store.entity.Store;
 import com.catchtable.remain.StoreRemain;
 import com.catchtable.remain.StoreRemainRepository;
 import com.catchtable.store.repository.StoreRepository;
-import com.catchtable.vacancy.dto.VacancyListResponse;
+import com.catchtable.vacancy.dto.write.VacancyListResponse;
 import com.catchtable.vacancy.entity.Vacancy;
 import com.catchtable.vacancy.repository.VacancyRepository;
 import lombok.RequiredArgsConstructor;

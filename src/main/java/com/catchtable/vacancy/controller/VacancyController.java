@@ -1,8 +1,8 @@
 package com.catchtable.vacancy.controller;
 
-import com.catchtable.vacancy.dto.VacancyListResponse;
-import com.catchtable.vacancy.dto.VacancyRegisterRequest;
-import com.catchtable.vacancy.dto.VacancyRegisterResponse;
+import com.catchtable.vacancy.dto.create.VacancyRegisterRequest;
+import com.catchtable.vacancy.dto.create.VacancyRegisterResponse;
+import com.catchtable.vacancy.dto.write.VacancyListResponse;
 import com.catchtable.vacancy.service.VacancyService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +21,7 @@ public class VacancyController {
 
     @PostMapping
     public ResponseEntity<VacancyRegisterResponse> register(@RequestBody @Valid VacancyRegisterRequest request) {
-        Long vacancyId = vacancyService.register(request.getUserId(), request.getRemainId());
+        Long vacancyId = vacancyService.register(request.userId(), request.remainId());
         return ResponseEntity.status(201).body(new VacancyRegisterResponse(vacancyId));
     }
 
