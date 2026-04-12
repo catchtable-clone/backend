@@ -3,7 +3,7 @@ package com.catchtable.reservation.dto.update;
 import java.time.LocalDateTime;
 
 public record ReservationUpdateResponseDto(
-        Long reservationId,
+        Long id,
         Long remainId,
         Integer member,
         String status,

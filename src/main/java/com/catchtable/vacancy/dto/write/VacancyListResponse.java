@@ -1,6 +1,6 @@
 package com.catchtable.vacancy.dto.write;
 
-import com.catchtable.remain.StoreRemain;
+import com.catchtable.remain.entity.StoreRemain;
 import com.catchtable.store.entity.Store;
 import com.catchtable.vacancy.entity.Vacancy;
 import lombok.Getter;

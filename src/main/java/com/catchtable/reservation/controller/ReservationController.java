@@ -1,19 +1,19 @@
 package com.catchtable.reservation.controller;
 
+import com.catchtable.global.common.ApiResponse;
+import com.catchtable.global.common.SuccessCode;
 import com.catchtable.reservation.dto.create.ReservationCreateRequestDto;
 import com.catchtable.reservation.dto.create.ReservationCreateResponseDto;
 import com.catchtable.reservation.dto.read.ReservationDetailResponseDto;
 import com.catchtable.reservation.dto.read.ReservationListResponseDto;
 import com.catchtable.reservation.dto.update.ReservationUpdateRequestDto;
 import com.catchtable.reservation.dto.update.ReservationUpdateResponseDto;
-import org.springframework.http.HttpStatus;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.catchtable.reservation.service.ReservationService;
-
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 
@@ -25,46 +25,56 @@ public class ReservationController {
     private final ReservationService reservationService;
 
     @PostMapping
-    public ResponseEntity<ReservationCreateResponseDto> create(
+    public ResponseEntity<ApiResponse<ReservationCreateResponseDto>> create(
             @Valid @RequestBody ReservationCreateRequestDto request
     ) {
-        ReservationCreateResponseDto response = reservationService.create(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        ReservationCreateResponseDto responseData = reservationService.create(request);
+        return ResponseEntity
+                .status(SuccessCode.RESERVATION_CREATE_SUCCESS.getHttpStatus())
+                .body(ApiResponse.success(SuccessCode.RESERVATION_CREATE_SUCCESS, responseData));
     }
 
     @GetMapping("/me")
-    public ResponseEntity<List<ReservationListResponseDto>> getMyReservations(
+    public ResponseEntity<ApiResponse<List<ReservationListResponseDto>>> getMyReservations(
             @RequestParam Long userId
     ) {
-        List<ReservationListResponseDto> response = reservationService.getUserReservations(userId);
-        return ResponseEntity.ok(response);
+        List<ReservationListResponseDto> responseData = reservationService.getUserReservations(userId);
+        return ResponseEntity
+                .status(SuccessCode.RESERVATION_LOOKUP_SUCCESS.getHttpStatus())
+                .body(ApiResponse.success(SuccessCode.RESERVATION_LOOKUP_SUCCESS, responseData));
     }
 
     @GetMapping("/{reservationId}")
-    public ResponseEntity<ReservationDetailResponseDto> getReservationDetail(
+    public ResponseEntity<ApiResponse<ReservationDetailResponseDto>> getReservationDetail(
             @PathVariable Long reservationId,
             @RequestParam Long userId
     ) {
-        ReservationDetailResponseDto response = reservationService.getReservationDetail(reservationId, userId);
-        return ResponseEntity.ok(response);
+        ReservationDetailResponseDto responseData = reservationService.getReservationDetail(reservationId, userId);
+        return ResponseEntity
+                .status(SuccessCode.RESERVATION_LOOKUP_SUCCESS.getHttpStatus())
+                .body(ApiResponse.success(SuccessCode.RESERVATION_LOOKUP_SUCCESS, responseData));
     }
 
-    @PatchMapping("/{reservationId}/cancel")
-    public ResponseEntity<Void> cancel(
+    @DeleteMapping("/{reservationId}")
+    public ResponseEntity<ApiResponse<Void>> cancel(
             @PathVariable Long reservationId,
             @RequestParam Long userId
     ) {
         reservationService.cancelReservation(reservationId, userId);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity
+                .status(SuccessCode.RESERVATION_CANCEL_SUCCESS.getHttpStatus())
+                .body(ApiResponse.success(SuccessCode.RESERVATION_CANCEL_SUCCESS));
     }
 
     @PatchMapping("/{reservationId}")
-    public ResponseEntity<ReservationUpdateResponseDto> updateReservation(
+    public ResponseEntity<ApiResponse<ReservationUpdateResponseDto>> updateReservation(
             @PathVariable Long reservationId,
             @RequestParam Long userId,
             @Valid @RequestBody ReservationUpdateRequestDto request
     ) {
-        ReservationUpdateResponseDto response = reservationService.updateReservation(reservationId, userId, request);
-        return ResponseEntity.ok(response);
+        ReservationUpdateResponseDto responseData = reservationService.updateReservation(reservationId, userId, request);
+        return ResponseEntity
+                .status(SuccessCode.RESERVATION_UPDATE_SUCCESS.getHttpStatus())
+                .body(ApiResponse.success(SuccessCode.RESERVATION_UPDATE_SUCCESS, responseData));
     }
 }
