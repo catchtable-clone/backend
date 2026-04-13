@@ -1,8 +1,11 @@
 package com.catchtable.store.dto.read;
 
+import com.catchtable.remain.dto.read.RemainDateResponse;
 import com.catchtable.store.entity.Store;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+
+import java.util.List;
 
 @Getter
 @AllArgsConstructor
@@ -22,8 +25,9 @@ public class StoreDetailResponse {
     private String status;
     private Integer reviewCount;
     private Integer bookmarkCount;
+    private List<RemainDateResponse> remainDates;
 
-    public static StoreDetailResponse from(Store store) {
+    public static StoreDetailResponse from(Store store, List<RemainDateResponse> remainDates) {
         return new StoreDetailResponse(
                 store.getId(),
                 store.getStoreName(),
@@ -38,7 +42,8 @@ public class StoreDetailResponse {
                 store.getCloseTime(),
                 store.getStatus().name(),
                 store.getReviewCount(),
-                store.getBookmarkCount()
+                store.getBookmarkCount(),
+                remainDates
         );
     }
 }

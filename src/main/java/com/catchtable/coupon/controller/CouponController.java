@@ -1,11 +1,15 @@
 package com.catchtable.coupon.controller;
 
+import com.catchtable.coupon.dto.create.CouponTemplateCreateRequest;
+import com.catchtable.coupon.dto.create.CouponTemplateCreateResponse;
 import com.catchtable.coupon.dto.issue.CouponIssueResponse;
 import com.catchtable.coupon.dto.read.CouponReadResponse;
 import com.catchtable.coupon.service.CouponService;
 import com.catchtable.global.common.ApiResponse;
 import com.catchtable.global.common.SuccessCode;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,6 +21,16 @@ import java.util.List;
 public class CouponController {
 
     private final CouponService couponService;
+
+    @PostMapping("/templates")
+    public ResponseEntity<ApiResponse<CouponTemplateCreateResponse>> createTemplate(
+            @RequestHeader("X-User-Id") Long userId,
+            @Valid @RequestBody CouponTemplateCreateRequest request) {
+        CouponTemplateCreateResponse response = couponService.createTemplate(userId, request);
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(ApiResponse.success(SuccessCode.COUPON_TEMPLATE_CREATED, response));
+    }
 
     @PostMapping("/{templateId}/issue")
     public ResponseEntity<ApiResponse<CouponIssueResponse>> issueCoupon(

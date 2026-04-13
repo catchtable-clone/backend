@@ -51,6 +51,9 @@ public class Coupon {
     private Boolean isDeleted = false;
 
     public void use() {
+        if (this.couponTemplate.getExpiredAt().isBefore(LocalDateTime.now())) {
+            throw new CustomException(ErrorCode.COUPON_EXPIRED);
+        }
         if (this.status != CouponStatus.UNUSED) {
             throw new CustomException(ErrorCode.COUPON_NOT_USABLE);
         }

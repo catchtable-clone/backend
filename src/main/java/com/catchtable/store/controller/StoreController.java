@@ -10,6 +10,7 @@ import com.catchtable.store.dto.status.StoreStatusUpdateRequest;
 import com.catchtable.store.dto.status.StoreStatusUpdateResponse;
 import com.catchtable.store.dto.update.StoreUpdateRequest;
 import com.catchtable.store.dto.update.StoreUpdateResponse;
+import com.catchtable.store.entity.District;
 import com.catchtable.store.service.StoreService;
 
 import java.util.List;
@@ -40,6 +41,14 @@ public class StoreController {
     public ResponseEntity<ApiResponse<List<StoreListResponse>>> searchStores(
             @RequestParam String name) {
         List<StoreListResponse> stores = storeService.searchStores(name);
+        return ResponseEntity
+                .ok(ApiResponse.success(SuccessCode.STORE_LIST_OK, stores));
+    }
+
+    @GetMapping("/district")
+    public ResponseEntity<ApiResponse<List<StoreListResponse>>> getStoresByDistrict(
+            @RequestParam District district) {
+        List<StoreListResponse> stores = storeService.getStoresByDistrict(district);
         return ResponseEntity
                 .ok(ApiResponse.success(SuccessCode.STORE_LIST_OK, stores));
     }
