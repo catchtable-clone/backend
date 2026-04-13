@@ -13,9 +13,8 @@ import com.catchtable.store.repository.StoreRepository;
 import com.catchtable.user.entity.User;
 import com.catchtable.user.entity.UserRole;
 import com.catchtable.user.repository.UserRepository;
-import com.catchtable.global.common.ResponseCode;
-import com.catchtable.global.exception.AccessDeniedException;
-import com.catchtable.global.exception.ResourceNotFoundException;
+import com.catchtable.global.exception.CustomException;
+import com.catchtable.global.exception.ErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -118,8 +117,9 @@ class StoreServiceTest {
 
         // when & then
         assertThatThrownBy(() -> storeService.createStore(2L, request))
-                .isInstanceOf(AccessDeniedException.class)
-                .hasMessage(ResponseCode.ADMIN_ONLY_STORE_CREATE.getMessage());
+                .isInstanceOf(CustomException.class)
+                .satisfies(ex -> assertThat(((CustomException) ex).getErrorCode())
+                        .isEqualTo(ErrorCode.ADMIN_ONLY_STORE_CREATE));
     }
 
     @Test
@@ -164,8 +164,9 @@ class StoreServiceTest {
 
         // when & then
         assertThatThrownBy(() -> storeService.updateStore(1L, 999L, request))
-                .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessage(ResponseCode.STORE_NOT_FOUND.getMessage());
+                .isInstanceOf(CustomException.class)
+                .satisfies(ex -> assertThat(((CustomException) ex).getErrorCode())
+                        .isEqualTo(ErrorCode.STORE_NOT_FOUND));
     }
 
     @Test
@@ -239,8 +240,9 @@ class StoreServiceTest {
 
         // when & then
         assertThatThrownBy(() -> storeService.updateStoreStatus(1L, 1L, request))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage(ResponseCode.INACTIVE_STORE.getMessage());
+                .isInstanceOf(CustomException.class)
+                .satisfies(ex -> assertThat(((CustomException) ex).getErrorCode())
+                        .isEqualTo(ErrorCode.INACTIVE_STORE));
     }
 
     @Test
@@ -258,8 +260,9 @@ class StoreServiceTest {
 
         // when & then
         assertThatThrownBy(() -> storeService.updateStoreStatus(1L, 1L, request))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage(ResponseCode.SAME_STATUS.getMessage());
+                .isInstanceOf(CustomException.class)
+                .satisfies(ex -> assertThat(((CustomException) ex).getErrorCode())
+                        .isEqualTo(ErrorCode.SAME_STATUS));
     }
 
     @Test
@@ -307,8 +310,9 @@ class StoreServiceTest {
 
         // when & then
         assertThatThrownBy(() -> storeService.getStore(999L))
-                .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessage(ResponseCode.STORE_NOT_FOUND.getMessage());
+                .isInstanceOf(CustomException.class)
+                .satisfies(ex -> assertThat(((CustomException) ex).getErrorCode())
+                        .isEqualTo(ErrorCode.STORE_NOT_FOUND));
     }
 
     @Test
@@ -320,8 +324,9 @@ class StoreServiceTest {
 
         // when & then
         assertThatThrownBy(() -> storeService.getStore(1L))
-                .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessage(ResponseCode.STORE_NOT_FOUND.getMessage());
+                .isInstanceOf(CustomException.class)
+                .satisfies(ex -> assertThat(((CustomException) ex).getErrorCode())
+                        .isEqualTo(ErrorCode.STORE_NOT_FOUND));
     }
 
     private void setField(Object target, String fieldName, Object value) {

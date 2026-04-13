@@ -13,9 +13,8 @@ import com.catchtable.store.repository.StoreRepository;
 import com.catchtable.user.entity.User;
 import com.catchtable.user.entity.UserRole;
 import com.catchtable.user.repository.UserRepository;
-import com.catchtable.global.common.ResponseCode;
-import com.catchtable.global.exception.AccessDeniedException;
-import com.catchtable.global.exception.ResourceNotFoundException;
+import com.catchtable.global.exception.CustomException;
+import com.catchtable.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,9 +31,9 @@ public class StoreService {
     @Transactional
     public StoreCreateResponse createStore(Long userId, StoreCreateRequest request) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException(ResponseCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
         if (user.getRole() != UserRole.ADMIN) {
-            throw new AccessDeniedException(ResponseCode.ADMIN_ONLY_STORE_CREATE);
+            throw new CustomException(ErrorCode.ADMIN_ONLY_STORE_CREATE);
         }
         Store store = request.toEntity();
         Store saved = storeRepository.save(store);
@@ -44,13 +43,13 @@ public class StoreService {
     @Transactional
     public StoreUpdateResponse updateStore(Long userId, Long storeId, StoreUpdateRequest request) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException(ResponseCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
         if (user.getRole() != UserRole.ADMIN) {
-            throw new AccessDeniedException(ResponseCode.ADMIN_ONLY_STORE_UPDATE);
+            throw new CustomException(ErrorCode.ADMIN_ONLY_STORE_UPDATE);
         }
         Store store = storeRepository.findById(storeId)
                 .filter(s -> !s.getIsDeleted())
-                .orElseThrow(() -> new ResourceNotFoundException(ResponseCode.STORE_NOT_FOUND));
+                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
         store.update(
                 request.getStoreName(), request.getStoreImage(), request.getCategory(),
                 request.getLatitude(), request.getLongitude(), request.getAddress(),
@@ -62,12 +61,12 @@ public class StoreService {
     @Transactional
     public StoreStatusUpdateResponse updateStoreStatus(Long userId, Long storeId, StoreStatusUpdateRequest request) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException(ResponseCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
         if (user.getRole() != UserRole.ADMIN) {
-            throw new AccessDeniedException(ResponseCode.ADMIN_ONLY_STORE_STATUS);
+            throw new CustomException(ErrorCode.ADMIN_ONLY_STORE_STATUS);
         }
         Store store = storeRepository.findById(storeId)
-                .orElseThrow(() -> new ResourceNotFoundException(ResponseCode.STORE_NOT_FOUND));
+                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
         store.changeStatus(request.getStatus());
         return StoreStatusUpdateResponse.from(store.getId(), store.getStatus().name());
     }
@@ -84,7 +83,7 @@ public class StoreService {
     public StoreDetailResponse getStore(Long storeId) {
         Store store = storeRepository.findById(storeId)
                 .filter(s -> !s.getIsDeleted())
-                .orElseThrow(() -> new ResourceNotFoundException(ResponseCode.STORE_NOT_FOUND));
+                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
         return StoreDetailResponse.from(store);
     }
 }

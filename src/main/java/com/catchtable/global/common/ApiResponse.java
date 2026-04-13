@@ -1,5 +1,6 @@
 package com.catchtable.global.common;
 
+import com.catchtable.global.exception.ErrorCode;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -11,15 +12,23 @@ public class ApiResponse<T> {
     private String message;
     private T data;
 
-    public static <T> ApiResponse<T> success(ResponseCode code, T data) {
-        return new ApiResponse<>(code.getStatus(), code.getMessage(), data);
+    // 성공 (데이터 포함)
+    public static <T> ApiResponse<T> success(SuccessCode code, T data) {
+        return new ApiResponse<>(code.getHttpStatus().value(), code.getMessage(), data);
     }
 
-    public static ApiResponse<Void> error(ResponseCode code) {
-        return new ApiResponse<>(code.getStatus(), code.getMessage(), null);
+    // 성공 (데이터 없음)
+    public static ApiResponse<Void> success(SuccessCode code) {
+        return new ApiResponse<>(code.getHttpStatus().value(), code.getMessage(), null);
     }
 
-    public static ApiResponse<Void> error(ResponseCode code, String message) {
-        return new ApiResponse<>(code.getStatus(), message, null);
+    // 실패 (데이터 없음)
+    public static ApiResponse<Void> error(ErrorCode code) {
+        return new ApiResponse<>(code.getHttpStatus().value(), code.getMessage(), null);
+    }
+
+    // 실패 (커스텀 메시지)
+    public static ApiResponse<Void> error(ErrorCode code, String message) {
+        return new ApiResponse<>(code.getHttpStatus().value(), message, null);
     }
 }

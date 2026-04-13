@@ -1,5 +1,7 @@
 package com.catchtable.coupon.entity;
 
+import com.catchtable.global.exception.CustomException;
+import com.catchtable.global.exception.ErrorCode;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -51,7 +53,7 @@ public class CouponTemplate {
 
     public void decreaseRemain() {
         if (this.remain <= 0) {
-            throw new IllegalArgumentException("쿠폰이 모두 소진되었습니다.");
+            throw new CustomException(ErrorCode.COUPON_EXHAUSTED);
         }
         this.remain--;
     }

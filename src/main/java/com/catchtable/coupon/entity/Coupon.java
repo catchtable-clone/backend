@@ -1,5 +1,7 @@
 package com.catchtable.coupon.entity;
 
+import com.catchtable.global.exception.CustomException;
+import com.catchtable.global.exception.ErrorCode;
 import com.catchtable.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
@@ -50,7 +52,7 @@ public class Coupon {
 
     public void use() {
         if (this.status != CouponStatus.UNUSED) {
-            throw new IllegalArgumentException("사용 가능한 쿠폰이 아닙니다.");
+            throw new CustomException(ErrorCode.COUPON_NOT_USABLE);
         }
         this.status = CouponStatus.USED;
         this.usedAt = LocalDateTime.now();
@@ -58,7 +60,7 @@ public class Coupon {
 
     public void returnCoupon() {
         if (this.status != CouponStatus.USED) {
-            throw new IllegalArgumentException("사용된 쿠폰만 반환할 수 있습니다.");
+            throw new CustomException(ErrorCode.COUPON_NOT_RETURNABLE);
         }
         this.status = CouponStatus.UNUSED;
         this.usedAt = null;

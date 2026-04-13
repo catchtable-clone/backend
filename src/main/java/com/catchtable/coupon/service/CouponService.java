@@ -6,8 +6,8 @@ import com.catchtable.coupon.entity.Coupon;
 import com.catchtable.coupon.entity.CouponTemplate;
 import com.catchtable.coupon.repository.CouponRepository;
 import com.catchtable.coupon.repository.CouponTemplateRepository;
-import com.catchtable.global.common.ResponseCode;
-import com.catchtable.global.exception.ResourceNotFoundException;
+import com.catchtable.global.exception.CustomException;
+import com.catchtable.global.exception.ErrorCode;
 import com.catchtable.user.entity.User;
 import com.catchtable.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -27,13 +27,13 @@ public class CouponService {
     @Transactional
     public CouponIssueResponse issueCoupon(Long templateId, Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException(ResponseCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
         CouponTemplate template = couponTemplateRepository.findByIdWithLock(templateId)
-                .orElseThrow(() -> new ResourceNotFoundException(ResponseCode.COUPON_TEMPLATE_NOT_FOUND));
+                .orElseThrow(() -> new CustomException(ErrorCode.COUPON_TEMPLATE_NOT_FOUND));
 
         if (couponRepository.existsByUserIdAndCouponTemplateId(userId, templateId)) {
-            throw new IllegalArgumentException(ResponseCode.DUPLICATE_COUPON.getMessage());
+            throw new CustomException(ErrorCode.DUPLICATE_COUPON);
         }
 
         template.decreaseRemain();
@@ -57,10 +57,10 @@ public class CouponService {
     @Transactional
     public void useCoupon(Long couponId, Long userId) {
         Coupon coupon = couponRepository.findById(couponId)
-                .orElseThrow(() -> new ResourceNotFoundException(ResponseCode.COUPON_NOT_FOUND));
+                .orElseThrow(() -> new CustomException(ErrorCode.COUPON_NOT_FOUND));
 
         if (!coupon.getUser().getId().equals(userId)) {
-            throw new IllegalArgumentException(ResponseCode.OWN_COUPON_ONLY.getMessage());
+            throw new CustomException(ErrorCode.OWN_COUPON_ONLY);
         }
 
         coupon.use();
@@ -69,7 +69,7 @@ public class CouponService {
     @Transactional
     public void returnCoupon(Long couponId) {
         Coupon coupon = couponRepository.findById(couponId)
-                .orElseThrow(() -> new ResourceNotFoundException(ResponseCode.COUPON_NOT_FOUND));
+                .orElseThrow(() -> new CustomException(ErrorCode.COUPON_NOT_FOUND));
 
         coupon.returnCoupon();
     }

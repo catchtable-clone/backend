@@ -1,8 +1,6 @@
 package com.catchtable.global.exception;
 
 import com.catchtable.global.common.ApiResponse;
-import com.catchtable.global.common.ResponseCode;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -11,15 +9,16 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    // 400 - 잘못된 요청
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ApiResponse<Void>> handleIllegalArgument(IllegalArgumentException e) {
+    // CustomException 통합 처리 (403, 404, 400 등 ErrorCode 기반)
+    @ExceptionHandler(CustomException.class)
+    protected ResponseEntity<ApiResponse<Void>> handleCustomException(CustomException e) {
+        ErrorCode errorCode = e.getErrorCode();
         return ResponseEntity
-                .badRequest()
-                .body(ApiResponse.error(ResponseCode.BAD_REQUEST, e.getMessage()));
+                .status(errorCode.getHttpStatus())
+                .body(ApiResponse.error(errorCode));
     }
 
-    // 400 - 입력값 검증 실패
+    // 400 - 입력값 검증 실패 (@Valid 에러)
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Void>> handleValidation(MethodArgumentNotValidException e) {
         String message = e.getBindingResult().getFieldErrors().stream()
@@ -28,30 +27,22 @@ public class GlobalExceptionHandler {
                 .orElse("입력값이 올바르지 않습니다.");
         return ResponseEntity
                 .badRequest()
-                .body(ApiResponse.error(ResponseCode.BAD_REQUEST, message));
+                .body(ApiResponse.error(ErrorCode.BAD_REQUEST, message));
     }
 
-    // 403 - 권한 없음
-    @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<ApiResponse<Void>> handleAccessDenied(AccessDeniedException e) {
+    // 409 - 데이터 충돌 (낙관적 락)
+    @ExceptionHandler(jakarta.persistence.OptimisticLockException.class)
+    public ResponseEntity<ApiResponse<Void>> handleOptimisticLock(jakarta.persistence.OptimisticLockException e) {
         return ResponseEntity
-                .status(HttpStatus.FORBIDDEN)
-                .body(ApiResponse.error(e.getResponseCode()));
-    }
-
-    // 404 - 리소스 없음
-    @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ApiResponse<Void>> handleResourceNotFound(ResourceNotFoundException e) {
-        return ResponseEntity
-                .status(HttpStatus.NOT_FOUND)
-                .body(ApiResponse.error(e.getResponseCode()));
+                .status(ErrorCode.OPTIMISTIC_LOCK_CONFLICT.getHttpStatus())
+                .body(ApiResponse.error(ErrorCode.OPTIMISTIC_LOCK_CONFLICT));
     }
 
     // 500 - 서버 내부 오류
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleException(Exception e) {
         return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error(ResponseCode.INTERNAL_ERROR));
+                .status(ErrorCode.INTERNAL_ERROR.getHttpStatus())
+                .body(ApiResponse.error(ErrorCode.INTERNAL_ERROR));
     }
 }

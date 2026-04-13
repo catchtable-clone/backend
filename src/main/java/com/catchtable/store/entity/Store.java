@@ -1,6 +1,7 @@
 package com.catchtable.store.entity;
 
-import com.catchtable.global.common.ResponseCode;
+import com.catchtable.global.exception.CustomException;
+import com.catchtable.global.exception.ErrorCode;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -94,10 +95,10 @@ public class Store {
 
     public void changeStatus(StoreStatus newStatus) {
         if (this.status == StoreStatus.INACTIVE) {
-            throw new IllegalArgumentException(ResponseCode.INACTIVE_STORE.getMessage());
+            throw new CustomException(ErrorCode.INACTIVE_STORE);
         }
         if (this.status == newStatus) {
-            throw new IllegalArgumentException(ResponseCode.SAME_STATUS.getMessage());
+            throw new CustomException(ErrorCode.SAME_STATUS);
         }
         this.status = newStatus;
         if (newStatus == StoreStatus.INACTIVE) {

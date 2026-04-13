@@ -1,7 +1,7 @@
 package com.catchtable.store.controller;
 
 import com.catchtable.global.common.ApiResponse;
-import com.catchtable.global.common.ResponseCode;
+import com.catchtable.global.common.SuccessCode;
 import com.catchtable.store.dto.create.StoreCreateRequest;
 import com.catchtable.store.dto.create.StoreCreateResponse;
 import com.catchtable.store.dto.read.StoreDetailResponse;
@@ -33,7 +33,7 @@ public class StoreController {
         StoreCreateResponse response = storeService.createStore(userId, request);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(ApiResponse.success(ResponseCode.STORE_CREATED, response));
+                .body(ApiResponse.success(SuccessCode.STORE_CREATED, response));
     }
 
     @GetMapping
@@ -41,7 +41,7 @@ public class StoreController {
             @RequestParam String name) {
         List<StoreListResponse> stores = storeService.searchStores(name);
         return ResponseEntity
-                .ok(ApiResponse.success(ResponseCode.STORE_LIST_OK, stores));
+                .ok(ApiResponse.success(SuccessCode.STORE_LIST_OK, stores));
     }
 
     @GetMapping("/{storeId}")
@@ -49,7 +49,7 @@ public class StoreController {
             @PathVariable Long storeId) {
         StoreDetailResponse store = storeService.getStore(storeId);
         return ResponseEntity
-                .ok(ApiResponse.success(ResponseCode.STORE_DETAIL_OK, store));
+                .ok(ApiResponse.success(SuccessCode.STORE_DETAIL_OK, store));
     }
 
     @PutMapping("/{storeId}")
@@ -59,7 +59,7 @@ public class StoreController {
             @Valid @RequestBody StoreUpdateRequest request) {
         StoreUpdateResponse response = storeService.updateStore(userId, storeId, request);
         return ResponseEntity
-                .ok(ApiResponse.success(ResponseCode.STORE_UPDATED, response));
+                .ok(ApiResponse.success(SuccessCode.STORE_UPDATED, response));
     }
 
     @PatchMapping("/{storeId}")
@@ -69,6 +69,6 @@ public class StoreController {
             @Valid @RequestBody StoreStatusUpdateRequest request) {
         StoreStatusUpdateResponse response = storeService.updateStoreStatus(userId, storeId, request);
         return ResponseEntity
-                .ok(ApiResponse.success(ResponseCode.STORE_STATUS_UPDATED, response));
+                .ok(ApiResponse.success(SuccessCode.STORE_STATUS_UPDATED, response));
     }
 }

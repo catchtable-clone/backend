@@ -1,9 +1,8 @@
 package com.catchtable.store.controller;
 
-import com.catchtable.global.common.ResponseCode;
-import com.catchtable.global.exception.AccessDeniedException;
+import com.catchtable.global.exception.CustomException;
+import com.catchtable.global.exception.ErrorCode;
 import com.catchtable.global.exception.GlobalExceptionHandler;
-import com.catchtable.global.exception.ResourceNotFoundException;
 import com.catchtable.store.dto.create.StoreCreateResponse;
 import com.catchtable.store.dto.status.StoreStatusUpdateResponse;
 import com.catchtable.store.dto.update.StoreUpdateResponse;
@@ -84,7 +83,7 @@ class StoreControllerTest {
     void createStoreAccessDenied() throws Exception {
         // given
         given(storeService.createStore(eq(2L), any()))
-                .willThrow(new AccessDeniedException(ResponseCode.ADMIN_ONLY_STORE_CREATE));
+                .willThrow(new CustomException(ErrorCode.ADMIN_ONLY_STORE_CREATE));
 
         String requestBody = """
                 {
@@ -107,7 +106,7 @@ class StoreControllerTest {
                         .content(requestBody))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.status").value(403))
-                .andExpect(jsonPath("$.message").value("관리자만 매장을 등록할 수 있습니다."));
+                .andExpect(jsonPath("$.message").value(ErrorCode.ADMIN_ONLY_STORE_CREATE.getMessage()));
     }
 
     @Test
@@ -199,12 +198,12 @@ class StoreControllerTest {
     void getStoreNotFound() throws Exception {
         // given
         given(storeService.getStore(999L))
-                .willThrow(new ResourceNotFoundException(ResponseCode.STORE_NOT_FOUND));
+                .willThrow(new CustomException(ErrorCode.STORE_NOT_FOUND));
 
         // when & then
         mockMvc.perform(get("/api/v1/stores/999"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404))
-                .andExpect(jsonPath("$.message").value("매장을 찾을 수 없습니다."));
+                .andExpect(jsonPath("$.message").value(ErrorCode.STORE_NOT_FOUND.getMessage()));
     }
 }
