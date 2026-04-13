@@ -1,3 +1,23 @@
+CREATE TABLE IF NOT EXISTS users (
+    id BIGSERIAL PRIMARY KEY,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    nickname VARCHAR(255) NOT NULL UNIQUE,
+    profile_image VARCHAR(255),
+    google_id VARCHAR(255) NOT NULL UNIQUE,
+    role VARCHAR(255) NOT NULL,
+    status VARCHAR(255) NOT NULL,
+    noshow_count INTEGER NOT NULL,
+    noshow_restricted_until TIMESTAMP,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP,
+    is_deleted BOOLEAN NOT NULL
+);
+
+INSERT INTO users (email, nickname, google_id, role, status, noshow_count, is_deleted, created_at)
+VALUES ('admin@test.com', '관리자', 'google-admin-1', 'ADMIN', 'ACTIVE', 0, false, NOW()),
+       ('user1@test.com', '일반유저1', 'google-user-1', 'USER', 'ACTIVE', 0, false, NOW()),
+       ('user2@test.com', '일반유저2', 'google-user-2', 'USER', 'ACTIVE', 0, false, NOW());
+
 CREATE TABLE IF NOT EXISTS stores (
     id BIGSERIAL PRIMARY KEY,
     store_name VARCHAR(255) NOT NULL,

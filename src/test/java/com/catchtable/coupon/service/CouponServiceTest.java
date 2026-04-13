@@ -49,6 +49,16 @@ class CouponServiceTest {
                 .build();
     }
 
+    private User createAdminUser() {
+        return User.builder()
+                .id(1L)
+                .email("admin@gmail.com")
+                .nickname("관리자")
+                .googleId("google-admin-123")
+                .role(UserRole.ADMIN)
+                .build();
+    }
+
     private CouponTemplate createTemplate(Integer remain, LocalDateTime expiredAt) {
         return CouponTemplate.builder()
                 .id(1L)
@@ -68,6 +78,44 @@ class CouponServiceTest {
                 .couponTemplate(template)
                 .status(status)
                 .build();
+    }
+
+    // === 쿠폰 템플릿 생성 ===
+
+    @Test
+    @DisplayName("쿠폰 템플릿 생성 성공 - 관리자")
+    void createTemplateSuccess() {
+        given(userRepository.findById(1L)).willReturn(Optional.of(createAdminUser()));
+        given(couponTemplateRepository.save(any(CouponTemplate.class))).willAnswer(invocation -> {
+            CouponTemplate t = invocation.getArgument(0);
+            setField(t, "id", 1L);
+            return t;
+        });
+
+        var request = new com.catchtable.coupon.dto.create.CouponTemplateCreateRequest();
+        setField(request, "couponName", "10% 할인");
+        setField(request, "discountRate", 10);
+        setField(request, "amount", 100);
+        setField(request, "startedAt", LocalDateTime.now());
+        setField(request, "expiredAt", LocalDateTime.now().plusDays(30));
+
+        var response = couponService.createTemplate(1L, request);
+
+        assertThat(response.templateId()).isEqualTo(1L);
+        assertThat(response.couponName()).isEqualTo("10% 할인");
+    }
+
+    @Test
+    @DisplayName("쿠폰 템플릿 생성 실패 - 일반 사용자 권한 없음")
+    void createTemplateFailNotAdmin() {
+        given(userRepository.findById(2L)).willReturn(Optional.of(createUser(2L)));
+
+        var request = new com.catchtable.coupon.dto.create.CouponTemplateCreateRequest();
+
+        assertThatThrownBy(() -> couponService.createTemplate(2L, request))
+                .isInstanceOf(CustomException.class)
+                .satisfies(ex -> assertThat(((CustomException) ex).getErrorCode())
+                        .isEqualTo(ErrorCode.ADMIN_ONLY_COUPON_CREATE));
     }
 
     // === 쿠폰 발급 ===
