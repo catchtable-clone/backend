@@ -1,5 +1,8 @@
 package com.catchtable.reservation.service;
 
+import com.catchtable.coupon.entity.Coupon;
+import com.catchtable.coupon.repository.CouponRepository;
+import com.catchtable.coupon.service.CouponService;
 import com.catchtable.global.exception.CustomException;
 import com.catchtable.global.exception.ErrorCode;
 import com.catchtable.remain.entity.StoreRemain;
@@ -30,6 +33,8 @@ public class ReservationService {
     private final ReservationRepository reservationRepository;
     private final UserRepository userRepository;
     private final StoreRemainRepository storeRemainRepository;
+    private final CouponService couponService;
+    private final CouponRepository couponRepository;
 
     @Transactional
     public ReservationCreateResponseDto create(ReservationCreateRequestDto request) {
@@ -42,9 +47,18 @@ public class ReservationService {
         // 재고 차감 (remainTeam <= 0 검증 포함)
         storeRemain.decreaseRemainTeam();
 
+        // 쿠폰 적용 (선택)
+        Coupon coupon = null;
+        if (request.couponId() != null) {
+            couponService.useCoupon(request.couponId(), request.userId());
+            coupon = couponRepository.findById(request.couponId())
+                    .orElseThrow(() -> new CustomException(ErrorCode.COUPON_NOT_FOUND));
+        }
+
         Reservation reservation = Reservation.builder()
                 .user(user)
                 .storeRemain(storeRemain)
+                .coupon(coupon)
                 .member(request.member())
                 .build();
 
@@ -131,6 +145,11 @@ public class ReservationService {
         // 예약했던 시간대의 재고 복구
         StoreRemain storeRemain = reservation.getStoreRemain();
         storeRemain.increaseRemainTeam();
+
+        // 쿠폰 반환
+        if (reservation.getCoupon() != null) {
+            couponService.returnCoupon(reservation.getCoupon().getId());
+        }
     }
 
     @Transactional
@@ -152,6 +171,11 @@ public class ReservationService {
         // 기존 예약 취소 및 재고 복구
         oldReservation.changeStatus(ReservationStatus.CANCELED);
         oldReservation.getStoreRemain().increaseRemainTeam();
+
+        // 기존 쿠폰 반환
+        if (oldReservation.getCoupon() != null) {
+            couponService.returnCoupon(oldReservation.getCoupon().getId());
+        }
 
         // 새로운 예약 시간에 대한 재고 차감
         newStoreRemain.decreaseRemainTeam();

@@ -12,16 +12,6 @@ public class ApiResponse<T> {
     private String message;
     private T data;
 
-    // 기존 코드
-    public static <T> ApiResponse<T> success(int status, String message, T data) {
-        return new ApiResponse<>(status, message, data);
-    }
-
-    // 기존 코드
-    public static ApiResponse<Void> success(int status, String message) {
-        return new ApiResponse<>(status, message, null);
-    }
-
     // 성공 (데이터 포함)
     public static <T> ApiResponse<T> success(SuccessCode code, T data) {
         return new ApiResponse<>(code.getHttpStatus().value(), code.getMessage(), data);
@@ -32,13 +22,13 @@ public class ApiResponse<T> {
         return new ApiResponse<>(code.getHttpStatus().value(), code.getMessage(), null);
     }
 
-    // 실패 (데이터 포함)
-    public static <T> ApiResponse<T> error(ErrorCode code, T data) {
-        return new ApiResponse<>(code.getHttpStatus().value(), code.getMessage(), data);
-    }
-    
     // 실패 (데이터 없음)
     public static ApiResponse<Void> error(ErrorCode code) {
         return new ApiResponse<>(code.getHttpStatus().value(), code.getMessage(), null);
+    }
+
+    // 실패 (커스텀 메시지)
+    public static ApiResponse<Void> error(ErrorCode code, String message) {
+        return new ApiResponse<>(code.getHttpStatus().value(), message, null);
     }
 }

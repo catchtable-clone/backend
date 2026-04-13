@@ -1,25 +1,20 @@
 package com.catchtable.store.dto.update;
 
 import com.catchtable.store.entity.Store;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
 
-@Getter
-@AllArgsConstructor
-public class StoreUpdateResponse {
-
-    private Long storeId;
-    private String storeName;
-    private String storeImage;
-    private String category;
-    private String address;
-    private String district;
-    private Double latitude;
-    private Double longitude;
-    private Integer team;
-    private String openTime;
-    private String closeTime;
-
+public record StoreUpdateResponse(
+        Long storeId,
+        String storeName,
+        String storeImage,
+        String category,
+        String address,
+        String district,
+        Double latitude,
+        Double longitude,
+        Integer team,
+        String openTime,
+        String closeTime
+) {
     public static StoreUpdateResponse from(Store store) {
         return new StoreUpdateResponse(
                 store.getId(),

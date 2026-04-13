@@ -1,22 +1,17 @@
 package com.catchtable.store.dto.read;
 
 import com.catchtable.store.entity.Store;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
 
-@Getter
-@AllArgsConstructor
-public class StoreListResponse {
-
-    private Long storeId;
-    private String storeName;
-    private String category;
-    private String district;
-    private String address;
-    private String storeImage;
-    private Double latitude;
-    private Double longitude;
-
+public record StoreListResponse(
+        Long storeId,
+        String storeName,
+        String storeImage,
+        String category,
+        String address,
+        String district,
+        Double latitude,
+        Double longitude
+) {
     public static StoreListResponse from(Store store) {
         return new StoreListResponse(
                 store.getId(),

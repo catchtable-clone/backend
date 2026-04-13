@@ -1,10 +1,13 @@
 package com.catchtable.menu.controller;
 
-import com.catchtable.menu.dto.MenuActionResponse;
-import com.catchtable.menu.dto.MenuCreateRequest;
-import com.catchtable.menu.dto.MenuCreateResponse;
-import com.catchtable.menu.dto.MenuResponse;
-import com.catchtable.menu.dto.MenuUpdateRequest;
+import com.catchtable.global.common.ApiResponse;
+import com.catchtable.global.common.SuccessCode;
+import com.catchtable.menu.dto.create.MenuCreateRequest;
+import com.catchtable.menu.dto.create.MenuCreateResponse;
+import com.catchtable.menu.dto.delete.MenuDeleteResponse;
+import com.catchtable.menu.dto.read.MenuResponse;
+import com.catchtable.menu.dto.update.MenuUpdateRequest;
+import com.catchtable.menu.dto.update.MenuUpdateResponse;
 import com.catchtable.menu.service.MenuService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -26,81 +29,50 @@ public class MenuController {
 
     private final MenuService menuService;
 
-    @Operation(
-        summary = "메뉴 일괄 생성",
-        description = "특정 가게에 메뉴를 한 번에 여러 개 생성합니다. menuNames, prices는 같은 인덱스끼리 매핑됩니다."
-    )
+    @Operation(summary = "메뉴 일괄 생성", description = "특정 가게에 메뉴를 한 번에 여러 개 생성합니다.")
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<MenuCreateResponse> create(
-
-            @Parameter(description = "가게 ID", required = true)
-            @PathVariable
-            Long storeId,
-
-            @Parameter(description = "메뉴 정보 JSON")
-            @RequestPart("request")
-            MenuCreateRequest request,
-
-            @Parameter(description = "메뉴 이미지 파일 목록 (선택)")
-            @RequestPart(value = "menuImages", required = false)
-            List<MultipartFile> menuImages
-        ) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(menuService.create(storeId, request, menuImages));
+    public ResponseEntity<ApiResponse<MenuCreateResponse>> create(
+            @Parameter(description = "가게 ID", required = true) @PathVariable Long storeId,
+            @Parameter(description = "메뉴 정보 JSON") @RequestPart("request") MenuCreateRequest request,
+            @Parameter(description = "메뉴 이미지 파일 목록 (선택)") @RequestPart(value = "menuImages", required = false) List<MultipartFile> menuImages
+    ) {
+        MenuCreateResponse response = menuService.create(storeId, request, menuImages);
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(ApiResponse.success(SuccessCode.MENU_CREATED, response));
     }
 
-    @Operation(
-        summary = "가게 메뉴 목록 조회",
-        description = "특정 가게의 삭제되지 않은 메뉴 전체를 조회합니다."
-    )
+    @Operation(summary = "가게 메뉴 목록 조회", description = "특정 가게의 삭제되지 않은 메뉴 전체를 조회합니다.")
     @GetMapping
-    public ResponseEntity<List<MenuResponse>> getByStoreId(
-            @Parameter(description = "가게 ID", required = true) 
-            @PathVariable 
-            Long storeId
-        ) {
-        return ResponseEntity.ok(menuService.getByStoreId(storeId));
+    public ResponseEntity<ApiResponse<List<MenuResponse>>> getByStoreId(
+            @Parameter(description = "가게 ID", required = true) @PathVariable Long storeId
+    ) {
+        List<MenuResponse> response = menuService.getByStoreId(storeId);
+        return ResponseEntity
+                .ok(ApiResponse.success(SuccessCode.MENU_LIST_OK, response));
     }
 
-    @Operation(
-        summary = "메뉴 수정",
-        description = "특정 메뉴의 이름, 가격, 설명, 이미지를 수정합니다."
-    )
+    @Operation(summary = "메뉴 수정", description = "특정 메뉴의 이름, 가격, 설명, 이미지를 수정합니다.")
     @PatchMapping(value = "/{menuId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<MenuActionResponse> update(
-            @Parameter(description = "가게 ID", required = true)
-            @PathVariable
-            Long storeId,
-
-            @Parameter(description = "메뉴 ID", required = true)
-            @PathVariable
-            Long menuId,
-
-            @Parameter(description = "메뉴 수정 정보 JSON")
-            @RequestPart("request")
-            MenuUpdateRequest request,
-
-            @Parameter(description = "메뉴 이미지 파일 (선택)")
-            @RequestPart(value = "menuImage", required = false)
-            MultipartFile menuImage
-        ) {
-        return ResponseEntity.ok(menuService.update(menuId, request, menuImage));
+    public ResponseEntity<ApiResponse<MenuUpdateResponse>> update(
+            @Parameter(description = "가게 ID", required = true) @PathVariable Long storeId,
+            @Parameter(description = "메뉴 ID", required = true) @PathVariable Long menuId,
+            @Parameter(description = "메뉴 수정 정보 JSON") @RequestPart("request") MenuUpdateRequest request,
+            @Parameter(description = "메뉴 이미지 파일 (선택)") @RequestPart(value = "menuImage", required = false) MultipartFile menuImage
+    ) {
+        MenuUpdateResponse response = menuService.update(menuId, request, menuImage);
+        return ResponseEntity
+                .ok(ApiResponse.success(SuccessCode.MENU_UPDATED, response));
     }
 
-    @Operation(
-        summary = "메뉴 삭제",
-        description = "특정 메뉴를 소프트 삭제합니다. 실제 DB에서 삭제되지 않고 삭제 플래그만 변경됩니다."
-    )
+    @Operation(summary = "메뉴 삭제", description = "특정 메뉴를 소프트 삭제합니다.")
     @DeleteMapping("/{menuId}")
-    public ResponseEntity<MenuActionResponse> delete(
-            @Parameter(description = "가게 ID", required = true) 
-            @PathVariable 
-            Long storeId,
-
-            @Parameter(description = "메뉴 ID", required = true) 
-            @PathVariable 
-            Long menuId
-        ) {
-        return ResponseEntity.ok(menuService.delete(menuId));
+    public ResponseEntity<ApiResponse<MenuDeleteResponse>> delete(
+            @Parameter(description = "가게 ID", required = true) @PathVariable Long storeId,
+            @Parameter(description = "메뉴 ID", required = true) @PathVariable Long menuId
+    ) {
+        MenuDeleteResponse response = menuService.delete(menuId);
+        return ResponseEntity
+                .ok(ApiResponse.success(SuccessCode.MENU_DELETED, response));
     }
 }

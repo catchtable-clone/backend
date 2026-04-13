@@ -1,4 +1,4 @@
-package com.catchtable.menu.dto;
+package com.catchtable.menu.dto.update;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -12,4 +12,5 @@ public record MenuUpdateRequest(
 
         @Schema(description = "메뉴 설명", example = "크림 파스타")
         String description
-) {}
+) {
+}

@@ -7,6 +7,6 @@ import java.util.List;
 import java.util.Optional;
 
 public interface MenuRepository extends JpaRepository<Menu, Long> {
-    List<Menu> findByStoreIdAndIsDeletedFalse(Long storeId);
+    List<Menu> findByStore_IdAndIsDeletedFalse(Long storeId);
     Optional<Menu> findByIdAndIsDeletedFalse(Long id);
 }

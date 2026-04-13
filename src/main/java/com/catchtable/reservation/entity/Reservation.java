@@ -2,6 +2,7 @@ package com.catchtable.reservation.entity;
 
 import java.time.LocalDateTime;
 
+import com.catchtable.coupon.entity.Coupon;
 import com.catchtable.remain.entity.StoreRemain;
 import com.catchtable.user.entity.User;
 import jakarta.persistence.Entity;
@@ -37,6 +38,10 @@ public class Reservation {
     @JoinColumn(name = "remain_id", nullable = false)
     private StoreRemain storeRemain;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "coupon_id")
+    private Coupon coupon;
+
     private Integer member; //예약 인원
 
     @Enumerated(EnumType.STRING)
@@ -47,9 +52,10 @@ public class Reservation {
     private LocalDateTime updatedAt;
 
     @Builder
-    public Reservation(User user, StoreRemain storeRemain, Integer member, ReservationStatus status) {
+    public Reservation(User user, StoreRemain storeRemain, Coupon coupon, Integer member, ReservationStatus status) {
         this.user = user;
         this.storeRemain = storeRemain;
+        this.coupon = coupon;
         this.member = member;
         this.status = status;
     }
