@@ -8,6 +8,7 @@ import com.catchtable.reservation.repository.ReservationRepository;
 import com.catchtable.review.dto.create.ReviewCreateRequestDto;
 
 import com.catchtable.review.dto.read.ReviewResponseDto;
+import com.catchtable.review.dto.update.ReviewUpdateRequestDto;
 import com.catchtable.review.entity.Review;
 import com.catchtable.review.repository.ReviewRepository;
 import com.catchtable.store.entity.Store;
@@ -92,4 +93,20 @@ public class ReviewService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
+    public Long updateReview(Long userId, Long reviewId, ReviewUpdateRequestDto request) {
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new CustomException(ErrorCode.REVIEW_NOT_FOUND));
+
+        if (!review.getUser().getId().equals(userId)) {
+            throw new CustomException(ErrorCode.NOT_REVIEW_OWNER);
+        }
+
+        if (review.getIsDeleted()) {
+            throw new CustomException(ErrorCode.REVIEW_NOT_FOUND); // 이미 삭제된 리뷰
+        }
+
+        review.updateReview(request.star(), request.content(), request.reviewImage());
+        return review.getId();
+    }
 }

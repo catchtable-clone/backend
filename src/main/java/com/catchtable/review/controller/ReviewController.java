@@ -5,6 +5,7 @@ import com.catchtable.global.common.SuccessCode;
 import com.catchtable.review.dto.create.ReviewCreateRequestDto;
 
 import com.catchtable.review.dto.read.ReviewResponseDto;
+import com.catchtable.review.dto.update.ReviewUpdateRequestDto;
 import com.catchtable.review.service.ReviewService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -49,6 +50,18 @@ public class ReviewController {
         return ResponseEntity
                 .status(SuccessCode.REVIEW_LOOKUP_SUCCESS.getHttpStatus())
                 .body(ApiResponse.success(SuccessCode.REVIEW_LOOKUP_SUCCESS, responseData));
+    }
+
+    @PatchMapping("/{reviewId}")
+    public ResponseEntity<ApiResponse<Long>> updateReview(
+            @PathVariable Long reviewId,
+            @RequestParam Long userId,
+            @Valid @RequestBody ReviewUpdateRequestDto request
+    ) {
+        Long updatedReviewId = reviewService.updateReview(userId, reviewId, request);
+        return ResponseEntity
+                .status(SuccessCode.REVIEW_UPDATE_SUCCESS.getHttpStatus())
+                .body(ApiResponse.success(SuccessCode.REVIEW_UPDATE_SUCCESS, updatedReviewId));
     }
 
 }

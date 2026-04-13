@@ -70,4 +70,14 @@ public class Review {
     public void delete() {
         this.isDeleted = true;
     }
+
+    public void updateReview(Integer star, String content, String reviewImage) {
+        if (star != null) {
+            this.star = star;
+        }
+        if (content != null) {
+            this.content = content;
+        }
+        this.reviewImage = reviewImage;
+    }
 }
