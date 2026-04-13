@@ -1,5 +1,6 @@
 package com.catchtable.menu.entity;
 
+import com.catchtable.store.entity.Store;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -17,8 +18,9 @@ public class Menu {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private Long storeId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "store_id", nullable = false)
+    private Store store;
 
     @Column(nullable = false)
     private String menuName;
@@ -40,17 +42,17 @@ public class Menu {
     private boolean isDeleted = false;
 
     @Builder
-    private Menu(Long storeId, String menuName, String description, Integer price, String menuImage) {
-        this.storeId = storeId;
+    private Menu(Store store, String menuName, String description, Integer price, String menuImage) {
+        this.store = store;
         this.menuName = menuName;
         this.description = description;
         this.price = price;
         this.menuImage = menuImage;
     }
 
-    public static Menu create(Long storeId, String menuName, String menuImage, Integer price, String description) {
+    public static Menu create(Store store, String menuName, String menuImage, Integer price, String description) {
         return Menu.builder()
-                .storeId(storeId)
+                .store(store)
                 .menuName(menuName)
                 .menuImage(menuImage)
                 .price(price)
