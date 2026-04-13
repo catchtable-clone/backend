@@ -17,6 +17,9 @@ public record ReservationCreateRequestDto(
         @Schema(example = "4")
         @NotNull(message = "예약 인원은 필수입니다.")
         @Min(value = 1, message = "예약 인원은 1 이상이어야 합니다.")
-        Integer member
+        Integer member,
+
+        @Schema(example = "1", description = "쿠폰 ID (선택)")
+        Long couponId
 ) {
 }

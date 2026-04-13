@@ -1,18 +1,22 @@
 package com.catchtable.menu.service;
 
-import com.catchtable.menu.dto.MenuActionResponse;
-import com.catchtable.menu.dto.MenuCreateRequest;
-import com.catchtable.menu.dto.MenuCreateResponse;
-import com.catchtable.menu.dto.MenuResponse;
-import com.catchtable.menu.dto.MenuUpdateRequest;
+import com.catchtable.global.exception.CustomException;
+import com.catchtable.global.exception.ErrorCode;
+import com.catchtable.menu.dto.create.MenuCreateRequest;
+import com.catchtable.menu.dto.create.MenuCreateResponse;
+import com.catchtable.menu.dto.delete.MenuDeleteResponse;
+import com.catchtable.menu.dto.read.MenuResponse;
+import com.catchtable.menu.dto.update.MenuUpdateRequest;
+import com.catchtable.menu.dto.update.MenuUpdateResponse;
 import com.catchtable.menu.entity.Menu;
 import com.catchtable.menu.repository.MenuRepository;
+import com.catchtable.store.entity.Store;
+import com.catchtable.store.repository.StoreRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -21,45 +25,55 @@ import java.util.List;
 public class MenuService {
 
     private final MenuRepository menuRepository;
+    private final StoreRepository storeRepository;
 
-    //메뉴 생성 메서드
+    // 메뉴 일괄 생성
     @Transactional
     public MenuCreateResponse create(Long storeId, MenuCreateRequest request, List<MultipartFile> menuImages) {
-        List<Long> menuIds = new ArrayList<>();
+        Store store = storeRepository.findById(storeId)
+                .filter(s -> !s.getIsDeleted())
+                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
+
         List<MenuCreateRequest.MenuItemRequest> menus = request.menus();
-        for (int i = 0; i < menus.size(); i++) {
-            MenuCreateRequest.MenuItemRequest item = menus.get(i);
-            String menuImage = (menuImages != null && i < menuImages.size())
-                    ? menuImages.get(i).getOriginalFilename() : null;
-            Menu menu = Menu.create(storeId, item.menuName(), menuImage, item.price(), item.description());
-            menuIds.add(menuRepository.save(menu).getId());
-        }
+        List<Menu> menuList = java.util.stream.IntStream.range(0, menus.size())
+                .mapToObj(i -> {
+                    MenuCreateRequest.MenuItemRequest item = menus.get(i);
+                    String menuImage = (menuImages != null && i < menuImages.size())
+                            ? menuImages.get(i).getOriginalFilename() : null;
+                    return Menu.create(store, item.menuName(), menuImage, item.price(), item.description());
+                })
+                .toList();
+
+        List<Long> menuIds = menuRepository.saveAll(menuList).stream()
+                .map(Menu::getId)
+                .toList();
+
         return new MenuCreateResponse(menuIds);
     }
 
-    //메뉴 조회 메서드
+    // 메뉴 목록 조회
     public List<MenuResponse> getByStoreId(Long storeId) {
-        return menuRepository.findByStoreIdAndIsDeletedFalse(storeId).stream()
+        return menuRepository.findByStore_IdAndIsDeletedFalse(storeId).stream()
                 .map(MenuResponse::from)
                 .toList();
     }
 
-    //메뉴 수정 메서드
+    // 메뉴 수정
     @Transactional
-    public MenuActionResponse update(Long menuId, MenuUpdateRequest request, MultipartFile menuImage) {
+    public MenuUpdateResponse update(Long menuId, MenuUpdateRequest request, MultipartFile menuImage) {
         Menu menu = menuRepository.findByIdAndIsDeletedFalse(menuId)
-                .orElseThrow(() -> new RuntimeException("Menu not found: " + menuId));
+                .orElseThrow(() -> new CustomException(ErrorCode.MENU_NOT_FOUND));
         String menuImageName = menuImage != null ? menuImage.getOriginalFilename() : menu.getMenuImage();
         menu.update(request.menuName(), request.description(), request.price(), menuImageName);
-        return new MenuActionResponse(menuId, "메뉴 수정 완료");
+        return new MenuUpdateResponse(menuId, "메뉴 수정 완료");
     }
 
-    //메뉴 삭제 메서드
+    // 메뉴 삭제
     @Transactional
-    public MenuActionResponse delete(Long menuId) {
+    public MenuDeleteResponse delete(Long menuId) {
         Menu menu = menuRepository.findByIdAndIsDeletedFalse(menuId)
-                .orElseThrow(() -> new RuntimeException("Menu not found: " + menuId));
+                .orElseThrow(() -> new CustomException(ErrorCode.MENU_NOT_FOUND));
         menu.softDelete();
-        return new MenuActionResponse(menuId, "메뉴 삭제 완료");
+        return new MenuDeleteResponse(menuId, "메뉴 삭제 완료");
     }
 }
