@@ -16,4 +16,7 @@ public interface StoreRemainRepository extends JpaRepository<StoreRemain, Long> 
 
     @Query("SELECT sr FROM StoreRemain sr WHERE sr.store.id = :storeId AND sr.remainDate = :date ORDER BY sr.remainTime ASC")
     List<StoreRemain> findAllByStoreIdAndDate(@Param("storeId") Long storeId, @Param("date") LocalDate date);
+
+    @Query("SELECT sr.remainDate, SUM(sr.remainTeam) FROM StoreRemain sr WHERE sr.store.id = :storeId AND sr.remainDate >= :fromDate GROUP BY sr.remainDate ORDER BY sr.remainDate ASC")
+    List<Object[]> findDateAvailabilityByStoreId(@Param("storeId") Long storeId, @Param("fromDate") LocalDate fromDate);
 }
