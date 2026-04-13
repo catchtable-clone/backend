@@ -7,6 +7,7 @@ import com.catchtable.reservation.entity.ReservationStatus;
 import com.catchtable.reservation.repository.ReservationRepository;
 import com.catchtable.review.dto.create.ReviewCreateRequestDto;
 
+import com.catchtable.review.dto.read.ReviewResponseDto;
 import com.catchtable.review.entity.Review;
 import com.catchtable.review.repository.ReviewRepository;
 import com.catchtable.store.entity.Store;
@@ -16,6 +17,9 @@ import com.catchtable.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -63,4 +67,29 @@ public class ReviewService {
 
         return reviewRepository.save(review).getId();
     }
+
+    @Transactional(readOnly = true)
+    public List<ReviewResponseDto> getStoreReviews(Long storeId) {
+        if (!storeRepository.existsById(storeId)) {
+            throw new CustomException(ErrorCode.STORE_NOT_FOUND);
+        }
+
+        List<Review> reviews = reviewRepository.findAllByStoreIdAndIsDeletedFalseOrderByCreatedAtDesc(storeId);
+        return reviews.stream()
+                .map(ReviewResponseDto::from)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<ReviewResponseDto> getMyReviews(Long userId) {
+        if (!userRepository.existsById(userId)) {
+            throw new CustomException(ErrorCode.USER_NOT_FOUND);
+        }
+
+        List<Review> reviews = reviewRepository.findAllByUserIdAndIsDeletedFalseOrderByCreatedAtDesc(userId);
+        return reviews.stream()
+                .map(ReviewResponseDto::from)
+                .collect(Collectors.toList());
+    }
+
 }

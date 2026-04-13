@@ -1,4 +1,4 @@
-package com.catchtable.review.dto.response;
+package com.catchtable.review.dto.read;
 
 import com.catchtable.review.entity.Review;
 
