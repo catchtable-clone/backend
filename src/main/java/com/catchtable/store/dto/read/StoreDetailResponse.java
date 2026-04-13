@@ -2,31 +2,26 @@ package com.catchtable.store.dto.read;
 
 import com.catchtable.remain.dto.read.RemainDateResponse;
 import com.catchtable.store.entity.Store;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
 
 import java.util.List;
 
-@Getter
-@AllArgsConstructor
-public class StoreDetailResponse {
-
-    private Long storeId;
-    private String storeName;
-    private String storeImage;
-    private String category;
-    private String address;
-    private String district;
-    private Double latitude;
-    private Double longitude;
-    private Integer team;
-    private String openTime;
-    private String closeTime;
-    private String status;
-    private Integer reviewCount;
-    private Integer bookmarkCount;
-    private List<RemainDateResponse> remainDates;
-
+public record StoreDetailResponse(
+        Long storeId,
+        String storeName,
+        String storeImage,
+        String category,
+        String address,
+        String district,
+        Double latitude,
+        Double longitude,
+        Integer team,
+        String openTime,
+        String closeTime,
+        String status,
+        Integer reviewCount,
+        Integer bookmarkCount,
+        List<RemainDateResponse> remainDates
+) {
     public static StoreDetailResponse from(Store store, List<RemainDateResponse> remainDates) {
         return new StoreDetailResponse(
                 store.getId(),

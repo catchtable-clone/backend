@@ -95,9 +95,9 @@ public class StoreService {
                 .filter(s -> !s.getIsDeleted())
                 .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
         store.update(
-                request.getStoreName(), request.getStoreImage(), request.getCategory(),
-                request.getLatitude(), request.getLongitude(), request.getAddress(),
-                request.getDistrict(), request.getTeam(), request.getOpenTime(), request.getCloseTime()
+                request.storeName(), request.storeImage(), request.category(),
+                request.latitude(), request.longitude(), request.address(),
+                request.district(), request.team(), request.openTime(), request.closeTime()
         );
         return StoreUpdateResponse.from(store);
     }
@@ -112,7 +112,7 @@ public class StoreService {
         }
         Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
-        store.changeStatus(request.getStatus());
+        store.changeStatus(request.status());
         return StoreStatusUpdateResponse.from(store.getId(), store.getStatus().name());
     }
 }

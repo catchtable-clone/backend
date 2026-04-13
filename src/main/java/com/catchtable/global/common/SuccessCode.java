@@ -20,6 +20,21 @@ public enum SuccessCode implements ResponseCode {
     COUPON_ISSUED(HttpStatus.OK, "쿠폰이 발급되었습니다."),
     COUPON_LIST_OK(HttpStatus.OK, "내 쿠폰 목록을 조회했습니다."),
 
+    // Menu
+    MENU_CREATED(HttpStatus.CREATED, "메뉴가 생성되었습니다."),
+    MENU_LIST_OK(HttpStatus.OK, "메뉴 목록을 조회했습니다."),
+    MENU_UPDATED(HttpStatus.OK, "메뉴가 수정되었습니다."),
+    MENU_DELETED(HttpStatus.OK, "메뉴가 삭제되었습니다."),
+
+    // Bookmark
+    BOOKMARK_FOLDER_CREATED(HttpStatus.CREATED, "북마크 폴더가 생성되었습니다."),
+    BOOKMARK_FOLDER_LIST_OK(HttpStatus.OK, "북마크 폴더 목록을 조회했습니다."),
+    BOOKMARK_FOLDER_UPDATED(HttpStatus.OK, "북마크 폴더 이름이 수정되었습니다."),
+    BOOKMARK_FOLDER_DELETED(HttpStatus.OK, "북마크 폴더가 삭제되었습니다."),
+    BOOKMARK_CREATED(HttpStatus.CREATED, "북마크가 추가되었습니다."),
+    BOOKMARK_LIST_OK(HttpStatus.OK, "북마크 목록을 조회했습니다."),
+    BOOKMARK_DELETED(HttpStatus.OK, "북마크가 삭제되었습니다."),
+
     // Reservation
     RESERVATION_CREATE_SUCCESS(HttpStatus.CREATED, "예약이 성공적으로 생성되었습니다."),
     RESERVATION_LOOKUP_SUCCESS(HttpStatus.OK, "예약 조회가 완료되었습니다."),

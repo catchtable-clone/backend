@@ -92,12 +92,8 @@ class CouponServiceTest {
             return t;
         });
 
-        var request = new com.catchtable.coupon.dto.create.CouponTemplateCreateRequest();
-        setField(request, "couponName", "10% 할인");
-        setField(request, "discountRate", 10);
-        setField(request, "amount", 100);
-        setField(request, "startedAt", LocalDateTime.now());
-        setField(request, "expiredAt", LocalDateTime.now().plusDays(30));
+        var request = new com.catchtable.coupon.dto.create.CouponTemplateCreateRequest(
+                "10% 할인", 10, 100, LocalDateTime.now(), LocalDateTime.now().plusDays(30));
 
         var response = couponService.createTemplate(1L, request);
 
@@ -110,7 +106,8 @@ class CouponServiceTest {
     void createTemplateFailNotAdmin() {
         given(userRepository.findById(2L)).willReturn(Optional.of(createUser(2L)));
 
-        var request = new com.catchtable.coupon.dto.create.CouponTemplateCreateRequest();
+        var request = new com.catchtable.coupon.dto.create.CouponTemplateCreateRequest(
+                "10% 할인", 10, 100, LocalDateTime.now(), LocalDateTime.now().plusDays(30));
 
         assertThatThrownBy(() -> couponService.createTemplate(2L, request))
                 .isInstanceOf(CustomException.class)

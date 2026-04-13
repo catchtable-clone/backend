@@ -36,6 +36,16 @@ public enum ErrorCode implements ResponseCode {
     COUPON_NOT_RETURNABLE(HttpStatus.BAD_REQUEST, "사용된 쿠폰만 반환할 수 있습니다."),
     COUPON_EXHAUSTED(HttpStatus.BAD_REQUEST, "쿠폰이 모두 소진되었습니다."),
 
+    // Menu
+    MENU_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 메뉴입니다."),
+
+    // Bookmark
+    BOOKMARK_FOLDER_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 폴더입니다."),
+    BOOKMARK_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 즐겨찾기입니다."),
+    BOOKMARK_FOLDER_NOT_OWNER(HttpStatus.FORBIDDEN, "본인의 폴더만 접근할 수 있습니다."),
+    BOOKMARK_NOT_OWNER(HttpStatus.FORBIDDEN, "본인의 즐겨찾기만 삭제할 수 있습니다."),
+    BOOKMARK_DUPLICATE(HttpStatus.BAD_REQUEST, "이미 해당 폴더에 저장된 매장입니다."),
+
     // Reservation
     RESERVATION_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 예약입니다."),
     NOT_RESERVATION_OWNER(HttpStatus.FORBIDDEN, "본인의 예약만 접근할 수 있습니다."),

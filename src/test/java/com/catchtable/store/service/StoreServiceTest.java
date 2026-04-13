@@ -1,8 +1,8 @@
 package com.catchtable.store.service;
 
-import com.catchtable.store.dto.create.StoreCreateRequest;
 import com.catchtable.store.dto.status.StoreStatusUpdateRequest;
 import com.catchtable.store.dto.status.StoreStatusUpdateResponse;
+import com.catchtable.store.dto.create.StoreCreateRequest;
 import com.catchtable.store.entity.*;
 import com.catchtable.store.repository.StoreRepository;
 import com.catchtable.remain.repository.StoreRemainRepository;
@@ -82,7 +82,10 @@ class StoreServiceTest {
     void createStoreFailNotAdmin() {
         given(userRepository.findById(2L)).willReturn(Optional.of(createNormalUser()));
 
-        assertThatThrownBy(() -> storeService.createStore(2L, new StoreCreateRequest()))
+        var request = new StoreCreateRequest("모수 서울", null, Category.WESTERN,
+                37.534, 126.993, "서울 용산구", District.YONGSAN, 10, "11:00", "22:00");
+
+        assertThatThrownBy(() -> storeService.createStore(2L, request))
                 .isInstanceOf(CustomException.class)
                 .satisfies(ex -> assertThat(((CustomException) ex).getErrorCode())
                         .isEqualTo(ErrorCode.ADMIN_ONLY_STORE_CREATE));
@@ -97,12 +100,11 @@ class StoreServiceTest {
         Store store = createTestStore(1L, "모수 서울", StoreStatus.ACTIVE, false);
         given(storeRepository.findById(1L)).willReturn(Optional.of(store));
 
-        StoreStatusUpdateRequest request = new StoreStatusUpdateRequest();
-        setField(request, "status", StoreStatus.REST);
+        var request = new StoreStatusUpdateRequest(StoreStatus.REST);
 
         StoreStatusUpdateResponse response = storeService.updateStoreStatus(1L, 1L, request);
 
-        assertThat(response.getStatus()).isEqualTo("REST");
+        assertThat(response.status()).isEqualTo("REST");
     }
 
     @Test
@@ -112,12 +114,11 @@ class StoreServiceTest {
         Store store = createTestStore(1L, "모수 서울", StoreStatus.ACTIVE, false);
         given(storeRepository.findById(1L)).willReturn(Optional.of(store));
 
-        StoreStatusUpdateRequest request = new StoreStatusUpdateRequest();
-        setField(request, "status", StoreStatus.INACTIVE);
+        var request = new StoreStatusUpdateRequest(StoreStatus.INACTIVE);
 
         StoreStatusUpdateResponse response = storeService.updateStoreStatus(1L, 1L, request);
 
-        assertThat(response.getStatus()).isEqualTo("INACTIVE");
+        assertThat(response.status()).isEqualTo("INACTIVE");
         assertThat(store.getIsDeleted()).isTrue();
     }
 
@@ -128,8 +129,7 @@ class StoreServiceTest {
         Store store = createTestStore(1L, "모수 서울", StoreStatus.INACTIVE, true);
         given(storeRepository.findById(1L)).willReturn(Optional.of(store));
 
-        StoreStatusUpdateRequest request = new StoreStatusUpdateRequest();
-        setField(request, "status", StoreStatus.ACTIVE);
+        var request = new StoreStatusUpdateRequest(StoreStatus.ACTIVE);
 
         assertThatThrownBy(() -> storeService.updateStoreStatus(1L, 1L, request))
                 .isInstanceOf(CustomException.class)
@@ -144,22 +144,11 @@ class StoreServiceTest {
         Store store = createTestStore(1L, "모수 서울", StoreStatus.ACTIVE, false);
         given(storeRepository.findById(1L)).willReturn(Optional.of(store));
 
-        StoreStatusUpdateRequest request = new StoreStatusUpdateRequest();
-        setField(request, "status", StoreStatus.ACTIVE);
+        var request = new StoreStatusUpdateRequest(StoreStatus.ACTIVE);
 
         assertThatThrownBy(() -> storeService.updateStoreStatus(1L, 1L, request))
                 .isInstanceOf(CustomException.class)
                 .satisfies(ex -> assertThat(((CustomException) ex).getErrorCode())
                         .isEqualTo(ErrorCode.SAME_STATUS));
-    }
-
-    private void setField(Object target, String fieldName, Object value) {
-        try {
-            var field = target.getClass().getDeclaredField(fieldName);
-            field.setAccessible(true);
-            field.set(target, value);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
     }
 }
