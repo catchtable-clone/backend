@@ -18,6 +18,20 @@ VALUES ('admin@test.com', '관리자', 'google-admin-1', 'ADMIN', 'ACTIVE', 0, f
        ('user1@test.com', '일반유저1', 'google-user-1', 'USER', 'ACTIVE', 0, false, NOW()),
        ('user2@test.com', '일반유저2', 'google-user-2', 'USER', 'ACTIVE', 0, false, NOW());
 
+CREATE TABLE IF NOT EXISTS bookmark_folders (
+    id          BIGSERIAL PRIMARY KEY,
+    user_id     BIGINT       NOT NULL REFERENCES users (id),
+    folder_name VARCHAR(255) NOT NULL,
+    folder_type VARCHAR(255) NOT NULL,
+    created_at  TIMESTAMP    NOT NULL,
+    updated_at  TIMESTAMP,
+    is_deleted  BOOLEAN      NOT NULL DEFAULT false
+);
+
+INSERT INTO bookmark_folders (user_id, folder_name, folder_type, is_deleted, created_at)
+SELECT id, '기본 폴더', 'DEFAULT', false, NOW()
+FROM users;
+
 CREATE TABLE IF NOT EXISTS stores (
     id BIGSERIAL PRIMARY KEY,
     store_name VARCHAR(255) NOT NULL,

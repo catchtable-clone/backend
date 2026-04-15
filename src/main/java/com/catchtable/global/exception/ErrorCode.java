@@ -45,6 +45,7 @@ public enum ErrorCode implements ResponseCode {
     BOOKMARK_FOLDER_NOT_OWNER(HttpStatus.FORBIDDEN, "본인의 폴더만 접근할 수 있습니다."),
     BOOKMARK_NOT_OWNER(HttpStatus.FORBIDDEN, "본인의 즐겨찾기만 삭제할 수 있습니다."),
     BOOKMARK_DUPLICATE(HttpStatus.BAD_REQUEST, "이미 해당 폴더에 저장된 매장입니다."),
+    BOOKMARK_DEFAULT_FOLDER_IMMUTABLE(HttpStatus.BAD_REQUEST, "기본 폴더는 수정하거나 삭제할 수 없습니다."),
 
     // Reservation
     RESERVATION_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 예약입니다."),
@@ -61,6 +62,11 @@ public enum ErrorCode implements ResponseCode {
     NOT_REVIEW_OWNER(HttpStatus.FORBIDDEN, "본인의 리뷰만 접근할 수 있습니다."),
     REVIEW_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, "이미 해당 예약에 대한 리뷰를 작성했습니다."),
     REVIEW_NOT_ALLOWED(HttpStatus.FORBIDDEN, "예약이 확정된 사용자만 리뷰를 작성할 수 있습니다.");
+    // Chat
+    CHAT_SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 채팅 세션입니다."),
+    CHAT_SESSION_NOT_OWNER(HttpStatus.FORBIDDEN, "본인의 채팅 세션만 접근할 수 있습니다."),
+    CHAT_DAILY_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "일일 메시지 제한(100회)을 초과했습니다."),
+    CHAT_AI_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "AI 응답 생성 중 오류가 발생했습니다.");
 
     private final HttpStatus httpStatus;
     private final String message;
