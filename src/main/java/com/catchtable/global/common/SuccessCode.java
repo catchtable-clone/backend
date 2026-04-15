@@ -48,7 +48,9 @@ public enum SuccessCode implements ResponseCode {
     // Review 도메인
     REVIEW_CREATE_SUCCESS(HttpStatus.CREATED, "리뷰가 성공적으로 작성되었습니다."),
     REVIEW_UPDATE_SUCCESS(HttpStatus.OK, "리뷰가 성공적으로 수정되었습니다."),
-    REVIEW_LOOKUP_SUCCESS(HttpStatus.OK, "리뷰 조회가 완료되었습니다.");
+    REVIEW_LOOKUP_SUCCESS(HttpStatus.OK, "리뷰 조회가 완료되었습니다."),
+    REVIEW_DELETE_SUCCESS(HttpStatus.OK, "리뷰가 성공적으로 삭제되었습니다.");
+
 
     private final HttpStatus httpStatus;
     private final String message;

@@ -109,4 +109,20 @@ public class ReviewService {
         review.updateReview(request.star(), request.content(), request.reviewImage());
         return review.getId();
     }
+
+    @Transactional
+    public void deleteReview(Long userId, Long reviewId) {
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new CustomException(ErrorCode.REVIEW_NOT_FOUND));
+
+        if (!review.getUser().getId().equals(userId)) {
+            throw new CustomException(ErrorCode.NOT_REVIEW_OWNER);
+        }
+
+        if (review.getIsDeleted()) {
+            throw new CustomException(ErrorCode.REVIEW_NOT_FOUND);
+        }
+
+        review.delete();
+    }
 }

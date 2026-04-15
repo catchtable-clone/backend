@@ -64,4 +64,14 @@ public class ReviewController {
                 .body(ApiResponse.success(SuccessCode.REVIEW_UPDATE_SUCCESS, updatedReviewId));
     }
 
+    @DeleteMapping("/{reviewId}")
+    public ResponseEntity<ApiResponse<Void>> deleteReview(
+            @PathVariable Long reviewId,
+            @RequestParam Long userId
+    ) {
+        reviewService.deleteReview(userId, reviewId);
+        return ResponseEntity
+                .status(SuccessCode.REVIEW_DELETE_SUCCESS.getHttpStatus())
+                .body(ApiResponse.success(SuccessCode.REVIEW_DELETE_SUCCESS));
+    }
 }

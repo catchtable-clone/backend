@@ -67,7 +67,7 @@ public class Reservation {
         this.updatedAt = now;
 
         if (this.status == null) {
-            this.status = ReservationStatus.PENDING;
+            this.status = ReservationStatus.CONFIRMED;
         }
     }
 
