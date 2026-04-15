@@ -13,6 +13,7 @@ import com.catchtable.review.entity.Review;
 import com.catchtable.review.repository.ReviewRepository;
 import com.catchtable.store.entity.Store;
 import com.catchtable.store.repository.StoreRepository;
+import com.catchtable.store.service.StoreService;
 import com.catchtable.user.entity.User;
 import com.catchtable.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,7 @@ public class ReviewService {
     private final ReservationRepository reservationRepository;
     private final UserRepository userRepository;
     private final StoreRepository storeRepository;
+    private final StoreService storeService;
 
     @Transactional
     public Long createReview(Long userId, ReviewCreateRequestDto request) {
@@ -66,7 +68,12 @@ public class ReviewService {
                 .reviewImage(request.reviewImage())
                 .build();
 
-        return reviewRepository.save(review).getId();
+        reviewRepository.save(review);
+
+        // 리뷰 카운트 증가
+        storeService.increaseReviewCount(store.getId());
+
+        return review.getId();
     }
 
     @Transactional(readOnly = true)
@@ -124,5 +131,8 @@ public class ReviewService {
         }
 
         review.delete();
+
+        // 리뷰 카운트 감소
+        storeService.decreaseReviewCount(review.getStore().getId());
     }
 }
