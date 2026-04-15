@@ -39,7 +39,7 @@ public class ChatbotService {
         Long sessionId = userMessage.getChatSession().getId();
 
         // 2단계: AI 호출 (트랜잭션 없음 — DB 커넥션 안 잡음)
-        List<ChatMessage> history = dbService.getHistory(sessionId);
+        List<ChatMessage> history = dbService.getRecentHistory(sessionId, MAX_HISTORY_SIZE);
         String reply = callAi(history);
         if (reply == null || reply.isBlank()) {
             throw new CustomException(ErrorCode.CHAT_AI_ERROR);
@@ -59,11 +59,7 @@ public class ChatbotService {
         List<Message> messages = new java.util.ArrayList<>();
         messages.add(new SystemMessage(SYSTEM_PROMPT));
 
-        // Sliding Window: 최근 20개 메시지만 AI에 전달
-        int fromIndex = Math.max(0, history.size() - MAX_HISTORY_SIZE);
-        List<ChatMessage> recentHistory = history.subList(fromIndex, history.size());
-
-        for (ChatMessage msg : recentHistory) {
+        for (ChatMessage msg : history) {
             if (msg.getRole() == MessageRole.USER) {
                 messages.add(new UserMessage(msg.getContent()));
             } else {
@@ -76,17 +72,29 @@ public class ChatbotService {
                     .call()
                     .content();
         } catch (Exception e) {
-            String message = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
+            String message = getFullErrorMessage(e).toLowerCase();
+            if (message.contains("api key") || message.contains("auth") || message.contains("401")) {
+                throw new CustomException(ErrorCode.CHAT_AI_AUTH_ERROR);
+            }
             if (message.contains("rate") || message.contains("429") || message.contains("quota")) {
                 throw new CustomException(ErrorCode.CHAT_AI_RATE_LIMIT);
             }
             if (message.contains("timeout") || message.contains("timed out")) {
                 throw new CustomException(ErrorCode.CHAT_AI_TIMEOUT);
             }
-            if (message.contains("auth") || message.contains("401") || message.contains("api key")) {
-                throw new CustomException(ErrorCode.CHAT_AI_AUTH_ERROR);
-            }
             throw new CustomException(ErrorCode.CHAT_AI_ERROR);
         }
+    }
+
+    private String getFullErrorMessage(Exception e) {
+        StringBuilder sb = new StringBuilder();
+        Throwable current = e;
+        while (current != null) {
+            if (current.getMessage() != null) {
+                sb.append(current.getMessage()).append(" ");
+            }
+            current = current.getCause();
+        }
+        return sb.toString();
     }
 }

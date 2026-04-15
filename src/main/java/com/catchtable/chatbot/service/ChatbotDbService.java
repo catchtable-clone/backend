@@ -34,11 +34,11 @@ public class ChatbotDbService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        ChatSession session = chatSessionRepository.findByUser(user)
+        ChatSession session = chatSessionRepository.findByUserAndIsDeletedFalse(user)
                 .orElseGet(() -> chatSessionRepository.save(
                         ChatSession.builder().user(user).build()));
 
-        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
+        LocalDateTime startOfDay = LocalDate.now(java.time.ZoneId.of("Asia/Seoul")).atStartOfDay();
         long dailyCount = chatMessageRepository.countByChatSessionAndRoleAndCreatedAtAfter(
                 session, MessageRole.USER, startOfDay);
         if (dailyCount >= DAILY_MESSAGE_LIMIT) {
@@ -69,13 +69,15 @@ public class ChatbotDbService {
         return chatMessageRepository.save(assistantMessage);
     }
 
-    // 대화 이력 조회
+    // 대화 이력 조회 (AI 전달용, 최근 20개)
     @Transactional(readOnly = true)
-    public List<ChatMessage> getHistory(Long sessionId) {
+    public List<ChatMessage> getRecentHistory(Long sessionId, int limit) {
         ChatSession session = chatSessionRepository.findById(sessionId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CHAT_SESSION_NOT_FOUND));
 
-        return chatMessageRepository.findByChatSessionOrderByCreatedAtAsc(session);
+        List<ChatMessage> recent = chatMessageRepository.findByChatSessionOrderByCreatedAtDesc(
+                session, org.springframework.data.domain.PageRequest.of(0, limit));
+        return recent.reversed();
     }
 
     // 대화 내역 조회 (API 응답용)
@@ -84,7 +86,7 @@ public class ChatbotDbService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        ChatSession session = chatSessionRepository.findByUser(user)
+        ChatSession session = chatSessionRepository.findByUserAndIsDeletedFalse(user)
                 .orElseThrow(() -> new CustomException(ErrorCode.CHAT_SESSION_NOT_FOUND));
 
         return chatMessageRepository.findByChatSessionOrderByCreatedAtAsc(session).stream()

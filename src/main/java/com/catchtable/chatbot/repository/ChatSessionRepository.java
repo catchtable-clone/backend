@@ -8,5 +8,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ChatSessionRepository extends JpaRepository<ChatSession, Long> {
 
-    Optional<ChatSession> findByUser(User user);
+    Optional<ChatSession> findByUserAndIsDeletedFalse(User user);
 }
