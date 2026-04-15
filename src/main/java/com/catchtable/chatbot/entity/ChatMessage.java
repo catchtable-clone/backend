@@ -38,6 +38,9 @@ public class ChatMessage {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
+    @Column(name = "is_deleted", nullable = false)
+    private Boolean isDeleted = false;
+
     private LocalDateTime createdAt;
 
     @Builder
