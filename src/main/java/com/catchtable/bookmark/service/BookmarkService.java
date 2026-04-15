@@ -36,17 +36,6 @@ public class BookmarkService {
     private final UserRepository userRepository;
     private final StoreRepository storeRepository;
 
-    private void ensureDefaultFolder(User user) {
-        if (!bookmarkFolderRepository.existsByUserIdAndFolderTypeAndIsDeletedFalse(user.getId(), FolderType.DEFAULT)) {
-            BookmarkFolder defaultFolder = BookmarkFolder.builder()
-                    .user(user)
-                    .folderName("기본 폴더")
-                    .folderType(FolderType.DEFAULT)
-                    .build();
-            bookmarkFolderRepository.save(defaultFolder);
-        }
-    }
-
     // 북마크 폴더 생성
     @Transactional
     public BookmarkFolderCreateResponse createFolder(Long userId, BookmarkFolderCreateRequest request) {
@@ -82,6 +71,10 @@ public class BookmarkService {
             throw new CustomException(ErrorCode.BOOKMARK_FOLDER_NOT_OWNER);
         }
 
+        if (folder.getFolderType() == FolderType.DEFAULT) {
+            throw new CustomException(ErrorCode.BOOKMARK_DEFAULT_FOLDER_IMMUTABLE);
+        }
+
         folder.updateName(request.folderName());
         return new BookmarkFolderUpdateResponse(folder.getId(), folder.getFolderName());
     }
@@ -96,6 +89,10 @@ public class BookmarkService {
             throw new CustomException(ErrorCode.BOOKMARK_FOLDER_NOT_OWNER);
         }
 
+        if (folder.getFolderType() == FolderType.DEFAULT) {
+            throw new CustomException(ErrorCode.BOOKMARK_DEFAULT_FOLDER_IMMUTABLE);
+        }
+
         bookmarkRepository.findByFolderIdAndIsDeletedFalse(folderId)
                 .forEach(Bookmark::softDelete);
 
@@ -107,11 +104,6 @@ public class BookmarkService {
     // 북마크 추가
     @Transactional
     public BookmarkCreateResponse addBookmark(Long userId, Long folderId, BookmarkCreateRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-
-        ensureDefaultFolder(user);
-
         BookmarkFolder folder = bookmarkFolderRepository.findByIdAndIsDeletedFalse(folderId)
                 .orElseThrow(() -> new CustomException(ErrorCode.BOOKMARK_FOLDER_NOT_FOUND));
 

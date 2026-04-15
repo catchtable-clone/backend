@@ -45,6 +45,7 @@ public enum ErrorCode implements ResponseCode {
     BOOKMARK_FOLDER_NOT_OWNER(HttpStatus.FORBIDDEN, "본인의 폴더만 접근할 수 있습니다."),
     BOOKMARK_NOT_OWNER(HttpStatus.FORBIDDEN, "본인의 즐겨찾기만 삭제할 수 있습니다."),
     BOOKMARK_DUPLICATE(HttpStatus.BAD_REQUEST, "이미 해당 폴더에 저장된 매장입니다."),
+    BOOKMARK_DEFAULT_FOLDER_IMMUTABLE(HttpStatus.BAD_REQUEST, "기본 폴더는 수정하거나 삭제할 수 없습니다."),
 
     // Reservation
     RESERVATION_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 예약입니다."),
