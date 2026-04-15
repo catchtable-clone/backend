@@ -55,7 +55,13 @@ public enum ErrorCode implements ResponseCode {
     // Remain
     REMAIN_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 예약 시간대입니다."),
     REMAIN_EXHAUSTED(HttpStatus.BAD_REQUEST, "해당 시간대의 예약이 마감되었습니다."),
-    OPTIMISTIC_LOCK_CONFLICT(HttpStatus.CONFLICT, "이미 다른 사용자가 예약하여 마감되었습니다. 다시 시도해주세요.");
+    OPTIMISTIC_LOCK_CONFLICT(HttpStatus.CONFLICT, "이미 다른 사용자가 예약하여 마감되었습니다. 다시 시도해주세요."),
+
+    // Chat
+    CHAT_SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 채팅 세션입니다."),
+    CHAT_SESSION_NOT_OWNER(HttpStatus.FORBIDDEN, "본인의 채팅 세션만 접근할 수 있습니다."),
+    CHAT_DAILY_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "일일 메시지 제한(100회)을 초과했습니다."),
+    CHAT_AI_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "AI 응답 생성 중 오류가 발생했습니다.");
 
     private final HttpStatus httpStatus;
     private final String message;
