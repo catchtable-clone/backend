@@ -59,8 +59,10 @@ public enum ErrorCode implements ResponseCode {
 
     // Chat
     CHAT_SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 채팅 세션입니다."),
-    CHAT_SESSION_NOT_OWNER(HttpStatus.FORBIDDEN, "본인의 채팅 세션만 접근할 수 있습니다."),
     CHAT_DAILY_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "일일 메시지 제한(100회)을 초과했습니다."),
+    CHAT_AI_RATE_LIMIT(HttpStatus.TOO_MANY_REQUESTS, "AI 요청이 너무 많습니다. 잠시 후 다시 시도해주세요."),
+    CHAT_AI_TIMEOUT(HttpStatus.GATEWAY_TIMEOUT, "AI 응답 시간이 초과되었습니다. 다시 시도해주세요."),
+    CHAT_AI_AUTH_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "AI 서비스 인증에 실패했습니다."),
     CHAT_AI_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "AI 응답 생성 중 오류가 발생했습니다.");
 
     private final HttpStatus httpStatus;
