@@ -51,6 +51,9 @@ public enum SuccessCode implements ResponseCode {
     REVIEW_LOOKUP_SUCCESS(HttpStatus.OK, "리뷰 조회가 완료되었습니다."),
     REVIEW_DELETE_SUCCESS(HttpStatus.OK, "리뷰가 성공적으로 삭제되었습니다.");
 
+    // Chat
+    CHAT_MESSAGE_SENT(HttpStatus.OK, "메시지가 전송되었습니다."),
+    CHAT_MESSAGE_LIST_OK(HttpStatus.OK, "채팅 메시지 목록을 조회했습니다.");
 
     private final HttpStatus httpStatus;
     private final String message;
