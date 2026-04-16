@@ -1,4 +1,4 @@
-package com.catchtable.vacancy.dto;
+package com.catchtable.vacancy.dto.write;
 
 import com.catchtable.remain.entity.StoreRemain;
 import com.catchtable.store.entity.Store;

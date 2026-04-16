@@ -1,17 +1,17 @@
 package com.catchtable.vacancy.service;
 
+import com.catchtable.global.exception.CustomException;
+import com.catchtable.global.exception.ErrorCode;
 import com.catchtable.store.entity.Store;
 import com.catchtable.remain.entity.StoreRemain;
 import com.catchtable.remain.repository.StoreRemainRepository;
 import com.catchtable.store.repository.StoreRepository;
-import com.catchtable.vacancy.dto.VacancyListResponse;
+import com.catchtable.vacancy.dto.write.VacancyListResponse;
 import com.catchtable.vacancy.entity.Vacancy;
 import com.catchtable.vacancy.repository.VacancyRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -25,8 +25,15 @@ public class VacancyService {
 
     @Transactional
     public Long register(Long userId, Long remainId) {
+        StoreRemain storeRemain = storeRemainRepository.findById(remainId)
+                .orElseThrow(() -> new CustomException(ErrorCode.REMAIN_NOT_FOUND));
+
+        if (storeRemain.getRemainTeam() > 0) {
+            throw new CustomException(ErrorCode.VACANCY_REMAIN_NOT_EXHAUSTED);
+        }
+
         if (vacancyRepository.existsByUserIdAndRemainIdAndIsDeletedFalse(userId, remainId)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 빈자리 알림을 등록했습니다.");
+            throw new CustomException(ErrorCode.VACANCY_ALREADY_REGISTERED);
         }
         Vacancy vacancy = new Vacancy(userId, remainId);
         return vacancyRepository.save(vacancy).getId();
@@ -40,9 +47,9 @@ public class VacancyService {
                 .stream()
                 .map(vacancy -> {
                     StoreRemain storeRemain = storeRemainRepository.findById(vacancy.getRemainId())
-                            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "잔여 좌석 정보를 찾을 수 없습니다."));
+                            .orElseThrow(() -> new CustomException(ErrorCode.REMAIN_NOT_FOUND));
                     Store store = storeRepository.findById(storeRemain.getStore().getId())
-                            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "매장 정보를 찾을 수 없습니다."));
+                            .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
                     return new VacancyListResponse(vacancy, storeRemain, store);
                 })
                 .toList();
@@ -51,9 +58,9 @@ public class VacancyService {
     @Transactional
     public Long delete(Long vacancyId) {
         Vacancy vacancy = vacancyRepository.findById(vacancyId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 알림입니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.VACANCY_NOT_FOUND));
         if (vacancy.getIsDeleted()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 삭제된 알림입니다.");
+            throw new CustomException(ErrorCode.VACANCY_ALREADY_DELETED);
         }
         vacancy.delete();
         return vacancy.getId();

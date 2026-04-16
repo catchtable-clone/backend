@@ -1,8 +1,10 @@
 package com.catchtable.vacancy.controller;
 
-import com.catchtable.vacancy.dto.VacancyListResponse;
-import com.catchtable.vacancy.dto.VacancyRegisterRequest;
-import com.catchtable.vacancy.dto.VacancyRegisterResponse;
+import com.catchtable.global.common.ApiResponse;
+import com.catchtable.global.common.SuccessCode;
+import com.catchtable.vacancy.dto.create.VacancyRegisterRequest;
+import com.catchtable.vacancy.dto.create.VacancyRegisterResponse;
+import com.catchtable.vacancy.dto.write.VacancyListResponse;
 import com.catchtable.vacancy.service.VacancyService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -10,7 +12,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
@@ -20,20 +21,28 @@ public class VacancyController {
     private final VacancyService vacancyService;
 
     @PostMapping
-    public ResponseEntity<VacancyRegisterResponse> register(@RequestBody @Valid VacancyRegisterRequest request) {
-        Long vacancyId = vacancyService.register(request.getUserId(), request.getRemainId());
-        return ResponseEntity.status(201).body(new VacancyRegisterResponse(vacancyId));
+    public ResponseEntity<ApiResponse<VacancyRegisterResponse>> register(@RequestBody @Valid VacancyRegisterRequest request) {
+        Long vacancyId = vacancyService.register(request.userId(), request.remainId());
+        VacancyRegisterResponse responseData = new VacancyRegisterResponse(vacancyId);
+        return ResponseEntity
+                .status(SuccessCode.VACANCY_REGISTER_SUCCESS.getHttpStatus())
+                .body(ApiResponse.success(SuccessCode.VACANCY_REGISTER_SUCCESS, responseData));
     }
 
-    // 해야할거: userId는 인증 구현 후 @AuthenticationPrincipal로 교체
+    // TODO: userId는 인증 구현 후 @AuthenticationPrincipal로 교체
     @GetMapping("/me")
-    public ResponseEntity<List<VacancyListResponse>> getMyList(@RequestParam Long userId) {
-        return ResponseEntity.ok(vacancyService.getMyList(userId));
+    public ResponseEntity<ApiResponse<List<VacancyListResponse>>> getMyList(@RequestParam Long userId) {
+        List<VacancyListResponse> responseData = vacancyService.getMyList(userId);
+        return ResponseEntity
+                .status(SuccessCode.VACANCY_LOOKUP_SUCCESS.getHttpStatus())
+                .body(ApiResponse.success(SuccessCode.VACANCY_LOOKUP_SUCCESS, responseData));
     }
 
     @DeleteMapping("/{vacancyId}")
-    public ResponseEntity<Map<String, Object>> delete(@PathVariable Long vacancyId) {
-        Long deletedId = vacancyService.delete(vacancyId);
-        return ResponseEntity.ok(Map.of("vacancyId", deletedId, "message", "삭제 완료"));
+    public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Long vacancyId) {
+        vacancyService.delete(vacancyId);
+        return ResponseEntity
+                .status(SuccessCode.VACANCY_DELETE_SUCCESS.getHttpStatus())
+                .body(ApiResponse.success(SuccessCode.VACANCY_DELETE_SUCCESS));
     }
 }
