@@ -47,7 +47,12 @@ public enum SuccessCode implements ResponseCode {
 
     // Chat
     CHAT_MESSAGE_SENT(HttpStatus.OK, "메시지가 전송되었습니다."),
-    CHAT_MESSAGE_LIST_OK(HttpStatus.OK, "채팅 메시지 목록을 조회했습니다.");
+    CHAT_MESSAGE_LIST_OK(HttpStatus.OK, "채팅 메시지 목록을 조회했습니다."),
+
+    // Vacancy
+    VACANCY_REGISTER_SUCCESS(HttpStatus.CREATED, "빈자리 알림이 등록되었습니다."),
+    VACANCY_LOOKUP_SUCCESS(HttpStatus.OK, "빈자리 알림 조회가 완료되었습니다."),
+    VACANCY_DELETE_SUCCESS(HttpStatus.OK, "빈자리 알림이 삭제되었습니다.");
 
     private final HttpStatus httpStatus;
     private final String message;

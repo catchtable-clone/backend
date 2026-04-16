@@ -63,7 +63,13 @@ public enum ErrorCode implements ResponseCode {
     CHAT_AI_RATE_LIMIT(HttpStatus.TOO_MANY_REQUESTS, "AI 요청이 너무 많습니다. 잠시 후 다시 시도해주세요."),
     CHAT_AI_TIMEOUT(HttpStatus.GATEWAY_TIMEOUT, "AI 응답 시간이 초과되었습니다. 다시 시도해주세요."),
     CHAT_AI_AUTH_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "AI 서비스 인증에 실패했습니다."),
-    CHAT_AI_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "AI 응답 생성 중 오류가 발생했습니다.");
+    CHAT_AI_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "AI 응답 생성 중 오류가 발생했습니다."),
+
+    // Vacancy
+    VACANCY_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 알림입니다."),
+    VACANCY_ALREADY_REGISTERED(HttpStatus.CONFLICT, "이미 빈자리 알림을 등록했습니다."),
+    VACANCY_ALREADY_DELETED(HttpStatus.CONFLICT, "이미 삭제된 알림입니다."),
+    VACANCY_REMAIN_NOT_EXHAUSTED(HttpStatus.BAD_REQUEST, "아직 예약 가능한 시간대입니다. 잔여 좌석이 0일 때만 빈자리 알림을 등록할 수 있습니다.");
 
     private final HttpStatus httpStatus;
     private final String message;
