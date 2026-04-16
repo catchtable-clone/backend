@@ -51,6 +51,8 @@ public class Reservation {
 
     private LocalDateTime updatedAt;
 
+    private Boolean reminded = false;
+
     @Builder
     public Reservation(User user, StoreRemain storeRemain, Coupon coupon, Integer member, ReservationStatus status) {
         this.user = user;
@@ -78,5 +80,9 @@ public class Reservation {
 
     public void changeStatus(ReservationStatus status) {
         this.status = status;
+    }
+
+    public void markReminded() {
+        this.reminded = true;
     }
 }
