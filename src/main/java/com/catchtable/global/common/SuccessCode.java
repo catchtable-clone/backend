@@ -45,6 +45,12 @@ public enum SuccessCode implements ResponseCode {
     REMAIN_CREATE_SUCCESS(HttpStatus.CREATED, "예약 목록이 성공적으로 생성되었습니다."),
     REMAIN_LOOKUP_SUCCESS(HttpStatus.OK, "예약 가능 시간 조회가 완료되었습니다."),
 
+    // Review 도메인
+    REVIEW_CREATE_SUCCESS(HttpStatus.CREATED, "리뷰가 성공적으로 작성되었습니다."),
+    REVIEW_UPDATE_SUCCESS(HttpStatus.OK, "리뷰가 성공적으로 수정되었습니다."),
+    REVIEW_LOOKUP_SUCCESS(HttpStatus.OK, "리뷰 조회가 완료되었습니다."),
+    REVIEW_DELETE_SUCCESS(HttpStatus.OK, "리뷰가 성공적으로 삭제되었습니다.");
+
     // Chat
     CHAT_MESSAGE_SENT(HttpStatus.OK, "메시지가 전송되었습니다."),
     CHAT_MESSAGE_LIST_OK(HttpStatus.OK, "채팅 메시지 목록을 조회했습니다.");

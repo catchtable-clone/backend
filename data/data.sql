@@ -1,9 +1,3 @@
--- 유저 3명 추가 (ID 1, 2, 3 자동 생성 가정 또는 명시)
-INSERT INTO users (id, email, nickname, profile_image, google_id, role, status, noshow_count, created_at, updated_at, is_deleted)
-VALUES
-(1, 'test1@example.com', 'user1', 'img1.png', 'google_id_1', 'USER', 'ACTIVE', 0, NOW(), NOW(), false),
-(2, 'test2@example.com', 'user2', 'img2.png', 'google_id_2', 'USER', 'ACTIVE', 0, NOW(), NOW(), false),
-(3, 'test3@example.com', 'user3', 'img3.png', 'google_id_3', 'USER', 'ACTIVE', 0, NOW(), NOW(), false);
 
 SELECT setval('users_id_seq', (SELECT MAX(id) FROM users));
 

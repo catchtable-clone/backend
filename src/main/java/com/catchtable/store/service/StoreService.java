@@ -115,4 +115,14 @@ public class StoreService {
         store.changeStatus(request.status());
         return StoreStatusUpdateResponse.from(store.getId(), store.getStatus().name());
     }
+
+    @Transactional
+    public void increaseReviewCount(Long storeId) {
+        storeRepository.increaseReviewCount(storeId);
+    }
+
+    @Transactional
+    public void decreaseReviewCount(Long storeId) {
+        storeRepository.decreaseReviewCount(storeId);
+    }
 }
