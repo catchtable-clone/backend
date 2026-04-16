@@ -78,6 +78,15 @@ public class Review {
         if (content != null) {
             this.content = content;
         }
-        this.reviewImage = reviewImage;
+        
+        // 이미지가 있는 리뷰에서 수정하여 이미지를 삭제하고 싶을 때는 빈 문자열("")을 보내기
+        // null이 들어오면 기존 이미지를 유지하고 빈 문자열이 들어오면 null로 초기화하여 이미지를 삭제
+        if (reviewImage != null) {
+            if (reviewImage.isBlank()) {
+                this.reviewImage = null; // 이미지 삭제
+            } else {
+                this.reviewImage = reviewImage; // 새 이미지로 교체
+            }
+        }
     }
 }
