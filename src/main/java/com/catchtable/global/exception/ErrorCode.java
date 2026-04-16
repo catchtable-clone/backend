@@ -45,6 +45,7 @@ public enum ErrorCode implements ResponseCode {
     BOOKMARK_FOLDER_NOT_OWNER(HttpStatus.FORBIDDEN, "본인의 폴더만 접근할 수 있습니다."),
     BOOKMARK_NOT_OWNER(HttpStatus.FORBIDDEN, "본인의 즐겨찾기만 삭제할 수 있습니다."),
     BOOKMARK_DUPLICATE(HttpStatus.BAD_REQUEST, "이미 해당 폴더에 저장된 매장입니다."),
+    BOOKMARK_DEFAULT_FOLDER_IMMUTABLE(HttpStatus.BAD_REQUEST, "기본 폴더는 수정하거나 삭제할 수 없습니다."),
 
     // Reservation
     RESERVATION_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 예약입니다."),
@@ -54,7 +55,15 @@ public enum ErrorCode implements ResponseCode {
     // Remain
     REMAIN_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 예약 시간대입니다."),
     REMAIN_EXHAUSTED(HttpStatus.BAD_REQUEST, "해당 시간대의 예약이 마감되었습니다."),
-    OPTIMISTIC_LOCK_CONFLICT(HttpStatus.CONFLICT, "이미 다른 사용자가 예약하여 마감되었습니다. 다시 시도해주세요.");
+    OPTIMISTIC_LOCK_CONFLICT(HttpStatus.CONFLICT, "이미 다른 사용자가 예약하여 마감되었습니다. 다시 시도해주세요."),
+
+    // Chat
+    CHAT_SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 채팅 세션입니다."),
+    CHAT_DAILY_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "일일 메시지 제한(100회)을 초과했습니다."),
+    CHAT_AI_RATE_LIMIT(HttpStatus.TOO_MANY_REQUESTS, "AI 요청이 너무 많습니다. 잠시 후 다시 시도해주세요."),
+    CHAT_AI_TIMEOUT(HttpStatus.GATEWAY_TIMEOUT, "AI 응답 시간이 초과되었습니다. 다시 시도해주세요."),
+    CHAT_AI_AUTH_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "AI 서비스 인증에 실패했습니다."),
+    CHAT_AI_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "AI 응답 생성 중 오류가 발생했습니다.");
 
     private final HttpStatus httpStatus;
     private final String message;
