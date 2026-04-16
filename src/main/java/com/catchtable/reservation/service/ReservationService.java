@@ -5,6 +5,7 @@ import com.catchtable.coupon.repository.CouponRepository;
 import com.catchtable.coupon.service.CouponService;
 import com.catchtable.global.exception.CustomException;
 import com.catchtable.global.exception.ErrorCode;
+import com.catchtable.notification.service.VacancyNotificationService;
 import com.catchtable.remain.entity.StoreRemain;
 import com.catchtable.remain.repository.StoreRemainRepository;
 import com.catchtable.reservation.dto.create.ReservationCreateRequestDto;
@@ -35,6 +36,7 @@ public class ReservationService {
     private final StoreRemainRepository storeRemainRepository;
     private final CouponService couponService;
     private final CouponRepository couponRepository;
+    private final VacancyNotificationService vacancyNotificationService;
 
     @Transactional
     public ReservationCreateResponseDto create(ReservationCreateRequestDto request) {
@@ -145,6 +147,9 @@ public class ReservationService {
         // 예약했던 시간대의 재고 복구
         StoreRemain storeRemain = reservation.getStoreRemain();
         storeRemain.increaseRemainTeam();
+
+        // 빈자리 알림 구독자에게 알림 발송
+        vacancyNotificationService.notifySubscribers(storeRemain.getId());
 
         // 쿠폰 반환
         if (reservation.getCoupon() != null) {
