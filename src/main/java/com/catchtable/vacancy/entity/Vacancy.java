@@ -50,4 +50,8 @@ public class Vacancy {
     public void delete() {
         this.isDeleted = true;
     }
+
+    public void markNotified() {
+        this.status = VacancyStatus.NOTIFIED;
+    }
 }
