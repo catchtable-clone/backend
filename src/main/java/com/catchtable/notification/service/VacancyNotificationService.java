@@ -40,6 +40,9 @@ public class VacancyNotificationService {
             return;
         }
 
+        lastNotifiedMap.entrySet().removeIf(
+                entry -> entry.getValue().plusMinutes(5).isBefore(now));
+
         StoreRemain storeRemain = storeRemainRepository.findById(remainId)
                 .orElseThrow(() -> new CustomException(ErrorCode.REMAIN_NOT_FOUND));
 
