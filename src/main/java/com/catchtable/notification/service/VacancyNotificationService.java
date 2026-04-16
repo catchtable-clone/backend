@@ -18,6 +18,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -57,9 +58,12 @@ public class VacancyNotificationService {
         String remainDate = storeRemain.getRemainDate().toString();
         String remainTime = storeRemain.getRemainTime().toString();
 
+        List<Long> userIds = subscribers.stream().map(Vacancy::getUserId).toList();
+        Map<Long, User> userMap = userRepository.findAllById(userIds).stream()
+                .collect(Collectors.toMap(User::getId, user -> user));
+
         for (Vacancy vacancy : subscribers) {
-            User user = userRepository.findById(vacancy.getUserId())
-                    .orElse(null);
+            User user = userMap.get(vacancy.getUserId());
             if (user == null) continue;
 
             emailService.send(user.getEmail(),
