@@ -45,6 +45,13 @@ public class StoreController {
                 .ok(ApiResponse.success(SuccessCode.STORE_LIST_OK, stores));
     }
 
+    @GetMapping("/popular")
+    public ResponseEntity<ApiResponse<List<StoreListResponse>>> getPopularStores() {
+        List<StoreListResponse> stores = storeService.getPopularStores();
+        return ResponseEntity
+                .ok(ApiResponse.success(SuccessCode.STORE_LIST_OK, stores));
+    }
+
     @GetMapping("/district")
     public ResponseEntity<ApiResponse<List<StoreListResponse>>> getStoresByDistrict(
             @RequestParam District district) {

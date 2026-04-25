@@ -14,6 +14,8 @@ public interface StoreRepository extends JpaRepository<Store, Long> {
     @Query("SELECT s FROM Store s WHERE s.storeName LIKE %:name% AND s.isDeleted = false")
     List<Store> searchByStoreName(@Param("name") String name);
 
+    List<Store> findTop20ByIsDeletedFalseOrderByIdAsc();
+
     List<Store> findAllByDistrictAndIsDeletedFalse(District district);
 
     @Modifying
