@@ -61,8 +61,7 @@ public class StoreService {
     // 매장 상세조회 + 예약 가능 시간대 조회
     @Transactional(readOnly = true)
     public StoreDetailResponse getStore(Long storeId) {
-        Store store = storeRepository.findById(storeId)
-                .filter(s -> !s.getIsDeleted())
+        Store store = storeRepository.findByIdAndIsDeletedFalse(storeId)
                 .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
 
         List<RemainDateResponse> remainDates = storeRemainRepository
@@ -81,8 +80,7 @@ public class StoreService {
     @Transactional
     public StoreUpdateResponse updateStore(Long userId, Long storeId, StoreUpdateRequest request) {
         userRepository.getAdminOrThrow(userId, ErrorCode.ADMIN_ONLY_STORE_UPDATE);
-        Store store = storeRepository.findById(storeId)
-                .filter(s -> !s.getIsDeleted())
+        Store store = storeRepository.findByIdAndIsDeletedFalse(storeId)
                 .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
         store.update(
                 request.storeName(), request.storeImage(), request.category(),
@@ -96,7 +94,7 @@ public class StoreService {
     @Transactional
     public StoreStatusUpdateResponse updateStoreStatus(Long userId, Long storeId, StoreStatusUpdateRequest request) {
         userRepository.getAdminOrThrow(userId, ErrorCode.ADMIN_ONLY_STORE_STATUS);
-        Store store = storeRepository.findById(storeId)
+        Store store = storeRepository.findByIdAndIsDeletedFalse(storeId)
                 .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
         store.changeStatus(request.status());
         return StoreStatusUpdateResponse.from(store.getId(), store.getStatus().name());

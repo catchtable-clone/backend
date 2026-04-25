@@ -30,8 +30,7 @@ public class MenuService {
     // 메뉴 일괄 생성
     @Transactional
     public MenuCreateResponse create(Long storeId, MenuCreateRequest request, List<MultipartFile> menuImages) {
-        Store store = storeRepository.findById(storeId)
-                .filter(s -> !s.getIsDeleted())
+        Store store = storeRepository.findByIdAndIsDeletedFalse(storeId)
                 .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
 
         List<MenuCreateRequest.MenuItemRequest> menus = request.menus();

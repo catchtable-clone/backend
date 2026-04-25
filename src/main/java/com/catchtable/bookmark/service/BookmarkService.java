@@ -105,8 +105,7 @@ public class BookmarkService {
 
         folder.validateOwner(userId);
 
-        Store store = storeRepository.findById(request.storeId())
-                .filter(s -> !s.getIsDeleted())
+        Store store = storeRepository.findByIdAndIsDeletedFalse(request.storeId())
                 .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
 
         if (bookmarkRepository.existsByFolder_IdAndStore_IdAndIsDeletedFalse(folderId, store.getId())) {
