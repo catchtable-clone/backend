@@ -39,8 +39,7 @@ public class BookmarkService {
     // 북마크 폴더 생성
     @Transactional
     public BookmarkFolderCreateResponse createFolder(Long userId, BookmarkFolderCreateRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        User user = userRepository.getById(userId);
 
         BookmarkFolder folder = BookmarkFolder.builder()
                 .user(user)
@@ -61,17 +60,20 @@ public class BookmarkService {
                 .toList();
     }
 
-    // 북마크 폴더 이름 수정
-    @Transactional
-    public BookmarkFolderUpdateResponse updateFolder(Long userId, Long folderId, BookmarkFolderUpdateRequest request) {
+    private BookmarkFolder getEditableFolder(Long userId, Long folderId) {
         BookmarkFolder folder = bookmarkFolderRepository.findByIdAndIsDeletedFalse(folderId)
                 .orElseThrow(() -> new CustomException(ErrorCode.BOOKMARK_FOLDER_NOT_FOUND));
-
         folder.validateOwner(userId);
-
         if (folder.getFolderType() == FolderType.DEFAULT) {
             throw new CustomException(ErrorCode.BOOKMARK_DEFAULT_FOLDER_IMMUTABLE);
         }
+        return folder;
+    }
+
+    // 북마크 폴더 이름 수정
+    @Transactional
+    public BookmarkFolderUpdateResponse updateFolder(Long userId, Long folderId, BookmarkFolderUpdateRequest request) {
+        BookmarkFolder folder = getEditableFolder(userId, folderId);
 
         folder.updateName(request.folderName());
         return new BookmarkFolderUpdateResponse(folder.getId(), folder.getFolderName());
@@ -80,14 +82,7 @@ public class BookmarkService {
     // 북마크 폴더 삭제
     @Transactional
     public BookmarkFolderDeleteResponse deleteFolder(Long userId, Long folderId) {
-        BookmarkFolder folder = bookmarkFolderRepository.findByIdAndIsDeletedFalse(folderId)
-                .orElseThrow(() -> new CustomException(ErrorCode.BOOKMARK_FOLDER_NOT_FOUND));
-
-        folder.validateOwner(userId);
-
-        if (folder.getFolderType() == FolderType.DEFAULT) {
-            throw new CustomException(ErrorCode.BOOKMARK_DEFAULT_FOLDER_IMMUTABLE);
-        }
+        BookmarkFolder folder = getEditableFolder(userId, folderId);
 
         bookmarkRepository.findByFolderIdAndIsDeletedFalse(folderId)
                 .forEach(Bookmark::softDelete);

@@ -19,7 +19,6 @@ import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -99,6 +98,6 @@ public class StoreRemainService {
                         remain.getRemainTime(),
                         remain.getRemainTeam()
                 ))
-                .collect(Collectors.toList());
+                .toList();
     }
 }

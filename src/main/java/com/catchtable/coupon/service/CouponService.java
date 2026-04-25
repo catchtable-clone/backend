@@ -38,8 +38,7 @@ public class CouponService {
     // 쿠폰 발급 (비관적 락)
     @Transactional
     public CouponIssueResponse issueCoupon(Long templateId, Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        User user = userRepository.getById(userId);
 
         CouponTemplate template = couponTemplateRepository.findByIdWithLock(templateId)
                 .orElseThrow(() -> new CustomException(ErrorCode.COUPON_TEMPLATE_NOT_FOUND));

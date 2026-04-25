@@ -32,8 +32,7 @@ public class ChatbotDbService {
     // sessionId를 직접 반환하여 트랜잭션 종료 후 LazyLoading 문제 방지
     @Transactional
     public Long saveUserMessage(Long userId, String content) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        User user = userRepository.getById(userId);
 
         ChatSession session = chatSessionRepository.findByUserAndIsDeletedFalse(user)
                 .orElseGet(() -> chatSessionRepository.save(
@@ -85,8 +84,7 @@ public class ChatbotDbService {
     // 대화 내역 조회 (API 응답용)
     @Transactional(readOnly = true)
     public List<ChatMessageListResponse> getMessages(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        User user = userRepository.getById(userId);
 
         ChatSession session = chatSessionRepository.findByUserAndIsDeletedFalse(user)
                 .orElseThrow(() -> new CustomException(ErrorCode.CHAT_SESSION_NOT_FOUND));

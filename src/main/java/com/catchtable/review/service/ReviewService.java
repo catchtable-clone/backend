@@ -21,7 +21,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -35,8 +34,7 @@ public class ReviewService {
 
     @Transactional
     public Long createReview(Long userId, ReviewCreateRequestDto request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        User user = userRepository.getById(userId);
 
         Reservation reservation = reservationRepository.findById(request.reservationId())
                 .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
@@ -83,7 +81,7 @@ public class ReviewService {
         List<Review> reviews = reviewRepository.findAllByStoreIdAndIsDeletedFalseOrderByCreatedAtDesc(storeId);
         return reviews.stream()
                 .map(ReviewResponseDto::from)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -95,7 +93,7 @@ public class ReviewService {
         List<Review> reviews = reviewRepository.findAllByUserIdAndIsDeletedFalseOrderByCreatedAtDesc(userId);
         return reviews.stream()
                 .map(ReviewResponseDto::from)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Transactional
