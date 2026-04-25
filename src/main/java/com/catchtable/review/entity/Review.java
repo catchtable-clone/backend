@@ -1,5 +1,7 @@
 package com.catchtable.review.entity;
 
+import com.catchtable.global.exception.CustomException;
+import com.catchtable.global.exception.ErrorCode;
 import com.catchtable.reservation.entity.Reservation;
 import com.catchtable.store.entity.Store;
 import com.catchtable.user.entity.User;
@@ -65,6 +67,12 @@ public class Review {
         this.content = content;
         this.reviewImage = reviewImage;
         this.isDeleted = false;
+    }
+
+    public void validateOwner(Long userId) {
+        if (!this.user.getId().equals(userId)) {
+            throw new CustomException(ErrorCode.NOT_REVIEW_OWNER);
+        }
     }
 
     public void delete() {

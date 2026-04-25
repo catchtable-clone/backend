@@ -98,9 +98,7 @@ public class ReservationService {
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
         
-        if (!reservation.getUser().getId().equals(userId)) {
-            throw new CustomException(ErrorCode.NOT_RESERVATION_OWNER);
-        }
+        reservation.validateOwner(userId);
 
         StoreRemain storeRemain = reservation.getStoreRemain();
         Store store = storeRemain.getStore();
@@ -133,9 +131,7 @@ public class ReservationService {
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
 
-        if (!reservation.getUser().getId().equals(userId)) {
-            throw new CustomException(ErrorCode.NOT_RESERVATION_OWNER);
-        }
+        reservation.validateOwner(userId);
 
         if (reservation.getStatus() == ReservationStatus.CANCELED) {
             throw new CustomException(ErrorCode.ALREADY_CANCELED);
@@ -162,14 +158,12 @@ public class ReservationService {
         Reservation oldReservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
 
-        if (!oldReservation.getUser().getId().equals(userId)) {
-            throw new CustomException(ErrorCode.NOT_RESERVATION_OWNER);
-        }
+        oldReservation.validateOwner(userId);
 
         if (oldReservation.getStatus() == ReservationStatus.CANCELED) {
             throw new CustomException(ErrorCode.ALREADY_CANCELED);
         }
-                
+
         StoreRemain newStoreRemain = storeRemainRepository.findByIdWithStore(request.newRemainId())
                 .orElseThrow(() -> new CustomException(ErrorCode.REMAIN_NOT_FOUND));
 

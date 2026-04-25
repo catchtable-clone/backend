@@ -73,9 +73,7 @@ public class CouponService {
         Coupon coupon = couponRepository.findById(couponId)
                 .orElseThrow(() -> new CustomException(ErrorCode.COUPON_NOT_FOUND));
 
-        if (!coupon.getUser().getId().equals(userId)) {
-            throw new CustomException(ErrorCode.OWN_COUPON_ONLY);
-        }
+        coupon.validateOwner(userId);
 
         coupon.use();
     }

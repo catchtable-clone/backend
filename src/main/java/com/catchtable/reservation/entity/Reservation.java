@@ -3,6 +3,8 @@ package com.catchtable.reservation.entity;
 import java.time.LocalDateTime;
 
 import com.catchtable.coupon.entity.Coupon;
+import com.catchtable.global.exception.CustomException;
+import com.catchtable.global.exception.ErrorCode;
 import com.catchtable.remain.entity.StoreRemain;
 import com.catchtable.user.entity.User;
 import jakarta.persistence.Entity;
@@ -76,6 +78,12 @@ public class Reservation {
     @PreUpdate
     protected void Update() {
         this.updatedAt = LocalDateTime.now();
+    }
+
+    public void validateOwner(Long userId) {
+        if (!this.user.getId().equals(userId)) {
+            throw new CustomException(ErrorCode.NOT_RESERVATION_OWNER);
+        }
     }
 
     public void changeStatus(ReservationStatus status) {

@@ -67,9 +67,7 @@ public class BookmarkService {
         BookmarkFolder folder = bookmarkFolderRepository.findByIdAndIsDeletedFalse(folderId)
                 .orElseThrow(() -> new CustomException(ErrorCode.BOOKMARK_FOLDER_NOT_FOUND));
 
-        if (!folder.getUser().getId().equals(userId)) {
-            throw new CustomException(ErrorCode.BOOKMARK_FOLDER_NOT_OWNER);
-        }
+        folder.validateOwner(userId);
 
         if (folder.getFolderType() == FolderType.DEFAULT) {
             throw new CustomException(ErrorCode.BOOKMARK_DEFAULT_FOLDER_IMMUTABLE);
@@ -85,9 +83,7 @@ public class BookmarkService {
         BookmarkFolder folder = bookmarkFolderRepository.findByIdAndIsDeletedFalse(folderId)
                 .orElseThrow(() -> new CustomException(ErrorCode.BOOKMARK_FOLDER_NOT_FOUND));
 
-        if (!folder.getUser().getId().equals(userId)) {
-            throw new CustomException(ErrorCode.BOOKMARK_FOLDER_NOT_OWNER);
-        }
+        folder.validateOwner(userId);
 
         if (folder.getFolderType() == FolderType.DEFAULT) {
             throw new CustomException(ErrorCode.BOOKMARK_DEFAULT_FOLDER_IMMUTABLE);
@@ -107,9 +103,7 @@ public class BookmarkService {
         BookmarkFolder folder = bookmarkFolderRepository.findByIdAndIsDeletedFalse(folderId)
                 .orElseThrow(() -> new CustomException(ErrorCode.BOOKMARK_FOLDER_NOT_FOUND));
 
-        if (!folder.getUser().getId().equals(userId)) {
-            throw new CustomException(ErrorCode.BOOKMARK_FOLDER_NOT_OWNER);
-        }
+        folder.validateOwner(userId);
 
         Store store = storeRepository.findById(request.storeId())
                 .filter(s -> !s.getIsDeleted())
@@ -134,9 +128,7 @@ public class BookmarkService {
         BookmarkFolder folder = bookmarkFolderRepository.findByIdAndIsDeletedFalse(folderId)
                 .orElseThrow(() -> new CustomException(ErrorCode.BOOKMARK_FOLDER_NOT_FOUND));
 
-        if (!folder.getUser().getId().equals(userId)) {
-            throw new CustomException(ErrorCode.BOOKMARK_FOLDER_NOT_OWNER);
-        }
+        folder.validateOwner(userId);
 
         return bookmarkRepository.findByFolderIdAndIsDeletedFalse(folderId)
                 .stream()
@@ -151,9 +143,7 @@ public class BookmarkService {
         Bookmark bookmark = bookmarkRepository.findByIdAndIsDeletedFalse(bookmarkId)
                 .orElseThrow(() -> new CustomException(ErrorCode.BOOKMARK_NOT_FOUND));
 
-        if (!bookmark.getFolder().getUser().getId().equals(userId)) {
-            throw new CustomException(ErrorCode.BOOKMARK_NOT_OWNER);
-        }
+        bookmark.getFolder().validateOwner(userId);
 
         bookmark.softDelete();
         return new BookmarkDeleteResponse(bookmarkId, "삭제 완료");

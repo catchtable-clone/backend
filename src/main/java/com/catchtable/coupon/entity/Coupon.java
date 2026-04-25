@@ -50,6 +50,12 @@ public class Coupon {
     @Builder.Default
     private Boolean isDeleted = false;
 
+    public void validateOwner(Long userId) {
+        if (!this.user.getId().equals(userId)) {
+            throw new CustomException(ErrorCode.OWN_COUPON_ONLY);
+        }
+    }
+
     public void use() {
         if (this.couponTemplate.getExpiredAt().isBefore(LocalDateTime.now())) {
             throw new CustomException(ErrorCode.COUPON_EXPIRED);

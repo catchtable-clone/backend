@@ -42,9 +42,7 @@ public class ReviewService {
                 .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
 
         // 예약자 검증
-        if (!reservation.getUser().getId().equals(userId)) {
-            throw new CustomException(ErrorCode.NOT_RESERVATION_OWNER);
-        }
+        reservation.validateOwner(userId);
 
         // 예약 상태 CONFIRMED 인지
         if (reservation.getStatus() != ReservationStatus.CONFIRMED) {
@@ -105,9 +103,7 @@ public class ReviewService {
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new CustomException(ErrorCode.REVIEW_NOT_FOUND));
 
-        if (!review.getUser().getId().equals(userId)) {
-            throw new CustomException(ErrorCode.NOT_REVIEW_OWNER);
-        }
+        review.validateOwner(userId);
 
         if (review.getIsDeleted()) {
             throw new CustomException(ErrorCode.REVIEW_NOT_FOUND); // 이미 삭제된 리뷰
@@ -122,9 +118,7 @@ public class ReviewService {
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new CustomException(ErrorCode.REVIEW_NOT_FOUND));
 
-        if (!review.getUser().getId().equals(userId)) {
-            throw new CustomException(ErrorCode.NOT_REVIEW_OWNER);
-        }
+        review.validateOwner(userId);
 
         if (review.getIsDeleted()) {
             throw new CustomException(ErrorCode.REVIEW_NOT_FOUND);
