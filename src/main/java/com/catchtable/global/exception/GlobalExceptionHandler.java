@@ -30,9 +30,17 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(ErrorCode.BAD_REQUEST, message));
     }
 
-    // 409 - 데이터 충돌 (낙관적 락)
+    // 409 - 데이터 충돌 (낙관적 락 - JPA 표준)
     @ExceptionHandler(jakarta.persistence.OptimisticLockException.class)
     public ResponseEntity<ApiResponse<Void>> handleOptimisticLock(jakarta.persistence.OptimisticLockException e) {
+        return ResponseEntity
+                .status(ErrorCode.OPTIMISTIC_LOCK_CONFLICT.getHttpStatus())
+                .body(ApiResponse.error(ErrorCode.OPTIMISTIC_LOCK_CONFLICT));
+    }
+
+    // 409 - 데이터 충돌 (낙관적 락 - Spring 래핑)
+    @ExceptionHandler(org.springframework.orm.ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<ApiResponse<Void>> handleSpringOptimisticLock(org.springframework.orm.ObjectOptimisticLockingFailureException e) {
         return ResponseEntity
                 .status(ErrorCode.OPTIMISTIC_LOCK_CONFLICT.getHttpStatus())
                 .body(ApiResponse.error(ErrorCode.OPTIMISTIC_LOCK_CONFLICT));

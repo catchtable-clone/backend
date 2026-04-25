@@ -29,8 +29,9 @@ public class ChatbotDbService {
     private final UserRepository userRepository;
 
     // 사용자 조회 + 세션 조회/생성 + 일일 제한 확인 + 사용자 메시지 저장
+    // sessionId를 직접 반환하여 트랜잭션 종료 후 LazyLoading 문제 방지
     @Transactional
-    public ChatMessage saveUserMessage(Long userId, String content) {
+    public Long saveUserMessage(Long userId, String content) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
@@ -51,7 +52,8 @@ public class ChatbotDbService {
                 .content(content)
                 .build();
 
-        return chatMessageRepository.save(userMessage);
+        chatMessageRepository.save(userMessage);
+        return session.getId();
     }
 
     // AI 응답 저장

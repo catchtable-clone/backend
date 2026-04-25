@@ -10,6 +10,8 @@ public record ReservationUpdateRequestDto(
 
         @NotNull(message = "변경할 예약 인원 수는 필수입니다.")
         @Min(value = 1, message = "예약 인원은 1명 이상이어야 합니다.")
-        Integer newMember
+        Integer newMember,
+
+        Long couponId
 ) {
 }

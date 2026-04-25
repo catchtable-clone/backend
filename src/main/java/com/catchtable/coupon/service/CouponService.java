@@ -11,7 +11,6 @@ import com.catchtable.coupon.repository.CouponTemplateRepository;
 import com.catchtable.global.exception.CustomException;
 import com.catchtable.global.exception.ErrorCode;
 import com.catchtable.user.entity.User;
-import com.catchtable.user.entity.UserRole;
 import com.catchtable.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -30,11 +29,7 @@ public class CouponService {
     // 쿠폰 템플릿 생성
     @Transactional
     public CouponTemplateCreateResponse createTemplate(Long userId, CouponTemplateCreateRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-        if (user.getRole() != UserRole.ADMIN) {
-            throw new CustomException(ErrorCode.ADMIN_ONLY_COUPON_CREATE);
-        }
+        userRepository.getAdminOrThrow(userId, ErrorCode.ADMIN_ONLY_COUPON_CREATE);
         CouponTemplate template = request.toEntity();
         CouponTemplate saved = couponTemplateRepository.save(template);
         return CouponTemplateCreateResponse.from(saved);

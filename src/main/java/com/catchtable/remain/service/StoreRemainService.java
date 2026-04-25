@@ -4,6 +4,8 @@ import com.catchtable.remain.dto.read.StoreRemainResponseDto;
 import com.catchtable.remain.dto.create.StoreRemainCreateRequestDto;
 import com.catchtable.remain.entity.StoreRemain;
 import com.catchtable.remain.repository.StoreRemainRepository;
+import com.catchtable.global.exception.CustomException;
+import com.catchtable.global.exception.ErrorCode;
 import com.catchtable.store.entity.Store;
 import com.catchtable.store.repository.StoreRepository;
 import lombok.RequiredArgsConstructor;
@@ -31,7 +33,7 @@ public class StoreRemainService {
     public void generateMonthlyRemain(StoreRemainCreateRequestDto request) {
 
         Store store = storeRepository.findById(request.storeId())
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 매장입니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
 
         // 매장의 문자열 형태("10:00") 영업 시간을 LocalTime으로 파싱
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
@@ -44,7 +46,7 @@ public class StoreRemainService {
         } catch (Exception e) {
             log.error("매장 영업 시간 파싱 실패. storeId: {}, openTime: {}, closeTime: {}", 
                     store.getId(), store.getOpenTime(), store.getCloseTime());
-            throw new IllegalArgumentException("매장의 영업 시간 형식이 올바르지 않습니다.");
+            throw new CustomException(ErrorCode.BAD_REQUEST);
         }
 
         // 해당 월의 1일과 말일 계산

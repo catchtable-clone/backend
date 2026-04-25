@@ -13,8 +13,6 @@ import com.catchtable.remain.repository.StoreRemainRepository;
 import com.catchtable.store.entity.District;
 import com.catchtable.store.entity.Store;
 import com.catchtable.store.repository.StoreRepository;
-import com.catchtable.user.entity.User;
-import com.catchtable.user.entity.UserRole;
 import com.catchtable.user.repository.UserRepository;
 import com.catchtable.global.exception.CustomException;
 import com.catchtable.global.exception.ErrorCode;
@@ -36,11 +34,7 @@ public class StoreService {
     // 매장 등록
     @Transactional
     public StoreCreateResponse createStore(Long userId, StoreCreateRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-        if (user.getRole() != UserRole.ADMIN) {
-            throw new CustomException(ErrorCode.ADMIN_ONLY_STORE_CREATE);
-        }
+        userRepository.getAdminOrThrow(userId, ErrorCode.ADMIN_ONLY_STORE_CREATE);
         Store store = request.toEntity();
         Store saved = storeRepository.save(store);
         return StoreCreateResponse.from(saved.getId());
@@ -86,11 +80,7 @@ public class StoreService {
     // 매장 정보 수정
     @Transactional
     public StoreUpdateResponse updateStore(Long userId, Long storeId, StoreUpdateRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-        if (user.getRole() != UserRole.ADMIN) {
-            throw new CustomException(ErrorCode.ADMIN_ONLY_STORE_UPDATE);
-        }
+        userRepository.getAdminOrThrow(userId, ErrorCode.ADMIN_ONLY_STORE_UPDATE);
         Store store = storeRepository.findById(storeId)
                 .filter(s -> !s.getIsDeleted())
                 .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
@@ -105,11 +95,7 @@ public class StoreService {
     // 매장 상태 변경
     @Transactional
     public StoreStatusUpdateResponse updateStoreStatus(Long userId, Long storeId, StoreStatusUpdateRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-        if (user.getRole() != UserRole.ADMIN) {
-            throw new CustomException(ErrorCode.ADMIN_ONLY_STORE_STATUS);
-        }
+        userRepository.getAdminOrThrow(userId, ErrorCode.ADMIN_ONLY_STORE_STATUS);
         Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
         store.changeStatus(request.status());

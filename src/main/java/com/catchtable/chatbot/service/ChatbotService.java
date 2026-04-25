@@ -35,8 +35,7 @@ public class ChatbotService {
     // 트랜잭션 없음 — 흐름 제어만
     public ChatMessageResponse sendMessage(Long userId, ChatMessageRequest request) {
         // 1단계: DB 작업 (@Transactional) — 세션 조회/생성, 일일 제한 확인, 사용자 메시지 저장
-        ChatMessage userMessage = dbService.saveUserMessage(userId, request.message());
-        Long sessionId = userMessage.getChatSession().getId();
+        Long sessionId = dbService.saveUserMessage(userId, request.message());
 
         // 2단계: AI 호출 (트랜잭션 없음 — DB 커넥션 안 잡음)
         List<ChatMessage> history = dbService.getRecentHistory(sessionId, MAX_HISTORY_SIZE);

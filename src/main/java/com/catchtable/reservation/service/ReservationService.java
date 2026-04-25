@@ -185,10 +185,19 @@ public class ReservationService {
         // 새로운 예약 시간에 대한 재고 차감
         newStoreRemain.decreaseRemainTeam();
 
+        // 새 예약에 쿠폰 적용 (선택)
+        Coupon newCoupon = null;
+        if (request.couponId() != null) {
+            couponService.useCoupon(request.couponId(), oldReservation.getUser().getId());
+            newCoupon = couponRepository.findById(request.couponId())
+                    .orElseThrow(() -> new CustomException(ErrorCode.COUPON_NOT_FOUND));
+        }
+
         // 새로운 예약 생성
         Reservation newReservation = Reservation.builder()
                 .user(oldReservation.getUser()) // 기존 User 재사용
                 .storeRemain(newStoreRemain)
+                .coupon(newCoupon)
                 .member(request.newMember())
                 .status(ReservationStatus.PENDING)
                 .build();
