@@ -1,7 +1,6 @@
 package com.catchtable.reservation.service;
 
 import com.catchtable.coupon.entity.Coupon;
-import com.catchtable.coupon.repository.CouponRepository;
 import com.catchtable.coupon.service.CouponService;
 import com.catchtable.global.exception.CustomException;
 import com.catchtable.global.exception.ErrorCode;
@@ -34,7 +33,6 @@ public class ReservationService {
     private final UserRepository userRepository;
     private final StoreRemainRepository storeRemainRepository;
     private final CouponService couponService;
-    private final CouponRepository couponRepository;
     private final VacancyNotificationService vacancyNotificationService;
 
     @Transactional
@@ -51,9 +49,7 @@ public class ReservationService {
         // 쿠폰 적용 (선택)
         Coupon coupon = null;
         if (request.couponId() != null) {
-            couponService.useCoupon(request.couponId(), request.userId());
-            coupon = couponRepository.findById(request.couponId())
-                    .orElseThrow(() -> new CustomException(ErrorCode.COUPON_NOT_FOUND));
+            coupon = couponService.useCoupon(request.couponId(), request.userId());
         }
 
         Reservation reservation = Reservation.builder()
@@ -177,9 +173,7 @@ public class ReservationService {
         // 새 예약에 쿠폰 적용 (선택)
         Coupon newCoupon = null;
         if (request.couponId() != null) {
-            couponService.useCoupon(request.couponId(), oldReservation.getUser().getId());
-            newCoupon = couponRepository.findById(request.couponId())
-                    .orElseThrow(() -> new CustomException(ErrorCode.COUPON_NOT_FOUND));
+            newCoupon = couponService.useCoupon(request.couponId(), oldReservation.getUser().getId());
         }
 
         // 새로운 예약 생성

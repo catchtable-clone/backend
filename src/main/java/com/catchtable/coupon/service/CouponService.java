@@ -68,13 +68,14 @@ public class CouponService {
 
     // 쿠폰 사용 (예약 생성 시 호출)
     @Transactional
-    public void useCoupon(Long couponId, Long userId) {
+    public Coupon useCoupon(Long couponId, Long userId) {
         Coupon coupon = couponRepository.findById(couponId)
                 .orElseThrow(() -> new CustomException(ErrorCode.COUPON_NOT_FOUND));
 
         coupon.validateOwner(userId);
-
         coupon.use();
+
+        return coupon;
     }
 
     // 쿠폰 반환 (예약 취소/변경 시 호출)
