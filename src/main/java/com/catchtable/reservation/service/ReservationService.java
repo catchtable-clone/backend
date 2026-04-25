@@ -125,16 +125,19 @@ public class ReservationService {
         );
     }
 
-    @Transactional
-    public void cancelReservation(Long reservationId, Long userId) {
+    private Reservation getActiveReservation(Long reservationId, Long userId) {
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
-
         reservation.validateOwner(userId);
-
         if (reservation.getStatus() == ReservationStatus.CANCELED) {
             throw new CustomException(ErrorCode.ALREADY_CANCELED);
         }
+        return reservation;
+    }
+
+    @Transactional
+    public void cancelReservation(Long reservationId, Long userId) {
+        Reservation reservation = getActiveReservation(reservationId, userId);
 
         // 예약 상태 취소로 변경
         reservation.changeStatus(ReservationStatus.CANCELED);
@@ -154,14 +157,7 @@ public class ReservationService {
 
     @Transactional
     public ReservationUpdateResponseDto updateReservation(Long reservationId, Long userId, ReservationUpdateRequestDto request) {
-        Reservation oldReservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
-
-        oldReservation.validateOwner(userId);
-
-        if (oldReservation.getStatus() == ReservationStatus.CANCELED) {
-            throw new CustomException(ErrorCode.ALREADY_CANCELED);
-        }
+        Reservation oldReservation = getActiveReservation(reservationId, userId);
 
         StoreRemain newStoreRemain = storeRemainRepository.findByIdWithStore(request.newRemainId())
                 .orElseThrow(() -> new CustomException(ErrorCode.REMAIN_NOT_FOUND));
