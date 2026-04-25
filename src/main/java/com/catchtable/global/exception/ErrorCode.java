@@ -61,7 +61,7 @@ public enum ErrorCode implements ResponseCode {
     REVIEW_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 리뷰입니다."),
     NOT_REVIEW_OWNER(HttpStatus.FORBIDDEN, "본인의 리뷰만 접근할 수 있습니다."),
     REVIEW_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, "이미 해당 예약에 대한 리뷰를 작성했습니다."),
-    REVIEW_NOT_ALLOWED(HttpStatus.FORBIDDEN, "예약이 확정된 사용자만 리뷰를 작성할 수 있습니다.");
+    REVIEW_NOT_ALLOWED(HttpStatus.FORBIDDEN, "예약이 확정된 사용자만 리뷰를 작성할 수 있습니다."),
     // Chat
     CHAT_SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 채팅 세션입니다."),
     CHAT_DAILY_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "일일 메시지 제한(100회)을 초과했습니다."),
