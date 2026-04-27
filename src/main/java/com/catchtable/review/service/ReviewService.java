@@ -42,8 +42,8 @@ public class ReviewService {
         // 예약자 검증
         reservation.validateOwner(userId);
 
-        // 예약 상태 CONFIRMED 인지
-        if (reservation.getStatus() != ReservationStatus.CONFIRMED) {
+        // 예약 상태 VISITED 인지 확인
+        if (reservation.getStatus() != ReservationStatus.VISITED) {
             throw new CustomException(ErrorCode.REVIEW_NOT_ALLOWED);
         }
 

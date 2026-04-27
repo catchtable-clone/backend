@@ -6,6 +6,7 @@ import com.catchtable.reservation.dto.create.ReservationCreateRequestDto;
 import com.catchtable.reservation.dto.create.ReservationCreateResponseDto;
 import com.catchtable.reservation.dto.read.ReservationDetailResponseDto;
 import com.catchtable.reservation.dto.read.ReservationListResponseDto;
+import com.catchtable.reservation.dto.update.ReservationStatusUpdateRequestDto;
 import com.catchtable.reservation.dto.update.ReservationUpdateRequestDto;
 import com.catchtable.reservation.dto.update.ReservationUpdateResponseDto;
 import jakarta.validation.Valid;
@@ -76,5 +77,17 @@ public class ReservationController {
         return ResponseEntity
                 .status(SuccessCode.RESERVATION_UPDATE_SUCCESS.getHttpStatus())
                 .body(ApiResponse.success(SuccessCode.RESERVATION_UPDATE_SUCCESS, responseData));
+    }
+
+    @PatchMapping("/{reservationId}/status")
+    public ResponseEntity<ApiResponse<Void>> updateReservationStatus(
+            @PathVariable Long reservationId,
+            @RequestParam Long userId,
+            @Valid @RequestBody ReservationStatusUpdateRequestDto request
+    ) {
+        reservationService.updateReservationStatus(reservationId, userId, request);
+        return ResponseEntity
+                .status(SuccessCode.RESERVATION_UPDATE_SUCCESS.getHttpStatus())
+                .body(ApiResponse.success(SuccessCode.RESERVATION_UPDATE_SUCCESS));
     }
 }
