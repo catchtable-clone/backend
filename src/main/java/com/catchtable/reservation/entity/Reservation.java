@@ -2,12 +2,20 @@ package com.catchtable.reservation.entity;
 
 import java.time.LocalDateTime;
 
+import com.catchtable.coupon.entity.Coupon;
+import com.catchtable.global.exception.CustomException;
+import com.catchtable.global.exception.ErrorCode;
+import com.catchtable.remain.entity.StoreRemain;
+import com.catchtable.user.entity.User;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import lombok.AccessLevel;
@@ -22,25 +30,36 @@ public class Reservation {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long reservationId; //예약 아이디
+    private Long id;
 
-    private Long userId; //예약자
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user; // 예약자
 
-    private Long remainId; //남은 테이블 아이디
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "remain_id", nullable = false)
+    private StoreRemain storeRemain;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "coupon_id")
+    private Coupon coupon;
 
     private Integer member; //예약 인원
 
     @Enumerated(EnumType.STRING)
-    private ReservationStatus status; //예약 상태
+    private ReservationStatus status;
 
-    private LocalDateTime createdAt; //생성
+    private LocalDateTime createdAt;
 
-    private LocalDateTime updatedAt; //수정
+    private LocalDateTime updatedAt;
+
+    private Boolean reminded = false;
 
     @Builder
-    public Reservation(Long userId, Long remainId, Integer member, ReservationStatus status) {
-        this.userId = userId;
-        this.remainId = remainId;
+    public Reservation(User user, StoreRemain storeRemain, Coupon coupon, Integer member, ReservationStatus status) {
+        this.user = user;
+        this.storeRemain = storeRemain;
+        this.coupon = coupon;
         this.member = member;
         this.status = status;
     }
@@ -52,7 +71,7 @@ public class Reservation {
         this.updatedAt = now;
 
         if (this.status == null) {
-            this.status = ReservationStatus.PENDING;
+            this.status = ReservationStatus.CONFIRMED;
         }
     }
 
@@ -61,7 +80,17 @@ public class Reservation {
         this.updatedAt = LocalDateTime.now();
     }
 
+    public void validateOwner(Long userId) {
+        if (!this.user.getId().equals(userId)) {
+            throw new CustomException(ErrorCode.NOT_RESERVATION_OWNER);
+        }
+    }
+
     public void changeStatus(ReservationStatus status) {
         this.status = status;
+    }
+
+    public void markReminded() {
+        this.reminded = true;
     }
 }
