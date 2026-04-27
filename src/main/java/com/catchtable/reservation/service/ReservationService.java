@@ -9,6 +9,7 @@ import com.catchtable.remain.entity.StoreRemain;
 import com.catchtable.remain.repository.StoreRemainRepository;
 import com.catchtable.reservation.dto.create.ReservationCreateRequestDto;
 import com.catchtable.reservation.dto.create.ReservationCreateResponseDto;
+import com.catchtable.reservation.dto.update.ReservationStatusUpdateRequestDto;
 import com.catchtable.reservation.dto.update.ReservationUpdateRequestDto;
 import com.catchtable.reservation.dto.update.ReservationUpdateResponseDto;
 import com.catchtable.reservation.dto.read.ReservationDetailResponseDto;
@@ -194,5 +195,11 @@ public class ReservationService {
                 savedReservation.getStatus().name().toLowerCase(),
                 savedReservation.getUpdatedAt() != null ? savedReservation.getUpdatedAt() : java.time.LocalDateTime.now()
         );
+    }
+
+    @Transactional
+    public void updateReservationStatus(Long reservationId, Long userId, ReservationStatusUpdateRequestDto request) {
+        Reservation reservation = getActiveReservation(reservationId, userId);
+        reservation.changeStatus(request.status());
     }
 }
