@@ -79,8 +79,10 @@ public class ReservationService {
                     reservation.getId(),
                     storeRemain.getId(),
                     reservation.getStatus().name().toLowerCase(),
+                    store.getId(),
                     store.getStoreName(),
                     store.getStoreImage() != null ? store.getStoreImage() : "",
+                    store.getCategory().name(),
                     storeRemain.getRemainDate(),
                     storeRemain.getRemainTime(),
                     reservation.getMember(),
@@ -103,6 +105,7 @@ public class ReservationService {
                 store.getId(),
                 store.getStoreName(),
                 store.getStoreImage() != null ? store.getStoreImage() : "",
+                store.getCategory().name(),
                 store.getAddress()
         );
 
