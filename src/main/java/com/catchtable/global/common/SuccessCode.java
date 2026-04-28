@@ -58,7 +58,13 @@ public enum SuccessCode implements ResponseCode {
     // Vacancy
     VACANCY_REGISTER_SUCCESS(HttpStatus.CREATED, "빈자리 알림이 등록되었습니다."),
     VACANCY_LOOKUP_SUCCESS(HttpStatus.OK, "빈자리 알림 조회가 완료되었습니다."),
-    VACANCY_DELETE_SUCCESS(HttpStatus.OK, "빈자리 알림이 삭제되었습니다.");
+    VACANCY_DELETE_SUCCESS(HttpStatus.OK, "빈자리 알림이 삭제되었습니다."),
+
+    // Notification
+    NOTIFICATION_LOOKUP_SUCCESS(HttpStatus.OK, "알림 목록을 성공적으로 조회했습니다."),
+    NOTIFICATION_UNREAD_COUNT_SUCCESS(HttpStatus.OK, "안 읽은 알림 개수를 조회했습니다."),
+    NOTIFICATION_READ_SUCCESS(HttpStatus.OK, "알림을 읽음 처리했습니다."),
+    NOTIFICATION_DELETE_SUCCESS(HttpStatus.OK, "알림을 삭제했습니다.");
 
     private final HttpStatus httpStatus;
     private final String message;

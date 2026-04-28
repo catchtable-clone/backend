@@ -146,11 +146,11 @@ public class ReservationService {
         StoreRemain storeRemain = reservation.getStoreRemain();
         storeRemain.increaseRemainTeam();
 
-        // 빈자리 알림 이메일 발송 (추후 삭제 고려하여 그대로 둠)
-        vacancyNotificationService.notifySubscribers(storeRemain.getId());
+        // 빈자리 알림 이메일 발송 (주석 처리)
+        // vacancyNotificationService.notifySubscribers(storeRemain.getId());
 
-        // 빈자리 발생 이벤트 발행 (새로 추가한 인앱 알림 로직 트리거)
-        eventPublisher.publishEvent(new VacancyEvent(storeRemain));
+        // 빈자리 발생 이벤트 발행 (ID만 전달)
+        eventPublisher.publishEvent(new VacancyEvent(storeRemain.getId()));
 
         // 쿠폰 반환
         if (reservation.getCoupon() != null) {
@@ -167,10 +167,11 @@ public class ReservationService {
 
         // 기존 예약 취소 및 재고 복구
         oldReservation.changeStatus(ReservationStatus.CANCELED);
-        oldReservation.getStoreRemain().increaseRemainTeam();
+        StoreRemain oldStoreRemain = oldReservation.getStoreRemain();
+        oldStoreRemain.increaseRemainTeam();
 
-        // 예약 변경으로 기존 자리가 났으므로 알림 이벤트 발행
-        eventPublisher.publishEvent(new VacancyEvent(oldReservation.getStoreRemain()));
+        // 예약 변경으로 기존 자리가 났으므로 알림 이벤트 발행 (ID만 전달)
+        eventPublisher.publishEvent(new VacancyEvent(oldStoreRemain.getId()));
 
         // 기존 쿠폰 반환
         if (oldReservation.getCoupon() != null) {
