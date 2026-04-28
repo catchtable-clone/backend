@@ -4,7 +4,8 @@ import com.catchtable.coupon.entity.Coupon;
 import com.catchtable.coupon.service.CouponService;
 import com.catchtable.global.exception.CustomException;
 import com.catchtable.global.exception.ErrorCode;
-import com.catchtable.notification.service.VacancyNotificationService;
+import com.catchtable.notification.event.VacancyEvent;
+import com.catchtable.notification.service.VacancyNotificationEmailService;
 import com.catchtable.remain.entity.StoreRemain;
 import com.catchtable.remain.repository.StoreRemainRepository;
 import com.catchtable.reservation.dto.create.ReservationCreateRequestDto;
@@ -21,6 +22,7 @@ import com.catchtable.store.entity.Store;
 import com.catchtable.user.entity.User;
 import com.catchtable.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,7 +36,8 @@ public class ReservationService {
     private final UserRepository userRepository;
     private final StoreRemainRepository storeRemainRepository;
     private final CouponService couponService;
-    private final VacancyNotificationService vacancyNotificationService;
+    private final VacancyNotificationEmailService vacancyNotificationService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public ReservationCreateResponseDto create(ReservationCreateRequestDto request) {
@@ -143,8 +146,11 @@ public class ReservationService {
         StoreRemain storeRemain = reservation.getStoreRemain();
         storeRemain.increaseRemainTeam();
 
-        // 빈자리 알림 구독자에게 알림 발송
+        // 빈자리 알림 이메일 발송 (추후 삭제 고려하여 그대로 둠)
         vacancyNotificationService.notifySubscribers(storeRemain.getId());
+
+        // 빈자리 발생 이벤트 발행 (새로 추가한 인앱 알림 로직 트리거)
+        eventPublisher.publishEvent(new VacancyEvent(storeRemain));
 
         // 쿠폰 반환
         if (reservation.getCoupon() != null) {
@@ -162,6 +168,9 @@ public class ReservationService {
         // 기존 예약 취소 및 재고 복구
         oldReservation.changeStatus(ReservationStatus.CANCELED);
         oldReservation.getStoreRemain().increaseRemainTeam();
+
+        // 예약 변경으로 기존 자리가 났으므로 알림 이벤트 발행
+        eventPublisher.publishEvent(new VacancyEvent(oldReservation.getStoreRemain()));
 
         // 기존 쿠폰 반환
         if (oldReservation.getCoupon() != null) {

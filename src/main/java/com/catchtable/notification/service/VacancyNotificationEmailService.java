@@ -5,7 +5,6 @@ import com.catchtable.remain.repository.StoreRemainRepository;
 import com.catchtable.global.exception.CustomException;
 import com.catchtable.global.exception.ErrorCode;
 import com.catchtable.user.entity.User;
-import com.catchtable.user.repository.UserRepository;
 import com.catchtable.vacancy.entity.Vacancy;
 import com.catchtable.vacancy.entity.VacancyStatus;
 import com.catchtable.vacancy.repository.VacancyRepository;
@@ -18,16 +17,14 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class VacancyNotificationService {
+public class VacancyNotificationEmailService {
 
     private final VacancyRepository vacancyRepository;
     private final StoreRemainRepository storeRemainRepository;
-    private final UserRepository userRepository;
     private final EmailService emailService;
     private final Map<Long, LocalDateTime> lastNotifiedMap = new ConcurrentHashMap<>();
 
@@ -50,7 +47,8 @@ public class VacancyNotificationService {
             return;
         }
 
-        List<Vacancy> subscribers = vacancyRepository.findByRemainIdAndStatusAndIsDeletedFalse(
+        // Vacancy 엔티티 구조가 객체 참조로 변경되었으므로, N+1을 방지하는 메서드 사용
+        List<Vacancy> subscribers = vacancyRepository.findWithUserByStoreRemain_IdAndStatusAndIsDeletedFalse(
                 remainId, VacancyStatus.ACTIVE);
 
         if (subscribers.isEmpty()) {
@@ -61,12 +59,9 @@ public class VacancyNotificationService {
         String remainDate = storeRemain.getRemainDate().toString();
         String remainTime = storeRemain.getRemainTime().toString();
 
-        List<Long> userIds = subscribers.stream().map(Vacancy::getUserId).toList();
-        Map<Long, User> userMap = userRepository.findAllById(userIds).stream()
-                .collect(Collectors.toMap(User::getId, user -> user));
-
         for (Vacancy vacancy : subscribers) {
-            User user = userMap.get(vacancy.getUserId());
+            // @EntityGraph가 적용된 Repository 메서드를 통해 가져오므로, N+1 없이 User 정보 접근 가능
+            User user = vacancy.getUser();
             if (user == null) continue;
 
             emailService.send(user.getEmail(),
@@ -78,6 +73,6 @@ public class VacancyNotificationService {
         }
         lastNotifiedMap.put(remainId, now);
 
-        log.info("[빈자리 알림] remainId: {}, {}명에게 알림 발송", remainId, subscribers.size());
+        log.info("[빈자리 알림] remainId: {}, {}명에게 이메일 알림 발송", remainId, subscribers.size());
     }
 }
