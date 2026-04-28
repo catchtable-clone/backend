@@ -1,5 +1,6 @@
 package com.catchtable.store.repository;
 
+import com.catchtable.store.entity.Category;
 import com.catchtable.store.entity.District;
 import com.catchtable.store.entity.Store;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -14,10 +15,7 @@ public interface StoreRepository extends JpaRepository<Store, Long> {
 
     Optional<Store> findByIdAndIsDeletedFalse(Long id);
 
-    @Query("SELECT s FROM Store s WHERE s.storeName LIKE %:name% AND s.isDeleted = false")
-    List<Store> searchByStoreName(@Param("name") String name);
-
-    List<Store> findAllByDistrictAndIsDeletedFalse(District district);
+    List<Store> findAllByIsDeletedFalse();
 
     @Modifying
     @Query("UPDATE Store s SET s.reviewCount = s.reviewCount + 1 WHERE s.id = :storeId")

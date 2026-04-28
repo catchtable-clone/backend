@@ -66,8 +66,9 @@ public class ReviewService {
 
         reviewRepository.save(review);
 
-        // 리뷰 카운트 증가
+        // 리뷰 카운트 증가 + 평균 평점 갱신
         storeService.increaseReviewCount(store.getId());
+        storeService.recalculateAverageStar(store.getId());
 
         return review.getId();
     }
@@ -108,6 +109,11 @@ public class ReviewService {
         }
 
         review.updateReview(request.star(), request.content(), request.reviewImage());
+
+        // 별점이 변경된 경우 매장 평균 평점 갱신
+        if (request.star() != null) {
+            storeService.recalculateAverageStar(review.getStore().getId());
+        }
         return review.getId();
     }
 
@@ -124,7 +130,9 @@ public class ReviewService {
 
         review.delete();
 
-        // 리뷰 카운트 감소
-        storeService.decreaseReviewCount(review.getStore().getId());
+        // 리뷰 카운트 감소 + 평균 평점 갱신
+        Long storeId = review.getStore().getId();
+        storeService.decreaseReviewCount(storeId);
+        storeService.recalculateAverageStar(storeId);
     }
 }

@@ -10,6 +10,7 @@ import com.catchtable.store.dto.status.StoreStatusUpdateRequest;
 import com.catchtable.store.dto.status.StoreStatusUpdateResponse;
 import com.catchtable.store.dto.update.StoreUpdateRequest;
 import com.catchtable.store.dto.update.StoreUpdateResponse;
+import com.catchtable.store.entity.Category;
 import com.catchtable.store.entity.District;
 import com.catchtable.store.service.StoreService;
 
@@ -38,17 +39,32 @@ public class StoreController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<StoreListResponse>>> searchStores(
-            @RequestParam String name) {
-        List<StoreListResponse> stores = storeService.searchStores(name);
+    public ResponseEntity<ApiResponse<List<StoreListResponse>>> getStores(
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) Category category,
+            @RequestParam(required = false) District district,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        List<StoreListResponse> stores = storeService.getStores(name, category, district, page, size);
         return ResponseEntity
                 .ok(ApiResponse.success(SuccessCode.STORE_LIST_OK, stores));
     }
 
-    @GetMapping("/district")
-    public ResponseEntity<ApiResponse<List<StoreListResponse>>> getStoresByDistrict(
-            @RequestParam District district) {
-        List<StoreListResponse> stores = storeService.getStoresByDistrict(district);
+    @GetMapping("/popular")
+    public ResponseEntity<ApiResponse<List<StoreListResponse>>> getPopularStores(
+            @RequestParam(defaultValue = "10") int limit) {
+        List<StoreListResponse> stores = storeService.getPopularStores(limit);
+        return ResponseEntity
+                .ok(ApiResponse.success(SuccessCode.STORE_LIST_OK, stores));
+    }
+
+    @GetMapping("/nearby")
+    public ResponseEntity<ApiResponse<List<StoreListResponse>>> getNearbyStores(
+            @RequestParam Double latitude,
+            @RequestParam Double longitude,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        List<StoreListResponse> stores = storeService.getNearbyStores(latitude, longitude, page, size);
         return ResponseEntity
                 .ok(ApiResponse.success(SuccessCode.STORE_LIST_OK, stores));
     }

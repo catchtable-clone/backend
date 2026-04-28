@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS stores (
     status VARCHAR(255) NOT NULL,
     review_count INTEGER NOT NULL,
     bookmark_count INTEGER NOT NULL,
+    average_star DOUBLE PRECISION NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP,
     is_deleted BOOLEAN NOT NULL

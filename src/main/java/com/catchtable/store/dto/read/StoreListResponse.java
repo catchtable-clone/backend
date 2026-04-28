@@ -10,7 +10,9 @@ public record StoreListResponse(
         String address,
         String district,
         Double latitude,
-        Double longitude
+        Double longitude,
+        Double averageStar,
+        Integer reviewCount
 ) {
     public static StoreListResponse from(Store store) {
         return new StoreListResponse(
@@ -21,7 +23,9 @@ public record StoreListResponse(
                 store.getAddress(),
                 store.getDistrict().name(),
                 store.getLatitude(),
-                store.getLongitude()
+                store.getLongitude(),
+                store.getAverageStar(),
+                store.getReviewCount()
         );
     }
 }
