@@ -75,7 +75,13 @@ public enum ErrorCode implements ResponseCode {
     VACANCY_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 알림입니다."),
     VACANCY_ALREADY_REGISTERED(HttpStatus.CONFLICT, "이미 빈자리 알림을 등록했습니다."),
     VACANCY_ALREADY_DELETED(HttpStatus.CONFLICT, "이미 삭제된 알림입니다."),
-    VACANCY_REMAIN_NOT_EXHAUSTED(HttpStatus.BAD_REQUEST, "아직 예약 가능한 시간대입니다. 잔여 좌석이 0일 때만 빈자리 알림을 등록할 수 있습니다.");
+    VACANCY_REMAIN_NOT_EXHAUSTED(HttpStatus.BAD_REQUEST, "아직 예약 가능한 시간대입니다. 잔여 좌석이 0일 때만 빈자리 알림을 등록할 수 있습니다."),
+
+    // File
+    FILE_EMPTY(HttpStatus.BAD_REQUEST, "업로드할 파일이 비어있습니다."),
+    FILE_INVALID_TYPE(HttpStatus.BAD_REQUEST, "허용되지 않는 파일 형식입니다. (jpg, png, webp만 가능)"),
+    FILE_TOO_LARGE(HttpStatus.BAD_REQUEST, "파일 크기는 5MB를 초과할 수 없습니다."),
+    FILE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "파일 업로드 중 오류가 발생했습니다.");
 
     private final HttpStatus httpStatus;
     private final String message;

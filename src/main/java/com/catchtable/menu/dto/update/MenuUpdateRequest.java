@@ -11,6 +11,9 @@ public record MenuUpdateRequest(
         Integer price,
 
         @Schema(description = "메뉴 설명", example = "크림 파스타")
-        String description
+        String description,
+
+        @Schema(description = "메뉴 이미지 URL (선택)", example = "http://localhost:8080/uploads/abc.jpg")
+        String menuImage
 ) {
 }

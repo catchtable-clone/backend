@@ -15,7 +15,6 @@ import com.catchtable.store.repository.StoreRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -29,18 +28,14 @@ public class MenuService {
 
     // 메뉴 일괄 생성
     @Transactional
-    public MenuCreateResponse create(Long storeId, MenuCreateRequest request, List<MultipartFile> menuImages) {
+    public MenuCreateResponse create(Long storeId, MenuCreateRequest request) {
         Store store = storeRepository.findByIdAndIsDeletedFalse(storeId)
                 .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
 
-        List<MenuCreateRequest.MenuItemRequest> menus = request.menus();
-        List<Menu> menuList = java.util.stream.IntStream.range(0, menus.size())
-                .mapToObj(i -> {
-                    MenuCreateRequest.MenuItemRequest item = menus.get(i);
-                    String menuImage = (menuImages != null && i < menuImages.size())
-                            ? menuImages.get(i).getOriginalFilename() : null;
-                    return Menu.create(store, item.menuName(), menuImage, item.price(), item.description());
-                })
+        List<Menu> menuList = request.menus().stream()
+                .map(item -> Menu.create(
+                        store, item.menuName(), item.menuImage(), item.price(), item.description()
+                ))
                 .toList();
 
         List<Long> menuIds = menuRepository.saveAll(menuList).stream()
@@ -59,11 +54,10 @@ public class MenuService {
 
     // 메뉴 수정
     @Transactional
-    public MenuUpdateResponse update(Long menuId, MenuUpdateRequest request, MultipartFile menuImage) {
+    public MenuUpdateResponse update(Long menuId, MenuUpdateRequest request) {
         Menu menu = menuRepository.findByIdAndIsDeletedFalse(menuId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MENU_NOT_FOUND));
-        String menuImageName = menuImage != null ? menuImage.getOriginalFilename() : menu.getMenuImage();
-        menu.update(request.menuName(), request.description(), request.price(), menuImageName);
+        menu.update(request.menuName(), request.description(), request.price(), request.menuImage());
         return new MenuUpdateResponse(menuId, "메뉴 수정 완료");
     }
 
