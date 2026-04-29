@@ -47,7 +47,6 @@ public class VacancyNotificationEmailService {
             return;
         }
 
-        // Vacancy 엔티티 구조가 객체 참조로 변경되었으므로, N+1을 방지하는 메서드 사용
         List<Vacancy> subscribers = vacancyRepository.findWithUserByStoreRemain_IdAndStatusAndIsDeletedFalse(
                 remainId, VacancyStatus.ACTIVE);
 
@@ -60,12 +59,11 @@ public class VacancyNotificationEmailService {
         String remainTime = storeRemain.getRemainTime().toString();
 
         for (Vacancy vacancy : subscribers) {
-            // @EntityGraph가 적용된 Repository 메서드를 통해 가져오므로, N+1 없이 User 정보 접근 가능
             User user = vacancy.getUser();
             if (user == null) continue;
 
             emailService.send(user.getEmail(),
-                    "[캐치테이블] 빈자리 알림",
+                    "빈자리 알림",
                     String.format("%s님, %s %s %s에 빈자리가 발생했습니다! 지금 바로 예약하세요.",
                             user.getNickname(), storeName, remainDate, remainTime));
 

@@ -33,20 +33,17 @@ public class VacancyInAppNotificationListener {
 
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    // 리스너 내에서 다시 DB 조회를 하므로, 새로운 트랜잭션이 필요합니다.
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handleVacancyEvent(VacancyEvent event) {
         Long remainId = event.getRemainId();
 
-        // 이벤트로 받은 ID를 사용하여 DB에서 최신 상태의 StoreRemain 정보를 다시 조회합니다.
         StoreRemain storeRemain = storeRemainRepository.findById(remainId)
                 .orElseThrow(() -> new CustomException(ErrorCode.REMAIN_NOT_FOUND));
 
-        log.info("[인앱 알림 리스너] 빈자리 발생 이벤트 수신: remainId = {}, 현재 잔여 좌석 = {}", remainId, storeRemain.getRemainTeam());
+        log.info("빈자리 발생 이벤트 수신: remainId = {}, 현재 잔여 좌석 = {}", remainId, storeRemain.getRemainTeam());
 
-        // 최신 상태의 remainTeam으로 검사합니다.
         if (storeRemain.getRemainTeam() <= 0) {
-            log.warn("[인앱 알림 리스너] 잔여 좌석이 0 이하이므로 알림을 발송하지 않습니다.");
+            log.warn("잔여 좌석이 0 이하이므로 알림을 발송하지 않습니다.");
             return;
         }
 
@@ -54,7 +51,7 @@ public class VacancyInAppNotificationListener {
                 remainId, VacancyStatus.ACTIVE);
 
         if (subscribers.isEmpty()) {
-            log.info("[인앱 알림 리스너] 해당 시간대에 대한 빈자리 알림 구독자가 없습니다.");
+            log.info("해당 시간대에 대한 빈자리 알림 구독자가 없습니다.");
             return;
         }
 
@@ -62,7 +59,7 @@ public class VacancyInAppNotificationListener {
         String remainDate = storeRemain.getRemainDate().toString();
         String remainTime = storeRemain.getRemainTime().toString();
 
-        log.info("[인앱 알림 리스너] {}명에게 알림 생성을 시작합니다.", subscribers.size());
+        log.info("{}명에게 알림 생성을 시작합니다.", subscribers.size());
 
         for (Vacancy vacancy : subscribers) {
             User user = vacancy.getUser();

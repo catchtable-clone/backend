@@ -33,7 +33,7 @@ public class NotificationService {
 
     @Transactional(readOnly = true)
     public Page<NotificationListResponse> getMyNotifications(Long userId, Pageable pageable) {
-        return notificationRepository.findByUserIdAndIsDeletedFalseOrderByCreatedAtDesc(userId, pageable)
+        return notificationRepository.findByUserIdAndIsDeletedFalse(userId, pageable)
                 .map(NotificationListResponse::new);
     }
 
