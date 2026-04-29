@@ -219,7 +219,7 @@ class ReservationCouponTest {
             return r;
         });
 
-        var request = new com.catchtable.reservation.dto.update.ReservationUpdateRequestDto(2L, 2);
+        var request = new com.catchtable.reservation.dto.update.ReservationUpdateRequestDto(2L, 2, null);
         reservationService.updateReservation(1L, 1L, request);
 
         assertThat(oldReservation.getStatus()).isEqualTo(ReservationStatus.CANCELED);

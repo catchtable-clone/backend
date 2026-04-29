@@ -18,12 +18,17 @@ import com.catchtable.store.repository.StoreRepository;
 import com.catchtable.user.repository.UserRepository;
 import com.catchtable.global.exception.CustomException;
 import com.catchtable.global.exception.ErrorCode;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.Comparator;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -44,27 +49,32 @@ public class StoreService {
         return StoreCreateResponse.from(saved.getId());
     }
 
-    // 매장 목록 통합 조회 (이름·카테고리·지역 옵셔널 필터 + 페이지네이션)
+    /**
+     * 매장 목록 통합 조회 (이름·카테고리·지역 옵셔널 필터 + DB 페이지네이션 + 인기 정렬)
+     * Specification 사용으로 PostgreSQL+enum 조합에서 :param IS NULL 회피.
+     */
     @Transactional(readOnly = true)
     public List<StoreListResponse> getStores(String name, Category category, District district, int page, int size) {
         String trimmedName = (name == null || name.isBlank()) ? null : name.trim();
-        return storeRepository.findAllByIsDeletedFalse().stream()
-                .filter(s -> trimmedName == null || s.getStoreName().contains(trimmedName))
-                .filter(s -> category == null || s.getCategory() == category)
-                .filter(s -> district == null || s.getDistrict() == district)
-                .sorted(popularityComparator())
-                .skip((long) page * size)
-                .limit(size)
+        Specification<Store> spec = buildStoreSpec(trimmedName, category, district);
+        Pageable pageable = PageRequest.of(page, size, popularitySort());
+        return storeRepository.findAll(spec, pageable).getContent().stream()
                 .map(StoreListResponse::from)
                 .toList();
     }
 
-    // 인기 매장 (평균 평점 → 리뷰 수 → 북마크 수 순)
+    // 인기 매장 (averageStar DESC → reviewCount DESC → bookmarkCount DESC) — DB 정렬 + LIMIT
     @Transactional(readOnly = true)
     public List<StoreListResponse> getPopularStores(int limit) {
-        return storeRepository.findAllByIsDeletedFalse().stream()
-                .sorted(popularityComparator())
-                .limit(limit)
+        return storeRepository.findPopular(PageRequest.of(0, limit)).stream()
+                .map(StoreListResponse::from)
+                .toList();
+    }
+
+    // 내 주변 매장 (좌표 거리 정렬 + DB 페이지네이션)
+    @Transactional(readOnly = true)
+    public List<StoreListResponse> getNearbyStores(double latitude, double longitude, int page, int size) {
+        return storeRepository.findNearby(latitude, longitude, PageRequest.of(page, size)).stream()
                 .map(StoreListResponse::from)
                 .toList();
     }
@@ -72,26 +82,36 @@ public class StoreService {
     /**
      * 매장 인기도 정렬 기준
      * 1. 평점 내림차순 → 2. 리뷰 수 내림차순 → 3. 북마크 수 내림차순
+     * 4. (타이브레이커) id 오름차순 — 동률 시 먼저 등록된 매장이 위로 오도록 결정성 보장
      */
-    private Comparator<Store> popularityComparator() {
-        return Comparator
-                .comparingDouble((Store s) -> s.getAverageStar() != null ? s.getAverageStar() : 0.0)
-                .thenComparingInt(Store::getReviewCount)
-                .thenComparingInt(Store::getBookmarkCount)
-                .reversed();
+    private Sort popularitySort() {
+        return Sort.by(
+                Sort.Order.desc("averageStar"),
+                Sort.Order.desc("reviewCount"),
+                Sort.Order.desc("bookmarkCount"),
+                Sort.Order.asc("id")
+        );
     }
 
-    // 내 주변 매장 (좌표 거리 정렬 + 페이지네이션)
-    @Transactional(readOnly = true)
-    public List<StoreListResponse> getNearbyStores(double latitude, double longitude, int page, int size) {
-        return storeRepository.findAllByIsDeletedFalse().stream()
-                .sorted(Comparator.comparingDouble(s ->
-                        Math.pow(s.getLatitude() - latitude, 2) + Math.pow(s.getLongitude() - longitude, 2)
-                ))
-                .skip((long) page * size)
-                .limit(size)
-                .map(StoreListResponse::from)
-                .toList();
+    /**
+     * 이름(LIKE) + 카테고리/지역(EQ) + isDeleted=false 필터를 Specification으로 조립.
+     */
+    private Specification<Store> buildStoreSpec(String name, Category category, District district) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            predicates.add(cb.isFalse(root.get("isDeleted")));
+            if (name != null) {
+                predicates.add(cb.like(cb.lower(root.get("storeName")),
+                        "%" + name.toLowerCase() + "%"));
+            }
+            if (category != null) {
+                predicates.add(cb.equal(root.get("category"), category));
+            }
+            if (district != null) {
+                predicates.add(cb.equal(root.get("district"), district));
+            }
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
     }
 
     // 매장 상세조회 + 예약 가능 시간대 조회

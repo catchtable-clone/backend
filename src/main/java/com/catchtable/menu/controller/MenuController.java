@@ -12,6 +12,7 @@ import com.catchtable.menu.service.MenuService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -27,13 +28,14 @@ public class MenuController {
 
     private final MenuService menuService;
 
-    @Operation(summary = "메뉴 일괄 생성", description = "특정 가게에 메뉴를 한 번에 여러 개 생성합니다.")
+    @Operation(summary = "메뉴 일괄 생성", description = "특정 가게에 메뉴를 한 번에 여러 개 생성합니다. 관리자 전용.")
     @PostMapping
     public ResponseEntity<ApiResponse<MenuCreateResponse>> create(
+            @RequestHeader("X-User-Id") Long userId,
             @Parameter(description = "가게 ID", required = true) @PathVariable Long storeId,
-            @RequestBody MenuCreateRequest request
+            @Valid @RequestBody MenuCreateRequest request
     ) {
-        MenuCreateResponse response = menuService.create(storeId, request);
+        MenuCreateResponse response = menuService.create(userId, storeId, request);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ApiResponse.success(SuccessCode.MENU_CREATED, response));
@@ -49,25 +51,27 @@ public class MenuController {
                 .ok(ApiResponse.success(SuccessCode.MENU_LIST_OK, response));
     }
 
-    @Operation(summary = "메뉴 수정", description = "특정 메뉴의 이름, 가격, 설명, 이미지를 수정합니다.")
+    @Operation(summary = "메뉴 수정", description = "특정 메뉴의 이름, 가격, 설명, 이미지를 수정합니다. 관리자 전용 + 매장 소속 검증.")
     @PatchMapping("/{menuId}")
     public ResponseEntity<ApiResponse<MenuUpdateResponse>> update(
+            @RequestHeader("X-User-Id") Long userId,
             @Parameter(description = "가게 ID", required = true) @PathVariable Long storeId,
             @Parameter(description = "메뉴 ID", required = true) @PathVariable Long menuId,
-            @RequestBody MenuUpdateRequest request
+            @Valid @RequestBody MenuUpdateRequest request
     ) {
-        MenuUpdateResponse response = menuService.update(menuId, request);
+        MenuUpdateResponse response = menuService.update(userId, storeId, menuId, request);
         return ResponseEntity
                 .ok(ApiResponse.success(SuccessCode.MENU_UPDATED, response));
     }
 
-    @Operation(summary = "메뉴 삭제", description = "특정 메뉴를 소프트 삭제합니다.")
+    @Operation(summary = "메뉴 삭제", description = "특정 메뉴를 소프트 삭제합니다. 관리자 전용 + 매장 소속 검증.")
     @DeleteMapping("/{menuId}")
     public ResponseEntity<ApiResponse<MenuDeleteResponse>> delete(
+            @RequestHeader("X-User-Id") Long userId,
             @Parameter(description = "가게 ID", required = true) @PathVariable Long storeId,
             @Parameter(description = "메뉴 ID", required = true) @PathVariable Long menuId
     ) {
-        MenuDeleteResponse response = menuService.delete(menuId);
+        MenuDeleteResponse response = menuService.delete(userId, storeId, menuId);
         return ResponseEntity
                 .ok(ApiResponse.success(SuccessCode.MENU_DELETED, response));
     }

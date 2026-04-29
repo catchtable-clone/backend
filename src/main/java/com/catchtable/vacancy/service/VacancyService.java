@@ -41,17 +41,12 @@ public class VacancyService {
 
     @Transactional(readOnly = true)
     public List<VacancyListResponse> getMyList(Long userId) {
-        // TODO: N+1 문제, vacancy N개 조회 시 storeRemain N번 + store N번 추가 쿼리 발생.
-        // 나중에 인증 연동 시 @Query로 JOIN 처리 필요함.
-        return vacancyRepository.findByUserIdAndIsDeletedFalse(userId)
-                .stream()
-                .map(vacancy -> {
-                    StoreRemain storeRemain = storeRemainRepository.findById(vacancy.getRemainId())
-                            .orElseThrow(() -> new CustomException(ErrorCode.REMAIN_NOT_FOUND));
-                    Store store = storeRepository.findById(storeRemain.getStore().getId())
-                            .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
-                    return new VacancyListResponse(vacancy, storeRemain, store);
-                })
+        // 단일 쿼리로 Vacancy + StoreRemain + Store를 함께 조회하여 N+1 제거
+        return vacancyRepository.findMyListWithStore(userId).stream()
+                .map(row -> new VacancyListResponse(
+                        (Vacancy) row[0],
+                        (StoreRemain) row[1],
+                        (Store) row[2]))
                 .toList();
     }
 

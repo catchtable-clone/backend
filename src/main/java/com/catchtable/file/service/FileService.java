@@ -23,26 +23,57 @@ public class FileService {
     private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of(
             "image/jpeg", "image/png", "image/webp"
     );
+    private static final Set<String> ALLOWED_TYPES = Set.of("store", "menu");
 
-    public FileUploadResponse upload(MultipartFile file) {
+    public FileUploadResponse upload(MultipartFile file, String type, Long storeId) {
         validate(file);
 
         String extension = extractExtension(file.getOriginalFilename());
         String savedFilename = UUID.randomUUID() + "." + extension;
+        String subPath = computeSubPath(type, storeId);
 
         try {
-            Path uploadPath = Paths.get(UPLOAD_DIR);
+            Path uploadRoot = Paths.get(UPLOAD_DIR).toAbsolutePath().normalize();
+            Path uploadPath = uploadRoot.resolve(subPath).normalize();
+            // 경로 트래버설 방지: 최종 경로가 반드시 uploadRoot 하위에 있어야 함
+            if (!uploadPath.startsWith(uploadRoot)) {
+                throw new CustomException(ErrorCode.FILE_UPLOAD_FAILED);
+            }
             if (!Files.exists(uploadPath)) {
                 Files.createDirectories(uploadPath);
             }
-            Path destination = uploadPath.resolve(savedFilename).toAbsolutePath();
+            Path destination = uploadPath.resolve(savedFilename).normalize();
+            if (!destination.startsWith(uploadRoot)) {
+                throw new CustomException(ErrorCode.FILE_UPLOAD_FAILED);
+            }
             file.transferTo(destination);
         } catch (IOException e) {
             throw new CustomException(ErrorCode.FILE_UPLOAD_FAILED);
         }
 
-        String url = BASE_URL + "/" + UPLOAD_DIR + "/" + savedFilename;
+        String url = BASE_URL + "/" + UPLOAD_DIR + "/" + subPath + "/" + savedFilename;
         return FileUploadResponse.of(url);
+    }
+
+    /**
+     * 업로드 대상별 하위 경로 결정 (allowlist 기반)
+     * - type=store + storeId → stores/{storeId}/store
+     * - type=menu  + storeId → stores/{storeId}/menus
+     * - 그 외(허용되지 않은 type, storeId 누락) → misc
+     */
+    private String computeSubPath(String type, Long storeId) {
+        // type이 allowlist 밖이면 임의 경로 생성을 막기 위해 misc로 격리
+        String safeType = (type != null && ALLOWED_TYPES.contains(type.toLowerCase()))
+                ? type.toLowerCase()
+                : null;
+        if (storeId == null || safeType == null) {
+            return "misc";
+        }
+        return switch (safeType) {
+            case "store" -> "stores/" + storeId + "/store";
+            case "menu" -> "stores/" + storeId + "/menus";
+            default -> "misc";
+        };
     }
 
     private void validate(MultipartFile file) {

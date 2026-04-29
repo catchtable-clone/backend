@@ -61,7 +61,10 @@ public enum SuccessCode implements ResponseCode {
     VACANCY_DELETE_SUCCESS(HttpStatus.OK, "빈자리 알림이 삭제되었습니다."),
 
     // File
-    FILE_UPLOADED(HttpStatus.CREATED, "파일이 업로드되었습니다.");
+    FILE_UPLOADED(HttpStatus.CREATED, "파일이 업로드되었습니다."),
+
+    // User
+    USER_LOOKUP_SUCCESS(HttpStatus.OK, "사용자 정보를 조회했습니다.");
 
     private final HttpStatus httpStatus;
     private final String message;

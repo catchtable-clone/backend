@@ -21,6 +21,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 
 @ExtendWith(MockitoExtension.class)
@@ -80,7 +82,8 @@ class StoreServiceTest {
     @Test
     @DisplayName("매장 등록 실패 - 일반 사용자 권한 없음")
     void createStoreFailNotAdmin() {
-        given(userRepository.findById(2L)).willReturn(Optional.of(createNormalUser()));
+        given(userRepository.getAdminOrThrow(eq(2L), any(ErrorCode.class)))
+                .willThrow(new CustomException(ErrorCode.ADMIN_ONLY_STORE_CREATE));
 
         var request = new StoreCreateRequest("모수 서울", null, Category.WESTERN,
                 37.534, 126.993, "서울 용산구", District.YONGSAN, 10, "11:00", "22:00");
@@ -96,9 +99,9 @@ class StoreServiceTest {
     @Test
     @DisplayName("매장 상태 변경 성공 - ACTIVE → REST")
     void updateStoreStatusToRest() {
-        given(userRepository.findById(1L)).willReturn(Optional.of(createAdminUser()));
+        given(userRepository.getAdminOrThrow(eq(1L), any(ErrorCode.class))).willReturn(createAdminUser());
         Store store = createTestStore(1L, "모수 서울", StoreStatus.ACTIVE, false);
-        given(storeRepository.findById(1L)).willReturn(Optional.of(store));
+        given(storeRepository.findByIdAndIsDeletedFalse(1L)).willReturn(Optional.of(store));
 
         var request = new StoreStatusUpdateRequest(StoreStatus.REST);
 
@@ -110,9 +113,9 @@ class StoreServiceTest {
     @Test
     @DisplayName("매장 상태 변경 성공 - ACTIVE → INACTIVE (soft delete)")
     void updateStoreStatusToInactive() {
-        given(userRepository.findById(1L)).willReturn(Optional.of(createAdminUser()));
+        given(userRepository.getAdminOrThrow(eq(1L), any(ErrorCode.class))).willReturn(createAdminUser());
         Store store = createTestStore(1L, "모수 서울", StoreStatus.ACTIVE, false);
-        given(storeRepository.findById(1L)).willReturn(Optional.of(store));
+        given(storeRepository.findByIdAndIsDeletedFalse(1L)).willReturn(Optional.of(store));
 
         var request = new StoreStatusUpdateRequest(StoreStatus.INACTIVE);
 
@@ -125,9 +128,9 @@ class StoreServiceTest {
     @Test
     @DisplayName("매장 상태 변경 실패 - INACTIVE 상태에서 변경 불가")
     void updateStoreStatusFailFromInactive() {
-        given(userRepository.findById(1L)).willReturn(Optional.of(createAdminUser()));
+        given(userRepository.getAdminOrThrow(eq(1L), any(ErrorCode.class))).willReturn(createAdminUser());
         Store store = createTestStore(1L, "모수 서울", StoreStatus.INACTIVE, true);
-        given(storeRepository.findById(1L)).willReturn(Optional.of(store));
+        given(storeRepository.findByIdAndIsDeletedFalse(1L)).willReturn(Optional.of(store));
 
         var request = new StoreStatusUpdateRequest(StoreStatus.ACTIVE);
 
@@ -140,9 +143,9 @@ class StoreServiceTest {
     @Test
     @DisplayName("매장 상태 변경 실패 - 동일 상태로 변경")
     void updateStoreStatusFailSameStatus() {
-        given(userRepository.findById(1L)).willReturn(Optional.of(createAdminUser()));
+        given(userRepository.getAdminOrThrow(eq(1L), any(ErrorCode.class))).willReturn(createAdminUser());
         Store store = createTestStore(1L, "모수 서울", StoreStatus.ACTIVE, false);
-        given(storeRepository.findById(1L)).willReturn(Optional.of(store));
+        given(storeRepository.findByIdAndIsDeletedFalse(1L)).willReturn(Optional.of(store));
 
         var request = new StoreStatusUpdateRequest(StoreStatus.ACTIVE);
 

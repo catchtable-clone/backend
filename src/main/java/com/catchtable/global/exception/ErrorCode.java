@@ -38,6 +38,10 @@ public enum ErrorCode implements ResponseCode {
 
     // Menu
     MENU_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 메뉴입니다."),
+    ADMIN_ONLY_MENU_CREATE(HttpStatus.FORBIDDEN, "관리자만 메뉴를 등록할 수 있습니다."),
+    ADMIN_ONLY_MENU_UPDATE(HttpStatus.FORBIDDEN, "관리자만 메뉴를 수정할 수 있습니다."),
+    ADMIN_ONLY_MENU_DELETE(HttpStatus.FORBIDDEN, "관리자만 메뉴를 삭제할 수 있습니다."),
+    MENU_STORE_MISMATCH(HttpStatus.FORBIDDEN, "해당 매장의 메뉴가 아닙니다."),
 
     // Bookmark
     BOOKMARK_FOLDER_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 폴더입니다."),
