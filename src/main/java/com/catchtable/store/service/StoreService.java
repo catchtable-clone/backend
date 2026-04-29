@@ -49,6 +49,14 @@ public class StoreService {
                 .toList();
     }
 
+    // 홈 노출용 상위 매장 조회 (전체 조회 방지)
+    @Transactional(readOnly = true)
+    public List<StoreListResponse> getPopularStores() {
+        return storeRepository.findTop20ByIsDeletedFalseOrderByIdAsc().stream()
+                .map(StoreListResponse::from)
+                .toList();
+    }
+
     // 지역별 매장 조회
     @Transactional(readOnly = true)
     public List<StoreListResponse> getStoresByDistrict(District district) {
