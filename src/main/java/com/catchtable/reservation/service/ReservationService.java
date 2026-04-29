@@ -4,6 +4,9 @@ import com.catchtable.coupon.entity.Coupon;
 import com.catchtable.coupon.service.CouponService;
 import com.catchtable.global.exception.CustomException;
 import com.catchtable.global.exception.ErrorCode;
+import com.catchtable.notification.event.ReservationCanceledEvent;
+import com.catchtable.notification.event.ReservationConfirmedEvent;
+import com.catchtable.notification.event.ReservationVisitedEvent;
 import com.catchtable.notification.event.VacancyEvent;
 import com.catchtable.notification.service.VacancyNotificationEmailService;
 import com.catchtable.remain.entity.StoreRemain;
@@ -72,6 +75,16 @@ public class ReservationService {
                 .build();
 
         Reservation saved = reservationRepository.save(reservation);
+
+        // 예약 확정 알림 이벤트 발행
+        eventPublisher.publishEvent(new ReservationConfirmedEvent(
+                saved.getId(),
+                user.getId(),
+                storeRemain.getStore().getStoreName(),
+                storeRemain.getRemainDate().toString(),
+                storeRemain.getRemainTime().toString()
+        ));
+
         return new ReservationCreateResponseDto(saved.getId(), saved.getStatus());
     }
 
@@ -165,6 +178,15 @@ public class ReservationService {
         // 빈자리 발생 이벤트 발행 (ID만 전달)
         eventPublisher.publishEvent(new VacancyEvent(storeRemain.getId()));
 
+        // 예약 취소 알림 이벤트 발행
+        eventPublisher.publishEvent(new ReservationCanceledEvent(
+                reservation.getId(),
+                reservation.getUser().getId(),
+                storeRemain.getStore().getStoreName(),
+                storeRemain.getRemainDate().toString(),
+                storeRemain.getRemainTime().toString()
+        ));
+
         // 쿠폰 반환
         if (reservation.getCoupon() != null) {
             couponService.returnCoupon(reservation.getCoupon().getId());
@@ -234,7 +256,23 @@ public class ReservationService {
 
     @Transactional
     public void updateReservationStatus(Long reservationId, Long userId, ReservationStatusUpdateRequestDto request) {
-        Reservation reservation = getActiveReservation(reservationId, userId);
+        Reservation reservation = reservationRepository.findByIdWithUserAndStoreRemainAndStore(reservationId)
+                .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
+        
+        reservation.validateOwner(userId);
+
+        // 상태 변경
         reservation.changeStatus(request.status());
+
+        // 예약 상태가 VISITED로 변경될 때 이벤트 발행
+        if (request.status() == ReservationStatus.VISITED) {
+            eventPublisher.publishEvent(new ReservationVisitedEvent(
+                    reservation.getId(),
+                    reservation.getUser().getId(),
+                    reservation.getStoreRemain().getStore().getStoreName(),
+                    reservation.getStoreRemain().getRemainDate().toString(),
+                    reservation.getStoreRemain().getRemainTime().toString()
+            ));
+        }
     }
 }
