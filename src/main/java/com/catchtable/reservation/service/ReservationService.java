@@ -4,7 +4,11 @@ import com.catchtable.coupon.entity.Coupon;
 import com.catchtable.coupon.service.CouponService;
 import com.catchtable.global.exception.CustomException;
 import com.catchtable.global.exception.ErrorCode;
-import com.catchtable.notification.service.VacancyNotificationService;
+import com.catchtable.notification.event.ReservationCanceledEvent;
+import com.catchtable.notification.event.ReservationConfirmedEvent;
+import com.catchtable.notification.event.ReservationVisitedEvent;
+import com.catchtable.notification.event.VacancyEvent;
+import com.catchtable.notification.service.VacancyNotificationEmailService;
 import com.catchtable.remain.entity.StoreRemain;
 import com.catchtable.remain.repository.StoreRemainRepository;
 import com.catchtable.reservation.dto.create.ReservationCreateRequestDto;
@@ -21,6 +25,8 @@ import com.catchtable.store.entity.Store;
 import com.catchtable.user.entity.User;
 import com.catchtable.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,7 +40,8 @@ public class ReservationService {
     private final UserRepository userRepository;
     private final StoreRemainRepository storeRemainRepository;
     private final CouponService couponService;
-    private final VacancyNotificationService vacancyNotificationService;
+    private final VacancyNotificationEmailService vacancyNotificationService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public ReservationCreateResponseDto create(ReservationCreateRequestDto request) {
@@ -44,8 +51,15 @@ public class ReservationService {
         StoreRemain storeRemain = storeRemainRepository.findByIdWithStore(request.remainId())
                 .orElseThrow(() -> new CustomException(ErrorCode.REMAIN_NOT_FOUND));
 
-        // 재고 차감 (remainTeam <= 0 검증 포함)
-        storeRemain.decreaseRemainTeam();
+        try {
+            // 재고 차감 (remainTeam <= 0 검증 포함)
+            storeRemain.decreaseRemainTeam();
+            // 변경된 StoreRemain 엔티티를 명시적으로 저장하여 @Version 필드 업데이트를 트리거
+            storeRemainRepository.saveAndFlush(storeRemain);
+        } catch (OptimisticLockingFailureException e) {
+            throw new CustomException(ErrorCode.OPTIMISTIC_LOCK_CONFLICT);
+        }
+
 
         // 쿠폰 적용 (선택)
         Coupon coupon = null;
@@ -61,6 +75,16 @@ public class ReservationService {
                 .build();
 
         Reservation saved = reservationRepository.save(reservation);
+
+        // 예약 확정 알림 이벤트 발행
+        eventPublisher.publishEvent(new ReservationConfirmedEvent(
+                saved.getId(),
+                user.getId(),
+                storeRemain.getStore().getStoreName(),
+                storeRemain.getRemainDate().toString(),
+                storeRemain.getRemainTime().toString()
+        ));
+
         return new ReservationCreateResponseDto(saved.getId(), saved.getStatus());
     }
 
@@ -139,12 +163,29 @@ public class ReservationService {
         // 예약 상태 취소로 변경
         reservation.changeStatus(ReservationStatus.CANCELED);
 
-        // 예약했던 시간대의 재고 복구
         StoreRemain storeRemain = reservation.getStoreRemain();
-        storeRemain.increaseRemainTeam();
+        try {
+            // 예약했던 시간대의 재고 복구
+            storeRemain.increaseRemainTeam();
+            storeRemainRepository.saveAndFlush(storeRemain);
+        } catch (OptimisticLockingFailureException e) {
+            throw new CustomException(ErrorCode.OPTIMISTIC_LOCK_CONFLICT);
+        }
 
-        // 빈자리 알림 구독자에게 알림 발송
-        vacancyNotificationService.notifySubscribers(storeRemain.getId());
+        // 빈자리 알림 이메일 발송 (주석 처리)
+        // vacancyNotificationService.notifySubscribers(storeRemain.getId());
+
+        // 빈자리 발생 이벤트 발행 (ID만 전달)
+        eventPublisher.publishEvent(new VacancyEvent(storeRemain.getId()));
+
+        // 예약 취소 알림 이벤트 발행
+        eventPublisher.publishEvent(new ReservationCanceledEvent(
+                reservation.getId(),
+                reservation.getUser().getId(),
+                storeRemain.getStore().getStoreName(),
+                storeRemain.getRemainDate().toString(),
+                storeRemain.getRemainTime().toString()
+        ));
 
         // 쿠폰 반환
         if (reservation.getCoupon() != null) {
@@ -161,7 +202,17 @@ public class ReservationService {
 
         // 기존 예약 취소 및 재고 복구
         oldReservation.changeStatus(ReservationStatus.CANCELED);
-        oldReservation.getStoreRemain().increaseRemainTeam();
+        StoreRemain oldStoreRemain = oldReservation.getStoreRemain();
+        try {
+            oldStoreRemain.increaseRemainTeam();
+            storeRemainRepository.saveAndFlush(oldStoreRemain);
+        } catch (OptimisticLockingFailureException e) {
+            throw new CustomException(ErrorCode.OPTIMISTIC_LOCK_CONFLICT);
+        }
+
+
+        // 예약 변경으로 기존 자리가 났으므로 알림 이벤트 발행 (ID만 전달)
+        eventPublisher.publishEvent(new VacancyEvent(oldStoreRemain.getId()));
 
         // 기존 쿠폰 반환
         if (oldReservation.getCoupon() != null) {
@@ -169,7 +220,13 @@ public class ReservationService {
         }
 
         // 새로운 예약 시간에 대한 재고 차감
-        newStoreRemain.decreaseRemainTeam();
+        try {
+            newStoreRemain.decreaseRemainTeam();
+            storeRemainRepository.saveAndFlush(newStoreRemain);
+        } catch (OptimisticLockingFailureException e) {
+            throw new CustomException(ErrorCode.OPTIMISTIC_LOCK_CONFLICT);
+        }
+
 
         // 새 예약에 쿠폰 적용 (선택)
         Coupon newCoupon = null;
@@ -199,7 +256,23 @@ public class ReservationService {
 
     @Transactional
     public void updateReservationStatus(Long reservationId, Long userId, ReservationStatusUpdateRequestDto request) {
-        Reservation reservation = getActiveReservation(reservationId, userId);
+        Reservation reservation = reservationRepository.findByIdWithUserAndStoreRemainAndStore(reservationId)
+                .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
+        
+        reservation.validateOwner(userId);
+
+        // 상태 변경
         reservation.changeStatus(request.status());
+
+        // 예약 상태가 VISITED로 변경될 때 이벤트 발행
+        if (request.status() == ReservationStatus.VISITED) {
+            eventPublisher.publishEvent(new ReservationVisitedEvent(
+                    reservation.getId(),
+                    reservation.getUser().getId(),
+                    reservation.getStoreRemain().getStore().getStoreName(),
+                    reservation.getStoreRemain().getRemainDate().toString(),
+                    reservation.getStoreRemain().getRemainTime().toString()
+            ));
+        }
     }
 }

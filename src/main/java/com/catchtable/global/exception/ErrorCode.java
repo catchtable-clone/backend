@@ -75,7 +75,11 @@ public enum ErrorCode implements ResponseCode {
     VACANCY_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 알림입니다."),
     VACANCY_ALREADY_REGISTERED(HttpStatus.CONFLICT, "이미 빈자리 알림을 등록했습니다."),
     VACANCY_ALREADY_DELETED(HttpStatus.CONFLICT, "이미 삭제된 알림입니다."),
-    VACANCY_REMAIN_NOT_EXHAUSTED(HttpStatus.BAD_REQUEST, "아직 예약 가능한 시간대입니다. 잔여 좌석이 0일 때만 빈자리 알림을 등록할 수 있습니다.");
+    VACANCY_REMAIN_NOT_EXHAUSTED(HttpStatus.BAD_REQUEST, "아직 예약 가능한 시간대입니다. 잔여 좌석이 0일 때만 빈자리 알림을 등록할 수 있습니다."),
+
+    // Notification
+    NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 알림입니다."),
+    NOT_NOTIFICATION_OWNER(HttpStatus.FORBIDDEN, "본인의 알림만 접근할 수 있습니다.");
 
     private final HttpStatus httpStatus;
     private final String message;
