@@ -85,7 +85,11 @@ public enum ErrorCode implements ResponseCode {
     FILE_EMPTY(HttpStatus.BAD_REQUEST, "업로드할 파일이 비어있습니다."),
     FILE_INVALID_TYPE(HttpStatus.BAD_REQUEST, "허용되지 않는 파일 형식입니다. (jpg, png, webp만 가능)"),
     FILE_TOO_LARGE(HttpStatus.BAD_REQUEST, "파일 크기는 5MB를 초과할 수 없습니다."),
-    FILE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "파일 업로드 중 오류가 발생했습니다.");
+    FILE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "파일 업로드 중 오류가 발생했습니다."),
+
+    // Notification
+    NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 알림입니다."),
+    NOT_NOTIFICATION_OWNER(HttpStatus.FORBIDDEN, "본인의 알림만 접근할 수 있습니다.");
 
     private final HttpStatus httpStatus;
     private final String message;

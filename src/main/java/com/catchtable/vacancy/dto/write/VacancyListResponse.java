@@ -22,7 +22,7 @@ public class VacancyListResponse {
 
     public VacancyListResponse(Vacancy vacancy, StoreRemain storeRemain, Store store) {
         this.vacancyId = vacancy.getId();
-        this.remainId = vacancy.getRemainId();
+        this.remainId = storeRemain.getId();
         this.storeId = store.getId();
         this.storeName = store.getStoreName();
         this.remainDate = storeRemain.getRemainDate();

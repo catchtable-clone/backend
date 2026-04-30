@@ -26,4 +26,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
             @Param("date") LocalDate date,
             @Param("from") LocalTime from,
             @Param("to") LocalTime to);
+
+    @Query("SELECT r FROM Reservation r JOIN FETCH r.user u JOIN FETCH r.storeRemain sr JOIN FETCH sr.store s WHERE r.id = :id")
+    Optional<Reservation> findByIdWithUserAndStoreRemainAndStore(@Param("id") Long id);
 }

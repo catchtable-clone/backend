@@ -64,7 +64,14 @@ public enum SuccessCode implements ResponseCode {
     FILE_UPLOADED(HttpStatus.CREATED, "파일이 업로드되었습니다."),
 
     // User
-    USER_LOOKUP_SUCCESS(HttpStatus.OK, "사용자 정보를 조회했습니다.");
+    USER_LOOKUP_SUCCESS(HttpStatus.OK, "사용자 정보를 조회했습니다."),
+
+    // Notification
+    NOTIFICATION_LOOKUP_SUCCESS(HttpStatus.OK, "알림 목록을 성공적으로 조회했습니다."),
+    NOTIFICATION_UNREAD_COUNT_SUCCESS(HttpStatus.OK, "안 읽은 알림 개수를 조회했습니다."),
+    NOTIFICATION_READ_SUCCESS(HttpStatus.OK, "알림을 읽음 처리했습니다."),
+    NOTIFICATION_READ_ALL_SUCCESS(HttpStatus.OK, "모든 알림을 읽음 처리했습니다."),
+    NOTIFICATION_DELETE_SUCCESS(HttpStatus.OK, "알림을 삭제했습니다.");
 
     private final HttpStatus httpStatus;
     private final String message;
