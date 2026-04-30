@@ -64,6 +64,7 @@ public enum SuccessCode implements ResponseCode {
     NOTIFICATION_LOOKUP_SUCCESS(HttpStatus.OK, "알림 목록을 성공적으로 조회했습니다."),
     NOTIFICATION_UNREAD_COUNT_SUCCESS(HttpStatus.OK, "안 읽은 알림 개수를 조회했습니다."),
     NOTIFICATION_READ_SUCCESS(HttpStatus.OK, "알림을 읽음 처리했습니다."),
+    NOTIFICATION_READ_ALL_SUCCESS(HttpStatus.OK, "모든 알림을 읽음 처리했습니다."),
     NOTIFICATION_DELETE_SUCCESS(HttpStatus.OK, "알림을 삭제했습니다.");
 
     private final HttpStatus httpStatus;

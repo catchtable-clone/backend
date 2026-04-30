@@ -43,6 +43,12 @@ public class NotificationController {
         return ResponseEntity.ok(ApiResponse.success(SuccessCode.NOTIFICATION_READ_SUCCESS, null));
     }
 
+    @PatchMapping("/read-all")
+    public ResponseEntity<ApiResponse<Void>> markAllAsRead(@RequestParam Long userId) {
+        notificationService.markAllAsRead(userId);
+        return ResponseEntity.ok(ApiResponse.success(SuccessCode.NOTIFICATION_READ_ALL_SUCCESS, null));
+    }
+
     @DeleteMapping("/{notificationId}")
     public ResponseEntity<ApiResponse<Void>> deleteNotification(
             @PathVariable Long notificationId,
