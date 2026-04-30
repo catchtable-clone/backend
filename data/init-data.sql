@@ -23,13 +23,14 @@ CREATE TABLE IF NOT EXISTS bookmark_folders (
     user_id     BIGINT       NOT NULL REFERENCES users (id),
     folder_name VARCHAR(255) NOT NULL,
     folder_type VARCHAR(255) NOT NULL,
+    color       VARCHAR(20)  NOT NULL DEFAULT '#F97316',
     created_at  TIMESTAMP    NOT NULL,
     updated_at  TIMESTAMP,
     is_deleted  BOOLEAN      NOT NULL DEFAULT false
 );
 
-INSERT INTO bookmark_folders (user_id, folder_name, folder_type, is_deleted, created_at)
-SELECT id, '기본 폴더', 'DEFAULT', false, NOW()
+INSERT INTO bookmark_folders (user_id, folder_name, folder_type, color, is_deleted, created_at)
+SELECT id, '기본 폴더', 'DEFAULT', '#F97316', false, NOW()
 FROM users;
 
 CREATE TABLE IF NOT EXISTS stores (

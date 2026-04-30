@@ -80,6 +80,24 @@ public class StoreService {
     }
 
     /**
+     * 지도 화면 영역 안의 매장을 화면 중심에서 가까운 순서로 조회.
+     * limit를 넘으면 가장 먼 매장이 잘려나가므로 화면 중앙 주변에 마커가 균등하게 분포한다.
+     * 화면 중심 좌표가 누락되면 영역의 기하 중심을 자동 계산해 사용한다.
+     */
+    @Transactional(readOnly = true)
+    public List<StoreListResponse> getStoresInBounds(
+            double minLat, double maxLat, double minLng, double maxLng,
+            Double centerLat, Double centerLng, int limit) {
+        double cLat = centerLat != null ? centerLat : (minLat + maxLat) / 2.0;
+        double cLng = centerLng != null ? centerLng : (minLng + maxLng) / 2.0;
+        return storeRepository
+                .findInBounds(minLat, maxLat, minLng, maxLng, cLat, cLng, PageRequest.of(0, limit))
+                .stream()
+                .map(StoreListResponse::from)
+                .toList();
+    }
+
+    /**
      * 매장 인기도 정렬 기준
      * 1. 평점 내림차순 → 2. 리뷰 수 내림차순 → 3. 북마크 수 내림차순
      * 4. (타이브레이커) id 오름차순 — 동률 시 먼저 등록된 매장이 위로 오도록 결정성 보장

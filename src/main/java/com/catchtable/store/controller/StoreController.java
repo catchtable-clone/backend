@@ -69,6 +69,26 @@ public class StoreController {
                 .ok(ApiResponse.success(SuccessCode.STORE_LIST_OK, stores));
     }
 
+    /**
+     * 지도 화면 영역(bounding box) 안의 매장 조회.
+     * 줌/팬 시 호출되어 현재 화면에 보이는 매장만 마커로 그린다.
+     * limit는 줌 아웃으로 전국이 잡혀도 응답이 폭주하지 않도록 상한선을 둔다.
+     */
+    @GetMapping("/in-bounds")
+    public ResponseEntity<ApiResponse<List<StoreListResponse>>> getStoresInBounds(
+            @RequestParam Double minLat,
+            @RequestParam Double maxLat,
+            @RequestParam Double minLng,
+            @RequestParam Double maxLng,
+            @RequestParam(required = false) Double centerLat,
+            @RequestParam(required = false) Double centerLng,
+            @RequestParam(defaultValue = "1000") int limit) {
+        List<StoreListResponse> stores = storeService.getStoresInBounds(
+                minLat, maxLat, minLng, maxLng, centerLat, centerLng, limit);
+        return ResponseEntity
+                .ok(ApiResponse.success(SuccessCode.STORE_LIST_OK, stores));
+    }
+
     @GetMapping("/{storeId}")
     public ResponseEntity<ApiResponse<StoreDetailResponse>> getStore(
             @PathVariable Long storeId) {

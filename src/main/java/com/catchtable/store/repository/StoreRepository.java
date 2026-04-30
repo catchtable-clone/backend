@@ -48,6 +48,28 @@ public interface StoreRepository extends JpaRepository<Store, Long>, JpaSpecific
                            Pageable pageable);
 
     /**
+     * 지도 화면 영역(bounding box) 안의 매장을 화면 중심에서 가까운 순서로 검색.
+     * limit를 넘기면 멀리 있는 매장이 잘려나가므로, 분포가 화면 중앙 주변에 균등하게 모인다.
+     * 거리는 sqrt 없이 제곱 거리로 정렬해도 결과 순서는 동일.
+     */
+    @Query("""
+            SELECT s FROM Store s
+            WHERE s.isDeleted = false
+              AND s.latitude  BETWEEN :minLat AND :maxLat
+              AND s.longitude BETWEEN :minLng AND :maxLng
+            ORDER BY ((s.latitude - :centerLat) * (s.latitude - :centerLat)
+                   + (s.longitude - :centerLng) * (s.longitude - :centerLng)) ASC,
+                     s.id ASC
+            """)
+    List<Store> findInBounds(@Param("minLat") double minLat,
+                             @Param("maxLat") double maxLat,
+                             @Param("minLng") double minLng,
+                             @Param("maxLng") double maxLng,
+                             @Param("centerLat") double centerLat,
+                             @Param("centerLng") double centerLng,
+                             Pageable pageable);
+
+    /**
      * 리뷰 수 증감은 벌크 UPDATE이므로 영속성 컨텍스트와 DB가 일치하도록
      * 호출 전 flush, 호출 후 clear 한다.
      * 이로써 같은 트랜잭션 내 후속 findByIdAndIsDeletedFalse() 가 stale 캐시를 반환하지 않는다.
