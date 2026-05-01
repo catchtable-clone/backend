@@ -33,16 +33,23 @@ public interface StoreRepository extends JpaRepository<Store, Long>, JpaSpecific
     List<Store> findPopular(Pageable pageable);
 
     /**
-     * 좌표 거리 기반 정렬 (제곱 거리 사용 — sqrt 생략)
-     * 거리가 같으면 ID 오름차순으로 결정성 보장
+     * 좌표 거리 기반 정렬 — PostGIS ST_DistanceSphere 사용 (구면 거리, 미터 단위).
+     * Euclidean(좌표 차이 제곱) 방식은 지구 곡률을 무시해 위도가 다를수록 오차가 커지므로,
+     * 실제 운영 데이터에서는 부정확한 정렬이 나올 수 있다.
+     * 거리가 같으면 ID 오름차순으로 결정성 보장.
+     *
+     * NOTE: Native query — H2 등 PostGIS 미지원 DB에서는 동작하지 않으므로 통합 테스트 시 주의.
      */
-    @Query("""
-            SELECT s FROM Store s
-            WHERE s.isDeleted = false
-            ORDER BY ((s.latitude - :lat) * (s.latitude - :lat)
-                   + (s.longitude - :lon) * (s.longitude - :lon)) ASC,
+    @Query(value = """
+            SELECT * FROM stores s
+            WHERE s.is_deleted = false
+            ORDER BY ST_DistanceSphere(
+                       ST_MakePoint(s.longitude, s.latitude),
+                       ST_MakePoint(:lon, :lat)
+                     ) ASC,
                      s.id ASC
-            """)
+            """,
+           nativeQuery = true)
     List<Store> findNearby(@Param("lat") double latitude,
                            @Param("lon") double longitude,
                            Pageable pageable);
@@ -50,17 +57,20 @@ public interface StoreRepository extends JpaRepository<Store, Long>, JpaSpecific
     /**
      * 지도 화면 영역(bounding box) 안의 매장을 화면 중심에서 가까운 순서로 검색.
      * limit를 넘기면 멀리 있는 매장이 잘려나가므로, 분포가 화면 중앙 주변에 균등하게 모인다.
-     * 거리는 sqrt 없이 제곱 거리로 정렬해도 결과 순서는 동일.
+     * 거리 계산은 PostGIS ST_DistanceSphere 사용.
      */
-    @Query("""
-            SELECT s FROM Store s
-            WHERE s.isDeleted = false
+    @Query(value = """
+            SELECT * FROM stores s
+            WHERE s.is_deleted = false
               AND s.latitude  BETWEEN :minLat AND :maxLat
               AND s.longitude BETWEEN :minLng AND :maxLng
-            ORDER BY ((s.latitude - :centerLat) * (s.latitude - :centerLat)
-                   + (s.longitude - :centerLng) * (s.longitude - :centerLng)) ASC,
+            ORDER BY ST_DistanceSphere(
+                       ST_MakePoint(s.longitude, s.latitude),
+                       ST_MakePoint(:centerLng, :centerLat)
+                     ) ASC,
                      s.id ASC
-            """)
+            """,
+           nativeQuery = true)
     List<Store> findInBounds(@Param("minLat") double minLat,
                              @Param("maxLat") double maxLat,
                              @Param("minLng") double minLng,

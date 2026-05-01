@@ -6,6 +6,13 @@ build/
 !**/src/test/**/build/
 application.yaml
 
+### Node (실수로 백엔드 폴더에 npm 설치되는 것 방지) ###
+node_modules/
+package.json
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
 ### STS ###
 .apt_generated
 .classpath
