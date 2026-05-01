@@ -22,14 +22,14 @@ public class NotificationController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<Page<NotificationListResponse>>> getMyNotifications(
-            @RequestParam Long userId,
+            @RequestHeader("X-User-Id") Long userId,
             @ParameterObject @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         Page<NotificationListResponse> response = notificationService.getMyNotifications(userId, pageable);
         return ResponseEntity.ok(ApiResponse.success(SuccessCode.NOTIFICATION_LOOKUP_SUCCESS, response));
     }
 
     @GetMapping("/unread-count")
-    public ResponseEntity<ApiResponse<Long>> getUnreadCount(@RequestParam Long userId) {
+    public ResponseEntity<ApiResponse<Long>> getUnreadCount(@RequestHeader("X-User-Id") Long userId) {
         long count = notificationService.getUnreadCount(userId);
         return ResponseEntity.ok(ApiResponse.success(SuccessCode.NOTIFICATION_UNREAD_COUNT_SUCCESS, count));
     }
@@ -37,14 +37,14 @@ public class NotificationController {
     @PatchMapping("/{notificationId}/read")
     public ResponseEntity<ApiResponse<Void>> markAsRead(
             @PathVariable Long notificationId,
-            @RequestParam Long userId) {
+            @RequestHeader("X-User-Id") Long userId) {
 
         notificationService.markAsRead(notificationId, userId);
         return ResponseEntity.ok(ApiResponse.success(SuccessCode.NOTIFICATION_READ_SUCCESS, null));
     }
 
     @PatchMapping("/read-all")
-    public ResponseEntity<ApiResponse<Void>> markAllAsRead(@RequestParam Long userId) {
+    public ResponseEntity<ApiResponse<Void>> markAllAsRead(@RequestHeader("X-User-Id") Long userId) {
         notificationService.markAllAsRead(userId);
         return ResponseEntity.ok(ApiResponse.success(SuccessCode.NOTIFICATION_READ_ALL_SUCCESS, null));
     }
@@ -52,7 +52,7 @@ public class NotificationController {
     @DeleteMapping("/{notificationId}")
     public ResponseEntity<ApiResponse<Void>> deleteNotification(
             @PathVariable Long notificationId,
-            @RequestParam Long userId) {
+            @RequestHeader("X-User-Id") Long userId) {
 
         notificationService.deleteNotification(notificationId, userId);
         return ResponseEntity.ok(ApiResponse.success(SuccessCode.NOTIFICATION_DELETE_SUCCESS, null));

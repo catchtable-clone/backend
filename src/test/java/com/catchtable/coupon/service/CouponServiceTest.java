@@ -85,7 +85,8 @@ class CouponServiceTest {
     @Test
     @DisplayName("쿠폰 템플릿 생성 성공 - 관리자")
     void createTemplateSuccess() {
-        given(userRepository.findById(1L)).willReturn(Optional.of(createAdminUser()));
+        given(userRepository.getAdminOrThrow(1L, ErrorCode.ADMIN_ONLY_COUPON_CREATE))
+                .willReturn(createAdminUser());
         given(couponTemplateRepository.save(any(CouponTemplate.class))).willAnswer(invocation -> {
             CouponTemplate t = invocation.getArgument(0);
             setField(t, "id", 1L);
@@ -104,7 +105,8 @@ class CouponServiceTest {
     @Test
     @DisplayName("쿠폰 템플릿 생성 실패 - 일반 사용자 권한 없음")
     void createTemplateFailNotAdmin() {
-        given(userRepository.findById(2L)).willReturn(Optional.of(createUser(2L)));
+        given(userRepository.getAdminOrThrow(2L, ErrorCode.ADMIN_ONLY_COUPON_CREATE))
+                .willThrow(new CustomException(ErrorCode.ADMIN_ONLY_COUPON_CREATE));
 
         var request = new com.catchtable.coupon.dto.create.CouponTemplateCreateRequest(
                 "10% 할인", 10, 100, LocalDateTime.now(), LocalDateTime.now().plusDays(30));
@@ -123,7 +125,7 @@ class CouponServiceTest {
         User user = createUser(1L);
         CouponTemplate template = createTemplate(10, LocalDateTime.now().plusDays(30));
 
-        given(userRepository.findById(1L)).willReturn(Optional.of(user));
+        given(userRepository.getById(1L)).willReturn(user);
         given(couponTemplateRepository.findByIdWithLock(1L)).willReturn(Optional.of(template));
         given(couponRepository.existsByUserIdAndCouponTemplateId(1L, 1L)).willReturn(false);
         given(couponRepository.save(any(Coupon.class))).willAnswer(invocation -> {
@@ -143,7 +145,7 @@ class CouponServiceTest {
         User user = createUser(1L);
         CouponTemplate template = createTemplate(10, LocalDateTime.now().plusDays(30));
 
-        given(userRepository.findById(1L)).willReturn(Optional.of(user));
+        given(userRepository.getById(1L)).willReturn(user);
         given(couponTemplateRepository.findByIdWithLock(1L)).willReturn(Optional.of(template));
         given(couponRepository.existsByUserIdAndCouponTemplateId(1L, 1L)).willReturn(true);
 
@@ -159,7 +161,7 @@ class CouponServiceTest {
         User user = createUser(1L);
         CouponTemplate template = createTemplate(0, LocalDateTime.now().plusDays(30));
 
-        given(userRepository.findById(1L)).willReturn(Optional.of(user));
+        given(userRepository.getById(1L)).willReturn(user);
         given(couponTemplateRepository.findByIdWithLock(1L)).willReturn(Optional.of(template));
         given(couponRepository.existsByUserIdAndCouponTemplateId(1L, 1L)).willReturn(false);
 
