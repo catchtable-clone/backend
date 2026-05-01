@@ -4,6 +4,7 @@ import com.catchtable.coupon.dto.create.CouponTemplateCreateRequest;
 import com.catchtable.coupon.dto.create.CouponTemplateCreateResponse;
 import com.catchtable.coupon.dto.issue.CouponIssueResponse;
 import com.catchtable.coupon.dto.read.CouponReadResponse;
+import com.catchtable.coupon.dto.read.CouponTemplateActiveResponse;
 import com.catchtable.coupon.service.CouponService;
 import com.catchtable.global.common.ApiResponse;
 import com.catchtable.global.common.SuccessCode;
@@ -47,5 +48,12 @@ public class CouponController {
         List<CouponReadResponse> response = couponService.getMyCoupons(userId);
         return ResponseEntity
                 .ok(ApiResponse.success(SuccessCode.COUPON_LIST_OK, response));
+    }
+
+    @GetMapping("/templates/active")
+    public ResponseEntity<ApiResponse<List<CouponTemplateActiveResponse>>> getActiveTemplates() {
+        List<CouponTemplateActiveResponse> response = couponService.getActiveTemplates();
+        return ResponseEntity
+                .ok(ApiResponse.success(SuccessCode.COUPON_TEMPLATE_ACTIVE_OK, response));
     }
 }

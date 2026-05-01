@@ -19,6 +19,7 @@ public enum SuccessCode implements ResponseCode {
     COUPON_TEMPLATE_CREATED(HttpStatus.CREATED, "쿠폰 템플릿이 생성되었습니다."),
     COUPON_ISSUED(HttpStatus.OK, "쿠폰이 발급되었습니다."),
     COUPON_LIST_OK(HttpStatus.OK, "내 쿠폰 목록을 조회했습니다."),
+    COUPON_TEMPLATE_ACTIVE_OK(HttpStatus.OK, "발급 가능한 쿠폰 목록을 조회했습니다."),
 
     // Menu
     MENU_CREATED(HttpStatus.CREATED, "메뉴가 생성되었습니다."),

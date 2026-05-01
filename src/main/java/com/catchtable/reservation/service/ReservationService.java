@@ -263,7 +263,9 @@ public class ReservationService {
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
         reservation.validateOwner(userId);
-        if (reservation.getStatus() == ReservationStatus.CANCELED) {
+        // PENDING/CONFIRMED 상태만 변경/취소 허용. CANCELED/REPLACED/VISITED/NOSHOW 는 모두 종착 상태.
+        ReservationStatus status = reservation.getStatus();
+        if (status != ReservationStatus.PENDING && status != ReservationStatus.CONFIRMED) {
             throw new CustomException(ErrorCode.ALREADY_CANCELED);
         }
         return reservation;
