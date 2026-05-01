@@ -4,6 +4,7 @@ import com.catchtable.coupon.dto.create.CouponTemplateCreateRequest;
 import com.catchtable.coupon.dto.create.CouponTemplateCreateResponse;
 import com.catchtable.coupon.dto.issue.CouponIssueResponse;
 import com.catchtable.coupon.dto.read.CouponReadResponse;
+import com.catchtable.coupon.dto.read.CouponTemplateActiveResponse;
 import com.catchtable.coupon.entity.Coupon;
 import com.catchtable.coupon.entity.CouponTemplate;
 import com.catchtable.coupon.repository.CouponRepository;
@@ -16,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -63,6 +65,14 @@ public class CouponService {
     public List<CouponReadResponse> getMyCoupons(Long userId) {
         return couponRepository.findAllByUserId(userId).stream()
                 .map(CouponReadResponse::from)
+                .toList();
+    }
+
+    // 현재 발급 가능한 쿠폰 템플릿 목록 (홈 배너용) — 글로벌 데이터, 인증 불필요
+    @Transactional(readOnly = true)
+    public List<CouponTemplateActiveResponse> getActiveTemplates() {
+        return couponTemplateRepository.findActiveTemplates(LocalDateTime.now()).stream()
+                .map(CouponTemplateActiveResponse::from)
                 .toList();
     }
 

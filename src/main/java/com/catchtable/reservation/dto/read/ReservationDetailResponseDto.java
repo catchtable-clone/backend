@@ -16,6 +16,7 @@ public record ReservationDetailResponseDto(
             Long storeId,
             String storeName,
             String storeImage,
+            String storeCategory,
             String address
     ) {}
 

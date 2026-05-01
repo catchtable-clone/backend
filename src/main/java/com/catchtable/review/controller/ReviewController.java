@@ -23,7 +23,7 @@ public class ReviewController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<Long>> createReview(
-            @RequestParam Long userId,
+            @RequestHeader("X-User-Id") Long userId,
             @Valid @RequestBody ReviewCreateRequestDto request
     ) {
         Long reviewId = reviewService.createReview(userId, request);
@@ -44,7 +44,7 @@ public class ReviewController {
 
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<List<ReviewResponseDto>>> getMyReviews(
-            @RequestParam Long userId
+            @RequestHeader("X-User-Id") Long userId
     ) {
         List<ReviewResponseDto> responseData = reviewService.getMyReviews(userId);
         return ResponseEntity
@@ -55,7 +55,7 @@ public class ReviewController {
     @PatchMapping("/{reviewId}")
     public ResponseEntity<ApiResponse<Long>> updateReview(
             @PathVariable Long reviewId,
-            @RequestParam Long userId,
+            @RequestHeader("X-User-Id") Long userId,
             @Valid @RequestBody ReviewUpdateRequestDto request
     ) {
         Long updatedReviewId = reviewService.updateReview(userId, reviewId, request);
@@ -67,7 +67,7 @@ public class ReviewController {
     @DeleteMapping("/{reviewId}")
     public ResponseEntity<ApiResponse<Void>> deleteReview(
             @PathVariable Long reviewId,
-            @RequestParam Long userId
+            @RequestHeader("X-User-Id") Long userId
     ) {
         reviewService.deleteReview(userId, reviewId);
         return ResponseEntity

@@ -27,9 +27,10 @@ public class ReservationController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<ReservationCreateResponseDto>> create(
+            @RequestHeader("X-User-Id") Long userId,
             @Valid @RequestBody ReservationCreateRequestDto request
     ) {
-        ReservationCreateResponseDto responseData = reservationService.create(request);
+        ReservationCreateResponseDto responseData = reservationService.create(userId, request);
         return ResponseEntity
                 .status(SuccessCode.RESERVATION_CREATE_SUCCESS.getHttpStatus())
                 .body(ApiResponse.success(SuccessCode.RESERVATION_CREATE_SUCCESS, responseData));
@@ -37,7 +38,7 @@ public class ReservationController {
 
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<List<ReservationListResponseDto>>> getMyReservations(
-            @RequestParam Long userId
+            @RequestHeader("X-User-Id") Long userId
     ) {
         List<ReservationListResponseDto> responseData = reservationService.getUserReservations(userId);
         return ResponseEntity
@@ -48,7 +49,7 @@ public class ReservationController {
     @GetMapping("/{reservationId}")
     public ResponseEntity<ApiResponse<ReservationDetailResponseDto>> getReservationDetail(
             @PathVariable Long reservationId,
-            @RequestParam Long userId
+            @RequestHeader("X-User-Id") Long userId
     ) {
         ReservationDetailResponseDto responseData = reservationService.getReservationDetail(reservationId, userId);
         return ResponseEntity
@@ -59,7 +60,7 @@ public class ReservationController {
     @DeleteMapping("/{reservationId}")
     public ResponseEntity<ApiResponse<Void>> cancel(
             @PathVariable Long reservationId,
-            @RequestParam Long userId
+            @RequestHeader("X-User-Id") Long userId
     ) {
         reservationService.cancelReservation(reservationId, userId);
         return ResponseEntity
@@ -70,7 +71,7 @@ public class ReservationController {
     @PatchMapping("/{reservationId}")
     public ResponseEntity<ApiResponse<ReservationUpdateResponseDto>> updateReservation(
             @PathVariable Long reservationId,
-            @RequestParam Long userId,
+            @RequestHeader("X-User-Id") Long userId,
             @Valid @RequestBody ReservationUpdateRequestDto request
     ) {
         ReservationUpdateResponseDto responseData = reservationService.updateReservation(reservationId, userId, request);
@@ -82,7 +83,7 @@ public class ReservationController {
     @PatchMapping("/{reservationId}/status")
     public ResponseEntity<ApiResponse<Void>> updateReservationStatus(
             @PathVariable Long reservationId,
-            @RequestParam Long userId,
+            @RequestHeader("X-User-Id") Long userId,
             @Valid @RequestBody ReservationStatusUpdateRequestDto request
     ) {
         reservationService.updateReservationStatus(reservationId, userId, request);

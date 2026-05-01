@@ -10,6 +10,8 @@ public record BookmarkListResponse(
         @Schema(description = "매장 이름", example = "진진") String storeName,
         @Schema(description = "매장 이미지", example = "jinjin.jpg") String storeImage,
         @Schema(description = "카테고리") Category category,
-        @Schema(description = "주소", example = "서울시 강남구") String address
+        @Schema(description = "주소", example = "서울시 강남구") String address,
+        @Schema(description = "위도", example = "37.4979") Double latitude,
+        @Schema(description = "경도", example = "127.0276") Double longitude
 ) {
 }

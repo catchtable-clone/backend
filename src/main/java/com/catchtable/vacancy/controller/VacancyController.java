@@ -21,17 +21,18 @@ public class VacancyController {
     private final VacancyService vacancyService;
 
     @PostMapping
-    public ResponseEntity<ApiResponse<VacancyRegisterResponse>> register(@RequestBody @Valid VacancyRegisterRequest request) {
-        Long vacancyId = vacancyService.register(request.userId(), request.remainId());
+    public ResponseEntity<ApiResponse<VacancyRegisterResponse>> register(
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestBody @Valid VacancyRegisterRequest request) {
+        Long vacancyId = vacancyService.register(userId, request.remainId());
         VacancyRegisterResponse responseData = new VacancyRegisterResponse(vacancyId);
         return ResponseEntity
                 .status(SuccessCode.VACANCY_REGISTER_SUCCESS.getHttpStatus())
                 .body(ApiResponse.success(SuccessCode.VACANCY_REGISTER_SUCCESS, responseData));
     }
 
-    // TODO: userId는 인증 구현 후 @AuthenticationPrincipal로 교체
     @GetMapping("/me")
-    public ResponseEntity<ApiResponse<List<VacancyListResponse>>> getMyList(@RequestParam Long userId) {
+    public ResponseEntity<ApiResponse<List<VacancyListResponse>>> getMyList(@RequestHeader("X-User-Id") Long userId) {
         List<VacancyListResponse> responseData = vacancyService.getMyList(userId);
         return ResponseEntity
                 .status(SuccessCode.VACANCY_LOOKUP_SUCCESS.getHttpStatus())

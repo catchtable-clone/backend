@@ -62,6 +62,10 @@ public class Store {
     @Builder.Default
     private Integer reviewCount = 0;
 
+    @Column(name = "average_star", nullable = false)
+    @Builder.Default
+    private Double averageStar = 0.0;
+
     @Column(name = "bookmark_count", nullable = false)
     @Builder.Default
     private Integer bookmarkCount = 0;
@@ -91,6 +95,10 @@ public class Store {
         this.team = team;
         this.openTime = openTime;
         this.closeTime = closeTime;
+    }
+
+    public void updateAverageStar(Double newAverageStar) {
+        this.averageStar = newAverageStar != null ? newAverageStar : 0.0;
     }
 
     public void changeStatus(StoreStatus newStatus) {

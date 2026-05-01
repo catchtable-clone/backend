@@ -6,6 +6,7 @@ import com.catchtable.coupon.entity.CouponTemplate;
 import com.catchtable.coupon.repository.CouponRepository;
 import com.catchtable.coupon.service.CouponService;
 import com.catchtable.global.exception.ErrorCode;
+import com.catchtable.notification.service.VacancyNotificationEmailService;
 import com.catchtable.remain.entity.StoreRemain;
 import com.catchtable.remain.repository.StoreRemainRepository;
 import com.catchtable.reservation.dto.create.ReservationCreateRequestDto;
@@ -24,6 +25,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -49,6 +51,10 @@ class ReservationCouponTest {
     private CouponService couponService;
     @Mock
     private CouponRepository couponRepository;
+    @Mock
+    private VacancyNotificationEmailService vacancyNotificationService;
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private ReservationService reservationService;
@@ -115,15 +121,14 @@ class ReservationCouponTest {
     void createReservationWithCoupon() {
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
         given(storeRemainRepository.findByIdWithStore(1L)).willReturn(Optional.of(storeRemain));
-        given(couponRepository.findById(1L)).willReturn(Optional.of(coupon));
         given(reservationRepository.save(any(Reservation.class))).willAnswer(invocation -> {
             Reservation r = invocation.getArgument(0);
             setField(r, "id", 1L);
             return r;
         });
 
-        ReservationCreateRequestDto request = new ReservationCreateRequestDto(1L, 1L, 4, 1L);
-        ReservationCreateResponseDto response = reservationService.create(request);
+        ReservationCreateRequestDto request = new ReservationCreateRequestDto(1L, 4, 1L);
+        ReservationCreateResponseDto response = reservationService.create(1L, request);
 
         assertThat(response.id()).isEqualTo(1L);
         verify(couponService).useCoupon(1L, 1L);
@@ -140,8 +145,8 @@ class ReservationCouponTest {
             return r;
         });
 
-        ReservationCreateRequestDto request = new ReservationCreateRequestDto(1L, 1L, 4, null);
-        ReservationCreateResponseDto response = reservationService.create(request);
+        ReservationCreateRequestDto request = new ReservationCreateRequestDto(1L, 4, null);
+        ReservationCreateResponseDto response = reservationService.create(1L, request);
 
         assertThat(response.id()).isEqualTo(1L);
         verify(couponService, never()).useCoupon(any(), any());
@@ -212,6 +217,7 @@ class ReservationCouponTest {
         setField(newStoreRemain, "id", 2L);
 
         given(reservationRepository.findById(1L)).willReturn(Optional.of(oldReservation));
+        given(userRepository.findById(1L)).willReturn(Optional.of(user));
         given(storeRemainRepository.findByIdWithStore(2L)).willReturn(Optional.of(newStoreRemain));
         given(reservationRepository.save(any(Reservation.class))).willAnswer(invocation -> {
             Reservation r = invocation.getArgument(0);
@@ -219,10 +225,10 @@ class ReservationCouponTest {
             return r;
         });
 
-        var request = new com.catchtable.reservation.dto.update.ReservationUpdateRequestDto(2L, 2);
+        var request = new com.catchtable.reservation.dto.update.ReservationUpdateRequestDto(2L, 2, null);
         reservationService.updateReservation(1L, 1L, request);
 
-        assertThat(oldReservation.getStatus()).isEqualTo(ReservationStatus.CANCELED);
+        assertThat(oldReservation.getStatus()).isEqualTo(ReservationStatus.REPLACED);
         verify(couponService).returnCoupon(1L);
     }
 

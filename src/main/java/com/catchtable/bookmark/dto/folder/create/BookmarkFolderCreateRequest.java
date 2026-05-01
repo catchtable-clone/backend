@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 
 @Schema(description = "북마크 폴더 생성 요청")
 public record BookmarkFolderCreateRequest(
-        @NotBlank @Schema(description = "폴더 이름", example = "가고 싶은 맛집") String folderName
+        @NotBlank @Schema(description = "폴더 이름", example = "가고 싶은 맛집") String folderName,
+        @Schema(description = "폴더 색상 (HEX)", example = "#F97316") String color
 ) {
 }

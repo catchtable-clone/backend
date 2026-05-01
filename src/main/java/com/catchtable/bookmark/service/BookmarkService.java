@@ -36,15 +36,22 @@ public class BookmarkService {
     private final UserRepository userRepository;
     private final StoreRepository storeRepository;
 
+    private static final String DEFAULT_FOLDER_COLOR = "#F97316";
+
     // 북마크 폴더 생성
     @Transactional
     public BookmarkFolderCreateResponse createFolder(Long userId, BookmarkFolderCreateRequest request) {
         User user = userRepository.getById(userId);
 
+        String color = (request.color() == null || request.color().isBlank())
+                ? DEFAULT_FOLDER_COLOR
+                : request.color();
+
         BookmarkFolder folder = BookmarkFolder.builder()
                 .user(user)
                 .folderName(request.folderName())
                 .folderType(FolderType.CUSTOM)
+                .color(color)
                 .build();
 
         BookmarkFolder saved = bookmarkFolderRepository.save(folder);
@@ -56,7 +63,11 @@ public class BookmarkService {
     public List<BookmarkFolderListResponse> getFolders(Long userId) {
         return bookmarkFolderRepository.findByUserIdAndIsDeletedFalse(userId)
                 .stream()
-                .map(f -> new BookmarkFolderListResponse(f.getId(), f.getFolderName()))
+                .map(f -> new BookmarkFolderListResponse(
+                        f.getId(),
+                        f.getFolderName(),
+                        f.getColor(),
+                        f.getFolderType().name()))
                 .toList();
     }
 
@@ -70,13 +81,13 @@ public class BookmarkService {
         return folder;
     }
 
-    // 북마크 폴더 이름 수정
+    // 북마크 폴더 이름·색상 수정
     @Transactional
     public BookmarkFolderUpdateResponse updateFolder(Long userId, Long folderId, BookmarkFolderUpdateRequest request) {
         BookmarkFolder folder = getEditableFolder(userId, folderId);
 
-        folder.updateName(request.folderName());
-        return new BookmarkFolderUpdateResponse(folder.getId(), folder.getFolderName());
+        folder.update(request.folderName(), request.color());
+        return new BookmarkFolderUpdateResponse(folder.getId(), folder.getFolderName(), folder.getColor());
     }
 
     // 북마크 폴더 삭제
@@ -127,7 +138,15 @@ public class BookmarkService {
         return bookmarkRepository.findByFolderIdAndIsDeletedFalse(folderId)
                 .stream()
                 .filter(b -> !b.getStore().getIsDeleted())
-                .map(b -> new BookmarkListResponse(b.getId(), b.getStore().getId(), b.getStore().getStoreName(), b.getStore().getStoreImage(), b.getStore().getCategory(), b.getStore().getAddress()))
+                .map(b -> new BookmarkListResponse(
+                        b.getId(),
+                        b.getStore().getId(),
+                        b.getStore().getStoreName(),
+                        b.getStore().getStoreImage(),
+                        b.getStore().getCategory(),
+                        b.getStore().getAddress(),
+                        b.getStore().getLatitude(),
+                        b.getStore().getLongitude()))
                 .toList();
     }
 

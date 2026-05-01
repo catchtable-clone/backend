@@ -14,8 +14,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -27,7 +27,7 @@ public class ChatbotController {
 
     @PostMapping("/messages")
     public ResponseEntity<ApiResponse<ChatMessageResponse>> sendMessage(
-            @RequestParam Long userId,
+            @RequestHeader("X-User-Id") Long userId,
             @Valid @RequestBody ChatMessageRequest request
     ) {
         ChatMessageResponse responseData = chatbotService.sendMessage(userId, request);
@@ -38,7 +38,7 @@ public class ChatbotController {
 
     @GetMapping("/messages")
     public ResponseEntity<ApiResponse<List<ChatMessageListResponse>>> getMessages(
-            @RequestParam Long userId
+            @RequestHeader("X-User-Id") Long userId
     ) {
         List<ChatMessageListResponse> responseData = chatbotService.getMessages(userId);
         return ResponseEntity
