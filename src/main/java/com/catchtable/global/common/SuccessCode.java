@@ -8,6 +8,11 @@ import org.springframework.http.HttpStatus;
 @AllArgsConstructor
 public enum SuccessCode implements ResponseCode {
 
+    // Auth
+    LOGIN_SUCCESS(HttpStatus.OK, "로그인에 성공했습니다."),
+    TOKEN_REFRESHED(HttpStatus.OK, "토큰이 재발급되었습니다."),
+    LOGOUT_SUCCESS(HttpStatus.OK, "로그아웃되었습니다."),
+
     // Store
     STORE_CREATED(HttpStatus.CREATED, "매장이 등록되었습니다."),
     STORE_LIST_OK(HttpStatus.OK, "매장 목록을 조회했습니다."),
