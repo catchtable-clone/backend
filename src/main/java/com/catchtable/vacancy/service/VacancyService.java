@@ -58,11 +58,14 @@ public class VacancyService {
     }
 
     @Transactional
-    public Long delete(Long vacancyId) {
+    public Long delete(Long vacancyId, Long userId) {
         Vacancy vacancy = vacancyRepository.findById(vacancyId)
                 .orElseThrow(() -> new CustomException(ErrorCode.VACANCY_NOT_FOUND));
         if (vacancy.getIsDeleted()) {
             throw new CustomException(ErrorCode.VACANCY_ALREADY_DELETED);
+        }
+        if (!vacancy.getUser().getId().equals(userId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
         }
         vacancy.delete();
         return vacancy.getId();
