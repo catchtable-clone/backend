@@ -1,11 +1,8 @@
--- 강남구 매장에 카테고리별 메뉴 5~7개 랜덤 추가
+-- 모든 매장에 카테고리별 메뉴 5~7개 랜덤 추가
 -- 매장마다 메뉴 조합·개수가 다르게 들어감 (매장 ID 기반 해시 정렬)
--- random() 대신 md5(s.id || menu_name)을 쓰는 이유:
---   PostgreSQL 옵티마이저가 LATERAL 안의 random()을 한 번만 평가해서
---   같은 카테고리 매장이 같은 메뉴를 받는 문제를 우회
+-- 이미 메뉴가 있는 매장은 스킵 (NOT EXISTS 조건으로 멱등 실행 보장)
 -- 실행 예시:
---   docker exec -i catchtable-db psql -U teamE -d catchtable < backend/data/gangnam-menu-seed.sql
--- 또는 IntelliJ DB 도구에서 직접 실행
+--   docker exec -i catchtable-db psql -U teamE -d catchtable < backend/data/all-menu-seed.sql
 
 -- KOREAN (한식)
 INSERT INTO menu (store_id, menu_name, description, price, is_deleted, created_at)
@@ -30,7 +27,8 @@ CROSS JOIN LATERAL (
     ORDER BY md5(s.id::text || menu_name)
     LIMIT (5 + (s.id % 3))::int
 ) AS m
-WHERE s.district = 'GANGNAM' AND s.category = 'KOREAN' AND s.is_deleted = false;
+WHERE s.category = 'KOREAN' AND s.is_deleted = false
+  AND NOT EXISTS (SELECT 1 FROM menu WHERE store_id = s.id AND is_deleted = false);
 
 -- JAPANESE (일식)
 INSERT INTO menu (store_id, menu_name, description, price, is_deleted, created_at)
@@ -55,7 +53,8 @@ CROSS JOIN LATERAL (
     ORDER BY md5(s.id::text || menu_name)
     LIMIT (5 + (s.id % 3))::int
 ) AS m
-WHERE s.district = 'GANGNAM' AND s.category = 'JAPANESE' AND s.is_deleted = false;
+WHERE s.category = 'JAPANESE' AND s.is_deleted = false
+  AND NOT EXISTS (SELECT 1 FROM menu WHERE store_id = s.id AND is_deleted = false);
 
 -- CHINESE (중식)
 INSERT INTO menu (store_id, menu_name, description, price, is_deleted, created_at)
@@ -80,7 +79,8 @@ CROSS JOIN LATERAL (
     ORDER BY md5(s.id::text || menu_name)
     LIMIT (5 + (s.id % 3))::int
 ) AS m
-WHERE s.district = 'GANGNAM' AND s.category = 'CHINESE' AND s.is_deleted = false;
+WHERE s.category = 'CHINESE' AND s.is_deleted = false
+  AND NOT EXISTS (SELECT 1 FROM menu WHERE store_id = s.id AND is_deleted = false);
 
 -- WESTERN (양식)
 INSERT INTO menu (store_id, menu_name, description, price, is_deleted, created_at)
@@ -105,7 +105,8 @@ CROSS JOIN LATERAL (
     ORDER BY md5(s.id::text || menu_name)
     LIMIT (5 + (s.id % 3))::int
 ) AS m
-WHERE s.district = 'GANGNAM' AND s.category = 'WESTERN' AND s.is_deleted = false;
+WHERE s.category = 'WESTERN' AND s.is_deleted = false
+  AND NOT EXISTS (SELECT 1 FROM menu WHERE store_id = s.id AND is_deleted = false);
 
 -- DESSERT (디저트/카페)
 INSERT INTO menu (store_id, menu_name, description, price, is_deleted, created_at)
@@ -130,7 +131,8 @@ CROSS JOIN LATERAL (
     ORDER BY md5(s.id::text || menu_name)
     LIMIT (5 + (s.id % 3))::int
 ) AS m
-WHERE s.district = 'GANGNAM' AND s.category = 'DESSERT' AND s.is_deleted = false;
+WHERE s.category = 'DESSERT' AND s.is_deleted = false
+  AND NOT EXISTS (SELECT 1 FROM menu WHERE store_id = s.id AND is_deleted = false);
 
 -- CHICKEN (치킨)
 INSERT INTO menu (store_id, menu_name, description, price, is_deleted, created_at)
@@ -153,7 +155,8 @@ CROSS JOIN LATERAL (
     ORDER BY md5(s.id::text || menu_name)
     LIMIT (5 + (s.id % 3))::int
 ) AS m
-WHERE s.district = 'GANGNAM' AND s.category = 'CHICKEN' AND s.is_deleted = false;
+WHERE s.category = 'CHICKEN' AND s.is_deleted = false
+  AND NOT EXISTS (SELECT 1 FROM menu WHERE store_id = s.id AND is_deleted = false);
 
 -- MEAT (고기/구이)
 INSERT INTO menu (store_id, menu_name, description, price, is_deleted, created_at)
@@ -176,7 +179,8 @@ CROSS JOIN LATERAL (
     ORDER BY md5(s.id::text || menu_name)
     LIMIT (5 + (s.id % 3))::int
 ) AS m
-WHERE s.district = 'GANGNAM' AND s.category = 'MEAT' AND s.is_deleted = false;
+WHERE s.category = 'MEAT' AND s.is_deleted = false
+  AND NOT EXISTS (SELECT 1 FROM menu WHERE store_id = s.id AND is_deleted = false);
 
 -- FISH (횟집)
 INSERT INTO menu (store_id, menu_name, description, price, is_deleted, created_at)
@@ -199,7 +203,8 @@ CROSS JOIN LATERAL (
     ORDER BY md5(s.id::text || menu_name)
     LIMIT (5 + (s.id % 3))::int
 ) AS m
-WHERE s.district = 'GANGNAM' AND s.category = 'FISH' AND s.is_deleted = false;
+WHERE s.category = 'FISH' AND s.is_deleted = false
+  AND NOT EXISTS (SELECT 1 FROM menu WHERE store_id = s.id AND is_deleted = false);
 
 -- FASTFOOD (패스트푸드)
 INSERT INTO menu (store_id, menu_name, description, price, is_deleted, created_at)
@@ -222,7 +227,8 @@ CROSS JOIN LATERAL (
     ORDER BY md5(s.id::text || menu_name)
     LIMIT (5 + (s.id % 3))::int
 ) AS m
-WHERE s.district = 'GANGNAM' AND s.category = 'FASTFOOD' AND s.is_deleted = false;
+WHERE s.category = 'FASTFOOD' AND s.is_deleted = false
+  AND NOT EXISTS (SELECT 1 FROM menu WHERE store_id = s.id AND is_deleted = false);
 
 -- FOREIGN (외국음식)
 INSERT INTO menu (store_id, menu_name, description, price, is_deleted, created_at)
@@ -247,7 +253,8 @@ CROSS JOIN LATERAL (
     ORDER BY md5(s.id::text || menu_name)
     LIMIT (5 + (s.id % 3))::int
 ) AS m
-WHERE s.district = 'GANGNAM' AND s.category = 'FOREIGN' AND s.is_deleted = false;
+WHERE s.category = 'FOREIGN' AND s.is_deleted = false
+  AND NOT EXISTS (SELECT 1 FROM menu WHERE store_id = s.id AND is_deleted = false);
 
 -- BUFFET (뷔페)
 INSERT INTO menu (store_id, menu_name, description, price, is_deleted, created_at)
@@ -270,7 +277,8 @@ CROSS JOIN LATERAL (
     ORDER BY md5(s.id::text || menu_name)
     LIMIT (5 + (s.id % 3))::int
 ) AS m
-WHERE s.district = 'GANGNAM' AND s.category = 'BUFFET' AND s.is_deleted = false;
+WHERE s.category = 'BUFFET' AND s.is_deleted = false
+  AND NOT EXISTS (SELECT 1 FROM menu WHERE store_id = s.id AND is_deleted = false);
 
 -- OTHERS (기타)
 INSERT INTO menu (store_id, menu_name, description, price, is_deleted, created_at)
@@ -293,4 +301,5 @@ CROSS JOIN LATERAL (
     ORDER BY md5(s.id::text || menu_name)
     LIMIT (5 + (s.id % 3))::int
 ) AS m
-WHERE s.district = 'GANGNAM' AND s.category = 'OTHERS' AND s.is_deleted = false;
+WHERE s.category = 'OTHERS' AND s.is_deleted = false
+  AND NOT EXISTS (SELECT 1 FROM menu WHERE store_id = s.id AND is_deleted = false);
