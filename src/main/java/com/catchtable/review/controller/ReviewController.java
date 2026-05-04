@@ -2,14 +2,15 @@ package com.catchtable.review.controller;
 
 import com.catchtable.global.common.ApiResponse;
 import com.catchtable.global.common.SuccessCode;
+import com.catchtable.global.security.CustomUserDetails;
 import com.catchtable.review.dto.create.ReviewCreateRequestDto;
-
 import com.catchtable.review.dto.read.ReviewResponseDto;
 import com.catchtable.review.dto.update.ReviewUpdateRequestDto;
 import com.catchtable.review.service.ReviewService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,10 +24,10 @@ public class ReviewController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<Long>> createReview(
-            @RequestHeader("X-User-Id") Long userId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody ReviewCreateRequestDto request
     ) {
-        Long reviewId = reviewService.createReview(userId, request);
+        Long reviewId = reviewService.createReview(userDetails.getUserId(), request);
         return ResponseEntity
                 .status(SuccessCode.REVIEW_CREATE_SUCCESS.getHttpStatus())
                 .body(ApiResponse.success(SuccessCode.REVIEW_CREATE_SUCCESS, reviewId));
@@ -44,9 +45,9 @@ public class ReviewController {
 
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<List<ReviewResponseDto>>> getMyReviews(
-            @RequestHeader("X-User-Id") Long userId
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        List<ReviewResponseDto> responseData = reviewService.getMyReviews(userId);
+        List<ReviewResponseDto> responseData = reviewService.getMyReviews(userDetails.getUserId());
         return ResponseEntity
                 .status(SuccessCode.REVIEW_LOOKUP_SUCCESS.getHttpStatus())
                 .body(ApiResponse.success(SuccessCode.REVIEW_LOOKUP_SUCCESS, responseData));
@@ -55,10 +56,10 @@ public class ReviewController {
     @PatchMapping("/{reviewId}")
     public ResponseEntity<ApiResponse<Long>> updateReview(
             @PathVariable Long reviewId,
-            @RequestHeader("X-User-Id") Long userId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody ReviewUpdateRequestDto request
     ) {
-        Long updatedReviewId = reviewService.updateReview(userId, reviewId, request);
+        Long updatedReviewId = reviewService.updateReview(userDetails.getUserId(), reviewId, request);
         return ResponseEntity
                 .status(SuccessCode.REVIEW_UPDATE_SUCCESS.getHttpStatus())
                 .body(ApiResponse.success(SuccessCode.REVIEW_UPDATE_SUCCESS, updatedReviewId));
@@ -67,9 +68,9 @@ public class ReviewController {
     @DeleteMapping("/{reviewId}")
     public ResponseEntity<ApiResponse<Void>> deleteReview(
             @PathVariable Long reviewId,
-            @RequestHeader("X-User-Id") Long userId
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        reviewService.deleteReview(userId, reviewId);
+        reviewService.deleteReview(userDetails.getUserId(), reviewId);
         return ResponseEntity
                 .status(SuccessCode.REVIEW_DELETE_SUCCESS.getHttpStatus())
                 .body(ApiResponse.success(SuccessCode.REVIEW_DELETE_SUCCESS));
