@@ -72,6 +72,9 @@ public enum SuccessCode implements ResponseCode {
     // User
     USER_LOOKUP_SUCCESS(HttpStatus.OK, "사용자 정보를 조회했습니다."),
 
+    // Payment
+    PAYMENT_CONFIRM_SUCCESS(HttpStatus.OK, "결제가 성공적으로 확인되었습니다."),
+
     // Notification
     NOTIFICATION_LOOKUP_SUCCESS(HttpStatus.OK, "알림 목록을 성공적으로 조회했습니다."),
     NOTIFICATION_UNREAD_COUNT_SUCCESS(HttpStatus.OK, "안 읽은 알림 개수를 조회했습니다."),
