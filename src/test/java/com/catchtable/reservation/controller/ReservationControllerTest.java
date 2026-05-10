@@ -51,7 +51,7 @@ class ReservationControllerTest {
     @DisplayName("예약 생성 성공 - 201")
     void createReservationSuccess() throws Exception {
         given(reservationService.create(eq(1L), any()))
-                .willReturn(new ReservationCreateResponseDto(1L, ReservationStatus.PENDING));
+                .willReturn(new ReservationCreateResponseDto(1L, "CATCH-1-1746806400000", 10000, ReservationStatus.PENDING));
 
         String requestBody = """
                 {
