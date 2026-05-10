@@ -2,6 +2,7 @@ package com.catchtable.menu.controller;
 
 import com.catchtable.global.common.ApiResponse;
 import com.catchtable.global.common.SuccessCode;
+import com.catchtable.global.security.CustomUserDetails;
 import com.catchtable.menu.dto.create.MenuCreateRequest;
 import com.catchtable.menu.dto.create.MenuCreateResponse;
 import com.catchtable.menu.dto.delete.MenuDeleteResponse;
@@ -12,12 +13,12 @@ import com.catchtable.menu.service.MenuService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -29,14 +30,14 @@ public class MenuController {
 
     private final MenuService menuService;
 
-    @Operation(summary = "메뉴 일괄 생성", description = "특정 가게에 메뉴를 한 번에 여러 개 생성합니다.")
-    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "메뉴 일괄 생성", description = "특정 가게에 메뉴를 한 번에 여러 개 생성합니다. 관리자 전용.")
+    @PostMapping
     public ResponseEntity<ApiResponse<MenuCreateResponse>> create(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @Parameter(description = "가게 ID", required = true) @PathVariable Long storeId,
-            @Parameter(description = "메뉴 정보 JSON") @RequestPart("request") MenuCreateRequest request,
-            @Parameter(description = "메뉴 이미지 파일 목록 (선택)") @RequestPart(value = "menuImages", required = false) List<MultipartFile> menuImages
+            @Valid @RequestBody MenuCreateRequest request
     ) {
-        MenuCreateResponse response = menuService.create(storeId, request, menuImages);
+        MenuCreateResponse response = menuService.create(userDetails.getUserId(), storeId, request);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ApiResponse.success(SuccessCode.MENU_CREATED, response));
@@ -52,26 +53,27 @@ public class MenuController {
                 .ok(ApiResponse.success(SuccessCode.MENU_LIST_OK, response));
     }
 
-    @Operation(summary = "메뉴 수정", description = "특정 메뉴의 이름, 가격, 설명, 이미지를 수정합니다.")
-    @PatchMapping(value = "/{menuId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "메뉴 수정", description = "특정 메뉴의 이름, 가격, 설명, 이미지를 수정합니다. 관리자 전용 + 매장 소속 검증.")
+    @PatchMapping("/{menuId}")
     public ResponseEntity<ApiResponse<MenuUpdateResponse>> update(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @Parameter(description = "가게 ID", required = true) @PathVariable Long storeId,
             @Parameter(description = "메뉴 ID", required = true) @PathVariable Long menuId,
-            @Parameter(description = "메뉴 수정 정보 JSON") @RequestPart("request") MenuUpdateRequest request,
-            @Parameter(description = "메뉴 이미지 파일 (선택)") @RequestPart(value = "menuImage", required = false) MultipartFile menuImage
+            @Valid @RequestBody MenuUpdateRequest request
     ) {
-        MenuUpdateResponse response = menuService.update(menuId, request, menuImage);
+        MenuUpdateResponse response = menuService.update(userDetails.getUserId(), storeId, menuId, request);
         return ResponseEntity
                 .ok(ApiResponse.success(SuccessCode.MENU_UPDATED, response));
     }
 
-    @Operation(summary = "메뉴 삭제", description = "특정 메뉴를 소프트 삭제합니다.")
+    @Operation(summary = "메뉴 삭제", description = "특정 메뉴를 소프트 삭제합니다. 관리자 전용 + 매장 소속 검증.")
     @DeleteMapping("/{menuId}")
     public ResponseEntity<ApiResponse<MenuDeleteResponse>> delete(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @Parameter(description = "가게 ID", required = true) @PathVariable Long storeId,
             @Parameter(description = "메뉴 ID", required = true) @PathVariable Long menuId
     ) {
-        MenuDeleteResponse response = menuService.delete(menuId);
+        MenuDeleteResponse response = menuService.delete(userDetails.getUserId(), storeId, menuId);
         return ResponseEntity
                 .ok(ApiResponse.success(SuccessCode.MENU_DELETED, response));
     }

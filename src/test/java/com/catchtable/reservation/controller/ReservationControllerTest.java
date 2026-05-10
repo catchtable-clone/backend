@@ -50,18 +50,18 @@ class ReservationControllerTest {
     @Test
     @DisplayName("예약 생성 성공 - 201")
     void createReservationSuccess() throws Exception {
-        given(reservationService.create(any()))
-                .willReturn(new ReservationCreateResponseDto(1L, ReservationStatus.PENDING));
+        given(reservationService.create(eq(1L), any()))
+                .willReturn(new ReservationCreateResponseDto(1L, "CATCH-1-1746806400000", 10000, ReservationStatus.PENDING));
 
         String requestBody = """
                 {
                     "remainId": 1,
-                    "userId": 1,
                     "member": 4
                 }
                 """;
 
         mockMvc.perform(post("/api/v1/reservations")
+                        .header("X-User-Id", "1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isCreated())
@@ -74,12 +74,12 @@ class ReservationControllerTest {
         String requestBody = """
                 {
                     "remainId": 1,
-                    "userId": 1,
                     "member": 0
                 }
                 """;
 
         mockMvc.perform(post("/api/v1/reservations")
+                        .header("X-User-Id", "1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
@@ -95,7 +95,7 @@ class ReservationControllerTest {
                 .willThrow(new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
 
         mockMvc.perform(get("/api/v1/reservations/999")
-                        .param("userId", "1"))
+                        .header("X-User-Id", "1"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404));
     }
@@ -107,7 +107,7 @@ class ReservationControllerTest {
                 .willThrow(new CustomException(ErrorCode.NOT_RESERVATION_OWNER));
 
         mockMvc.perform(get("/api/v1/reservations/1")
-                        .param("userId", "999"))
+                        .header("X-User-Id", "999"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.status").value(403));
     }
@@ -121,7 +121,7 @@ class ReservationControllerTest {
                 .when(reservationService).cancelReservation(eq(1L), eq(1L));
 
         mockMvc.perform(delete("/api/v1/reservations/1")
-                        .param("userId", "1"))
+                        .header("X-User-Id", "1"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400));
     }

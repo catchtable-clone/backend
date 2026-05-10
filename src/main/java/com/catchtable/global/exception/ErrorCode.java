@@ -14,8 +14,15 @@ public enum ErrorCode implements ResponseCode {
     FORBIDDEN(HttpStatus.FORBIDDEN, "접근 권한이 없습니다."),
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류가 발생했습니다."),
 
+    // Auth
+    INVALID_GOOGLE_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않은 구글 토큰입니다."),
+    INVALID_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않은 리프레시 토큰입니다."),
+    UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증이 필요합니다."),
+
     // User
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 사용자입니다."),
+    USER_SUSPENDED(HttpStatus.FORBIDDEN, "정지된 계정입니다."),
+    USER_WITHDRAWN(HttpStatus.FORBIDDEN, "탈퇴한 계정입니다."),
 
     // Store
     STORE_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 매장입니다."),
@@ -38,6 +45,10 @@ public enum ErrorCode implements ResponseCode {
 
     // Menu
     MENU_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 메뉴입니다."),
+    ADMIN_ONLY_MENU_CREATE(HttpStatus.FORBIDDEN, "관리자만 메뉴를 등록할 수 있습니다."),
+    ADMIN_ONLY_MENU_UPDATE(HttpStatus.FORBIDDEN, "관리자만 메뉴를 수정할 수 있습니다."),
+    ADMIN_ONLY_MENU_DELETE(HttpStatus.FORBIDDEN, "관리자만 메뉴를 삭제할 수 있습니다."),
+    MENU_STORE_MISMATCH(HttpStatus.FORBIDDEN, "해당 매장의 메뉴가 아닙니다."),
 
     // Bookmark
     BOOKMARK_FOLDER_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 폴더입니다."),
@@ -61,7 +72,8 @@ public enum ErrorCode implements ResponseCode {
     REVIEW_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 리뷰입니다."),
     NOT_REVIEW_OWNER(HttpStatus.FORBIDDEN, "본인의 리뷰만 접근할 수 있습니다."),
     REVIEW_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, "이미 해당 예약에 대한 리뷰를 작성했습니다."),
-    REVIEW_NOT_ALLOWED(HttpStatus.FORBIDDEN, "예약이 확정된 사용자만 리뷰를 작성할 수 있습니다."),
+    REVIEW_NOT_ALLOWED(HttpStatus.FORBIDDEN, "예약이 방문 완료된 사용자만 리뷰를 작성할 수 있습니다."),
+
     // Chat
     CHAT_SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 채팅 세션입니다."),
     CHAT_DAILY_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "일일 메시지 제한(100회)을 초과했습니다."),
@@ -74,7 +86,24 @@ public enum ErrorCode implements ResponseCode {
     VACANCY_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 알림입니다."),
     VACANCY_ALREADY_REGISTERED(HttpStatus.CONFLICT, "이미 빈자리 알림을 등록했습니다."),
     VACANCY_ALREADY_DELETED(HttpStatus.CONFLICT, "이미 삭제된 알림입니다."),
-    VACANCY_REMAIN_NOT_EXHAUSTED(HttpStatus.BAD_REQUEST, "아직 예약 가능한 시간대입니다. 잔여 좌석이 0일 때만 빈자리 알림을 등록할 수 있습니다.");
+    VACANCY_REMAIN_NOT_EXHAUSTED(HttpStatus.BAD_REQUEST, "아직 예약 가능한 시간대입니다. 잔여 좌석이 0일 때만 빈자리 알림을 등록할 수 있습니다."),
+
+    // File
+    FILE_EMPTY(HttpStatus.BAD_REQUEST, "업로드할 파일이 비어있습니다."),
+    FILE_INVALID_TYPE(HttpStatus.BAD_REQUEST, "허용되지 않는 파일 형식입니다. (jpg, png, webp만 가능)"),
+    FILE_TOO_LARGE(HttpStatus.BAD_REQUEST, "파일 크기는 5MB를 초과할 수 없습니다."),
+    FILE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "파일 업로드 중 오류가 발생했습니다."),
+
+    // Notification
+    NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 알림입니다."),
+    NOT_NOTIFICATION_OWNER(HttpStatus.FORBIDDEN, "본인의 알림만 접근할 수 있습니다."),
+
+    // Payment
+    PAYMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 결제입니다."),
+    PAYMENT_VERIFICATION_FAILED(HttpStatus.BAD_REQUEST, "결제 검증에 실패했습니다."),
+    PAYMENT_AMOUNT_MISMATCH(HttpStatus.BAD_REQUEST, "결제 금액이 일치하지 않습니다."),
+    PAYMENT_PORTONE_API_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "포트원 API 호출 중 오류가 발생했습니다."),
+    PAYMENT_REFUND_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "결제 환불 처리 중 오류가 발생했습니다.");
 
     private final HttpStatus httpStatus;
     private final String message;

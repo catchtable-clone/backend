@@ -18,6 +18,7 @@ public record StoreDetailResponse(
         String openTime,
         String closeTime,
         String status,
+        Double averageStar,
         Integer reviewCount,
         Integer bookmarkCount,
         List<RemainDateResponse> remainDates
@@ -36,6 +37,7 @@ public record StoreDetailResponse(
                 store.getOpenTime(),
                 store.getCloseTime(),
                 store.getStatus().name(),
+                store.getAverageStar(),
                 store.getReviewCount(),
                 store.getBookmarkCount(),
                 remainDates

@@ -33,6 +33,14 @@ public class BookmarkFolder {
     @Column(name = "folder_type", nullable = false)
     private FolderType folderType;
 
+    /**
+     * 폴더 표시 색상 (HEX). 기본값은 주황색.
+     * 무지개 팔레트(빨/주/노/초/파/남/보 등)를 프론트가 골라서 전달한다.
+     */
+    @Column(name = "color", nullable = false, length = 20)
+    @Builder.Default
+    private String color = "#F97316";
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -53,6 +61,14 @@ public class BookmarkFolder {
 
     public void updateName(String folderName) {
         this.folderName = folderName;
+    }
+
+    /**
+     * 폴더 이름·색상을 한 번에 갱신. null인 항목은 그대로 둔다.
+     */
+    public void update(String folderName, String color) {
+        if (folderName != null) this.folderName = folderName;
+        if (color != null) this.color = color;
     }
 
     public void softDelete() {

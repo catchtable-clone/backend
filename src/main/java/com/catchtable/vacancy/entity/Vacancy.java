@@ -1,5 +1,7 @@
 package com.catchtable.vacancy.entity;
 
+import com.catchtable.remain.entity.StoreRemain;
+import com.catchtable.user.entity.User;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -19,11 +21,13 @@ public class Vacancy {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
-    @Column(name = "remain_id", nullable = false)
-    private Long remainId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "remain_id", nullable = false)
+    private StoreRemain storeRemain;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -40,9 +44,9 @@ public class Vacancy {
     @Column(name = "is_deleted", nullable = false)
     private Boolean isDeleted = false;
 
-    public Vacancy(Long userId, Long remainId) {
-        this.userId = userId;
-        this.remainId = remainId;
+    public Vacancy(User user, StoreRemain storeRemain) {
+        this.user = user;
+        this.storeRemain = storeRemain;
         this.status = VacancyStatus.ACTIVE;
         this.isDeleted = false;
     }
