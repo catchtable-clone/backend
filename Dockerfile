@@ -15,6 +15,11 @@ RUN ./gradlew bootJar --no-daemon -x test
 FROM eclipse-temurin:21.0.6_7-jre-noble
 WORKDIR /app
 
+# HEALTHCHECK용 wget 설치 (eclipse-temurin jre-noble 이미지에 미포함)
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends wget \
+ && rm -rf /var/lib/apt/lists/*
+
 # 비루트 유저로 실행
 RUN useradd -r -u 1001 spring
 USER spring
