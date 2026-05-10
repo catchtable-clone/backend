@@ -1,4 +1,4 @@
-﻿package com.catchtable.reservation.controller;
+package com.catchtable.reservation.controller;
 
 import com.catchtable.global.common.ApiResponse;
 import com.catchtable.global.common.SuccessCode;
