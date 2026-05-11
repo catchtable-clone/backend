@@ -23,7 +23,7 @@ public interface StoreRemainRepository extends JpaRepository<StoreRemain, Long> 
 
     @Query("SELECT sr FROM StoreRemain sr " +
            "JOIN sr.store s " +
-            "WHERE s.storeName LIKE %:storeName% " +
+            "WHERE s.storeName = :storeName " +
            "AND sr.remainDate = :date " +
            "AND sr.remainTime = :time")
     Optional<StoreRemain> findByStoreNameAndDateTime(
