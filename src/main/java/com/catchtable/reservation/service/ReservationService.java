@@ -193,6 +193,33 @@ public class ReservationService {
         }
     }
 
+    /**
+     * 사용자가 직접 "방문 확정" 버튼을 눌러 예약을 VISITED 상태로 전환한다.
+     * CONFIRMED 상태에서만 호출 가능. 호출 후 ReservationVisitedEvent 발행으로 알림이 자동 발송된다.
+     */
+    @Transactional
+    public void markAsVisited(Long reservationId, Long userId) {
+        Reservation reservation = reservationRepository.findByIdWithUserAndStoreRemainAndStore(reservationId)
+                .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
+
+        reservation.validateOwner(userId);
+
+        if (reservation.getStatus() != ReservationStatus.CONFIRMED) {
+            throw new CustomException(ErrorCode.ALREADY_CANCELED);
+        }
+
+        reservation.changeStatus(ReservationStatus.VISITED);
+
+        StoreRemain storeRemain = reservation.getStoreRemain();
+        eventPublisher.publishEvent(new ReservationVisitedEvent(
+                reservation.getId(),
+                reservation.getUser().getId(),
+                storeRemain.getStore().getStoreName(),
+                storeRemain.getRemainDate().toString(),
+                storeRemain.getRemainTime().toString()
+        ));
+    }
+
     // ============================================================
     // Internal core (알림 발행 X — 호출자가 알림 정책 결정)
     // ============================================================
