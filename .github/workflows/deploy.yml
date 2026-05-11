@@ -1,0 +1,126 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    name: Build & Push to ghcr.io
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image-tag: ${{ steps.tag.outputs.short_sha }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Inject application.yaml from secret
+        run: |
+          mkdir -p src/main/resources
+          cat > src/main/resources/application.yaml <<'EOF'
+          ${{ secrets.APPLICATION_YAML }}
+          EOF
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      # 테스트는 PR 시 ci.yml에서 검증. 여기선 스킵 (통합 테스트 환경 미구성)
+      - name: Compute short SHA
+        id: tag
+        run: echo "short_sha=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build & push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ steps.tag.outputs.short_sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to EC2
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          command_timeout: 10m
+          envs: IMAGE_TAG
+          script: |
+            set -e
+
+            APP_DIR=/home/${{ secrets.EC2_USER }}/catchtable
+            REPO_URL=https://github.com/${{ github.repository }}.git
+
+            # 1. 레포 클론 또는 pull (config 파일 동기화)
+            if [ ! -d "$APP_DIR" ]; then
+              git clone --depth 1 -b main "$REPO_URL" "$APP_DIR"
+            fi
+            cd "$APP_DIR"
+            git fetch origin main
+            git reset --hard origin/main
+
+            # 2. .env를 Secrets에서 매번 새로 생성
+            cat > .env <<'EOF'
+            ${{ secrets.ENV_FILE }}
+            EOF
+
+            # 3. 배포할 이미지 태그 추가
+            echo "" >> .env
+            echo "IMAGE_TAG=sha-${{ needs.build-and-push.outputs.image-tag }}" >> .env
+            chmod 600 .env
+
+            # 4. compose 파일 결정 (prod 사용)
+            COMPOSE="docker-compose.prod.yml"
+
+            # 5. 새 이미지 받기 (app만)
+            sudo docker compose -f "$COMPOSE" pull app
+
+            # 6. app만 교체 (nginx/certbot은 그대로 유지 — 무중단 가까움)
+            sudo docker compose -f "$COMPOSE" up -d --no-deps app
+
+            # 7. 헬스체크 (Docker healthcheck 상태 polling, 최대 90초)
+            echo "Waiting for app to become healthy..."
+            for i in $(seq 1 18); do
+              STATUS=$(sudo docker inspect --format='{{.State.Health.Status}}' catchtable-app 2>/dev/null || echo "starting")
+              if [ "$STATUS" = "healthy" ]; then
+                echo "✅ App is healthy"
+                sudo docker image prune -f
+                exit 0
+              fi
+              echo "  ($i/18) status=$STATUS"
+              sleep 5
+            done
+
+            echo "❌ Health check failed"
+            sudo docker compose -f "$COMPOSE" logs --tail=80 app
+            exit 1
