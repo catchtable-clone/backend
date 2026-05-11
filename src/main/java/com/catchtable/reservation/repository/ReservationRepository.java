@@ -1,6 +1,7 @@
 package com.catchtable.reservation.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -9,6 +10,7 @@ import com.catchtable.reservation.entity.ReservationStatus;
 import com.catchtable.user.entity.User;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
@@ -34,16 +36,18 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     Optional<Reservation> findByIdWithUserAndStoreRemainAndStore(@Param("id") Long id);
 
     /**
-     * NOSHOW 자동 전환 대상 조회.
-     * status = CONFIRMED 이고, 예약 시각(remainDate + remainTime)이 기준 시각(now - 30분) 이전인 건.
-     * remainDate/remainTime이 분리 저장이라 OR 조건으로 비교한다.
+     * CONFIRMED 상태이면서 예약 시각이 기준 시각 이전인 예약을 NOSHOW로 일괄 전환한다.
+     * 벌크 UPDATE라 @PreUpdate가 호출되지 않으므로 updatedAt도 쿼리에서 직접 갱신한다.
      */
-    @Query("SELECT r FROM Reservation r JOIN FETCH r.user u JOIN FETCH r.storeRemain sr JOIN FETCH sr.store s " +
-            "WHERE r.status = :status " +
-            "AND (sr.remainDate < :date " +
-            "     OR (sr.remainDate = :date AND sr.remainTime <= :time))")
-    List<Reservation> findNoshowTargets(
-            @Param("status") ReservationStatus status,
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE Reservation r " +
+            "SET r.status = com.catchtable.reservation.entity.ReservationStatus.NOSHOW, " +
+            "    r.updatedAt = :now " +
+            "WHERE r.status = com.catchtable.reservation.entity.ReservationStatus.CONFIRMED " +
+            "AND (r.storeRemain.remainDate < :date " +
+            "     OR (r.storeRemain.remainDate = :date AND r.storeRemain.remainTime <= :time))")
+    int bulkTransitionToNoshow(
             @Param("date") LocalDate date,
-            @Param("time") LocalTime time);
+            @Param("time") LocalTime time,
+            @Param("now") LocalDateTime now);
 }
