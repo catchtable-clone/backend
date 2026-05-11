@@ -58,6 +58,7 @@ public class ReservationService {
             "매장 이름은 사용자가 말한 그대로 넘겨주세요. 임의로 변경하지 마세요. " +
             "매장 이름, 예약 날짜, 예약 시간, 인원수 정보가 모두 필요합니다. " +
             "사용자가 예약을 요청하면 반드시 이 함수를 호출하세요.")
+    @Transactional
     public String createReservationFromAi(
             @ToolParam(description = "매장 이름 (예: 모수 서울, 경원집)") String storeName,
             @ToolParam(description = "예약 날짜, ISO 형식 (예: 2025-05-11)") LocalDate date,
@@ -82,6 +83,14 @@ public class ReservationService {
 
         Reservation saved = createReservationCore(
                 currentUserId, availableRemain.get().getId(), member, null);
+
+        eventPublisher.publishEvent(new ReservationConfirmedEvent(
+                saved.getId(),
+                currentUserId,
+                saved.getStoreRemain().getStore().getStoreName(),
+                saved.getStoreRemain().getRemainDate().toString(),
+                saved.getStoreRemain().getRemainTime().toString()
+        ));
 
         return String.format(
                 "네, %s 레스토랑 %s %s 시간으로 %d명 예약이 완료되었습니다. 예약 번호는 %d번입니다.",
