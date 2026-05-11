@@ -54,6 +54,8 @@ CREATE TABLE IF NOT EXISTS stores (
     is_deleted BOOLEAN NOT NULL
 );
 
+DROP TABLE IF EXISTS temp_stores;
+
 CREATE TEMP TABLE temp_stores (
                                   store_name text, store_image text, category text,
                                   latitude double precision, longitude double precision,
@@ -64,7 +66,7 @@ CREATE TEMP TABLE temp_stores (
 COPY temp_stores FROM '/tmp/data/store_data.csv' WITH (FORMAT csv, HEADER true);
 
 INSERT INTO stores (store_name, store_image, category, latitude, longitude, address, district, team, open_time,
-                    close_time, status, review_count, bookmark_count, is_deleted, created_at)
+                    close_time, status, review_count, bookmark_count, average_star, is_deleted, created_at)
 SELECT store_name,
        NULLIF(store_image, ''),
        category,
@@ -78,6 +80,7 @@ SELECT store_name,
        'ACTIVE',
        0,
        0,
+       0.0,
        false,
        NOW()
 FROM temp_stores;

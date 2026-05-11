@@ -12,6 +12,7 @@ import com.catchtable.notification.event.VacancyEvent;
 import com.catchtable.notification.service.VacancyNotificationEmailService;
 import com.catchtable.remain.entity.StoreRemain;
 import com.catchtable.remain.repository.StoreRemainRepository;
+import com.catchtable.remain.service.StoreRemainService;
 import com.catchtable.reservation.dto.create.ReservationCreateRequestDto;
 import com.catchtable.reservation.dto.create.ReservationCreateResponseDto;
 import com.catchtable.reservation.dto.update.ReservationStatusUpdateRequestDto;
@@ -26,13 +27,21 @@ import com.catchtable.store.entity.Store;
 import com.catchtable.user.entity.User;
 import com.catchtable.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.tool.annotation.Tool;
+import org.springframework.ai.tool.annotation.ToolParam;
+import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
+import java.util.Optional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ReservationService {
@@ -40,20 +49,50 @@ public class ReservationService {
     private final ReservationRepository reservationRepository;
     private final UserRepository userRepository;
     private final StoreRemainRepository storeRemainRepository;
+    private final StoreRemainService storeRemainService;
     private final CouponService couponService;
     private final VacancyNotificationEmailService vacancyNotificationService;
     private final ApplicationEventPublisher eventPublisher;
 
-    // ============================================================
-    // Public API
-    // ============================================================
+    @Tool(description = "사용자의 자연어 요청을 기반으로 레스토랑 예약을 생성합니다. " +
+            "매장 이름은 사용자가 말한 그대로 넘겨주세요. 임의로 변경하지 마세요. " +
+            "매장 이름, 예약 날짜, 예약 시간, 인원수 정보가 모두 필요합니다. " +
+            "사용자가 예약을 요청하면 반드시 이 함수를 호출하세요.")
+    public String createReservationFromAi(
+            @ToolParam(description = "매장 이름 (예: 모수 서울, 경원집)") String storeName,
+            @ToolParam(description = "예약 날짜, ISO 형식 (예: 2025-05-11)") LocalDate date,
+            @ToolParam(description = "예약 시간, HH:mm 형식 (예: 14:00)") LocalTime time,
+            @ToolParam(description = "예약 인원수 (예: 2)") int member,
+            ToolContext toolContext
+    ) {
+        Long currentUserId = (Long) toolContext.getContext().get("userId");
 
+        log.info("=== AI Tool 호출 === storeName='{}', date={}, time={}, member={}, userId={}",
+                storeName, date, time, member, currentUserId);
+
+        Optional<StoreRemain> availableRemain =
+                storeRemainService.findAvailableRemain(storeName, date, time);
+
+        log.info("=== 잔여석 조회 결과: {}",
+                availableRemain.isPresent() ? "있음 (id=" + availableRemain.get().getId() + ")" : "없음");
+
+        if (availableRemain.isEmpty()) {
+            return "죄송합니다. 요청하신 시간에 예약 가능한 자리가 없습니다.";
+        }
+
+        Reservation saved = createReservationCore(
+                currentUserId, availableRemain.get().getId(), member, null);
+
+        return String.format(
+                "네, %s 레스토랑 %s %s 시간으로 %d명 예약이 완료되었습니다. 예약 번호는 %d번입니다.",
+                storeName, date, time, member, saved.getId());
+    }
+    
     @Transactional
     public ReservationCreateResponseDto create(Long userId, ReservationCreateRequestDto request) {
         Reservation saved = createReservationCore(userId, request.remainId(), request.member(), request.couponId());
         StoreRemain storeRemain = saved.getStoreRemain();
 
-        // 예약 확정 알림 이벤트 발행
         eventPublisher.publishEvent(new ReservationConfirmedEvent(
                 saved.getId(),
                 userId,
@@ -70,7 +109,6 @@ public class ReservationService {
         Reservation reservation = cancelReservationCore(reservationId, userId, ReservationStatus.CANCELED);
         StoreRemain storeRemain = reservation.getStoreRemain();
 
-        // 예약 취소 알림 이벤트 발행
         eventPublisher.publishEvent(new ReservationCanceledEvent(
                 reservation.getId(),
                 reservation.getUser().getId(),
@@ -82,15 +120,12 @@ public class ReservationService {
 
     @Transactional
     public ReservationUpdateResponseDto updateReservation(Long reservationId, Long userId, ReservationUpdateRequestDto request) {
-        // 1. 기존 예약은 변경으로 대체됨 (REPLACED 마킹) — 취소/생성 로직 재사용, 알림은 발행하지 않음
         Reservation oldReservation = cancelReservationCore(reservationId, userId, ReservationStatus.REPLACED);
         StoreRemain oldStoreRemain = oldReservation.getStoreRemain();
 
-        // 2. 새 예약 생성 — 동일하게 알림은 발행하지 않음
         Reservation newReservation = createReservationCore(userId, request.newRemainId(), request.newMember(), request.couponId());
         StoreRemain newStoreRemain = newReservation.getStoreRemain();
 
-        // 3. 변경 알림 1건만 발행
         eventPublisher.publishEvent(new ReservationChangedEvent(
                 newReservation.getId(),
                 userId,
@@ -177,11 +212,8 @@ public class ReservationService {
                 .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
 
         reservation.validateOwner(userId);
-
-        // 상태 변경
         reservation.changeStatus(request.status());
 
-        // 예약 상태가 VISITED로 변경될 때 이벤트 발행
         if (request.status() == ReservationStatus.VISITED) {
             eventPublisher.publishEvent(new ReservationVisitedEvent(
                     reservation.getId(),
@@ -193,14 +225,9 @@ public class ReservationService {
         }
     }
 
-    // ============================================================
-    // Internal core (알림 발행 X — 호출자가 알림 정책 결정)
+    // Basic Logic
     // ============================================================
 
-    /**
-     * 예약 생성의 핵심 로직: 사용자/시간대 검증, 재고 차감, 쿠폰 적용, 저장.
-     * 알림은 발행하지 않으므로, 호출자가 상황(생성/변경)에 맞는 이벤트를 직접 publish 해야 한다.
-     */
     private Reservation createReservationCore(Long userId, Long remainId, Integer member, Long couponId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
@@ -231,12 +258,6 @@ public class ReservationService {
         return reservationRepository.save(reservation);
     }
 
-    /**
-     * 예약 종료(취소/대체) 핵심 로직: 상태 마킹, 재고 복구, 빈자리 이벤트, 쿠폰 반환.
-     * 알림은 발행하지 않으므로, 호출자가 상황(취소/변경)에 맞는 이벤트를 직접 publish 해야 한다.
-     *
-     * @param targetStatus CANCELED(진짜 취소) 또는 REPLACED(변경에 의한 대체)
-     */
     private Reservation cancelReservationCore(Long reservationId, Long userId, ReservationStatus targetStatus) {
         Reservation reservation = getActiveReservation(reservationId, userId);
         reservation.changeStatus(targetStatus);
@@ -249,7 +270,6 @@ public class ReservationService {
             throw new CustomException(ErrorCode.OPTIMISTIC_LOCK_CONFLICT);
         }
 
-        // 빈자리 발생 이벤트는 취소/변경 양쪽 모두에서 발행 (다른 사용자에게 빈자리 알림)
         eventPublisher.publishEvent(new VacancyEvent(storeRemain.getId()));
 
         if (reservation.getCoupon() != null) {
@@ -263,7 +283,6 @@ public class ReservationService {
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
         reservation.validateOwner(userId);
-        // PENDING/CONFIRMED 상태만 변경/취소 허용. CANCELED/REPLACED/VISITED/NOSHOW 는 모두 종착 상태.
         ReservationStatus status = reservation.getStatus();
         if (status != ReservationStatus.PENDING && status != ReservationStatus.CONFIRMED) {
             throw new CustomException(ErrorCode.ALREADY_CANCELED);
