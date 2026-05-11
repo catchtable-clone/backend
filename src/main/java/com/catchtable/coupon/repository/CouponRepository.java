@@ -18,12 +18,12 @@ public interface CouponRepository extends JpaRepository<Coupon, Long> {
 
     /**
      * UNUSED 상태의 쿠폰 중 템플릿 만료 시각이 지난 것을 일괄 EXPIRED로 전환한다.
-     * JPQL bulk UPDATE는 JOIN 직접 불가하므로 서브쿼리로 매칭한다.
+     * 경로 표현식(c.couponTemplate.expiredAt) 사용 시 Hibernate가 암시적 조인을 처리한다.
      */
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE Coupon c SET c.status = com.catchtable.coupon.entity.CouponStatus.EXPIRED " +
             "WHERE c.status = com.catchtable.coupon.entity.CouponStatus.UNUSED " +
             "AND c.isDeleted = false " +
-            "AND c.id IN (SELECT c2.id FROM Coupon c2 WHERE c2.couponTemplate.expiredAt < :now)")
+            "AND c.couponTemplate.expiredAt < :now")
     int expireCoupons(@Param("now") LocalDateTime now);
 }
