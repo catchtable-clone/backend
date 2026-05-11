@@ -62,6 +62,7 @@ public enum ErrorCode implements ResponseCode {
     RESERVATION_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 예약입니다."),
     NOT_RESERVATION_OWNER(HttpStatus.FORBIDDEN, "본인의 예약만 접근할 수 있습니다."),
     ALREADY_CANCELED(HttpStatus.BAD_REQUEST, "이미 취소된 예약입니다."),
+    NOT_VISITABLE_STATUS(HttpStatus.BAD_REQUEST, "이미 방문 완료 처리되었습니다."),
 
     // Remain
     REMAIN_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 예약 시간대입니다."),

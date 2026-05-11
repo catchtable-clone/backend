@@ -205,7 +205,7 @@ public class ReservationService {
         reservation.validateOwner(userId);
 
         if (reservation.getStatus() != ReservationStatus.CONFIRMED) {
-            throw new CustomException(ErrorCode.ALREADY_CANCELED);
+            throw new CustomException(ErrorCode.NOT_VISITABLE_STATUS);
         }
 
         reservation.changeStatus(ReservationStatus.VISITED);
