@@ -19,13 +19,16 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     @Query("SELECT r FROM Reservation r JOIN FETCH r.storeRemain sr JOIN FETCH r.user " +
             "WHERE r.status = :status " +
             "AND r.reminded = false " +
-            "AND sr.remainDate = :date " +
-            "AND sr.remainTime BETWEEN :from AND :to")
+            "AND (sr.remainDate > :fromDate " +
+            "     OR (sr.remainDate = :fromDate AND sr.remainTime >= :fromTime)) " +
+            "AND (sr.remainDate < :toDate " +
+            "     OR (sr.remainDate = :toDate AND sr.remainTime <= :toTime))")
     List<Reservation> findReminderTargets(
             @Param("status") ReservationStatus status,
-            @Param("date") LocalDate date,
-            @Param("from") LocalTime from,
-            @Param("to") LocalTime to);
+            @Param("fromDate") LocalDate fromDate,
+            @Param("fromTime") LocalTime fromTime,
+            @Param("toDate") LocalDate toDate,
+            @Param("toTime") LocalTime toTime);
 
     @Query("SELECT r FROM Reservation r JOIN FETCH r.user u JOIN FETCH r.storeRemain sr JOIN FETCH sr.store s WHERE r.id = :id")
     Optional<Reservation> findByIdWithUserAndStoreRemainAndStore(@Param("id") Long id);
