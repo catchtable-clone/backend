@@ -5,6 +5,7 @@ import com.catchtable.chatbot.dto.create.ChatMessageResponse;
 import com.catchtable.chatbot.dto.read.ChatMessageListResponse;
 import com.catchtable.chatbot.entity.ChatMessage;
 import com.catchtable.chatbot.entity.MessageRole;
+import com.catchtable.coupon.service.CouponService;
 import com.catchtable.global.exception.CustomException;
 import com.catchtable.global.exception.ErrorCode;
 import com.catchtable.reservation.service.ReservationService;
@@ -33,7 +34,9 @@ public class ChatbotService {
                     + "오늘 날짜는 " + java.time.LocalDate.now() + "이야. "
                     + "사용자가 '5월 12일'처럼 연도 없이 날짜를 말하면 오늘 날짜 기준으로 가장 가까운 미래 날짜로 해석해. "
                     + "너의 역할은 사용자의 질문을 이해하고, 주어진 도구(함수)를 사용하여 레스토랑 예약 요청을 처리하는 것이야. "
-                    + "사용자가 예약을 요청하면 반드시 'createReservationFromAi' 함수를 호출해서 예약을 처리해야 해. "
+                    + "사용자가 예약을 요청하면, 'createReservationFromAi' 함수를 호출하기 전에 반드시 'getAvailableCouponsForAi' 함수를 먼저 호출해서 사용자에게 사용 가능한 쿠폰이 있는지 확인하고, 있다면 어떤 쿠폰을 사용할지 물어봐야 해."
+                    + "만약 사용 가능한 쿠폰이 없다면, 바로 'createReservationFromAi' 함수를 호출해서 예약을 진행해. "
+                    + "사용자가 쿠폰을 사용하겠다고 하면, 'createReservationFromAi' 함수를 호출할 때 'couponId' 파라미터를 포함해서 호출해야 해."
                     + "함수를 호출하기 전에 '매장 이름', '날짜', '시간', '인원수' 4가지 정보가 모두 있는지 확인해. "
                     + "정보가 부족하면 사용자에게 추가 정보를 요청해. "
                     + "모든 답변은 한국어로, 친절하고 명확하게 제공해야 해.";
@@ -42,6 +45,7 @@ public class ChatbotService {
     private final ChatClient chatClient;
     private final ChatbotDbService dbService;
     private final ReservationService reservationService;
+    private final CouponService couponService;
 
     public ChatMessageResponse sendMessage(Long userId, ChatMessageRequest request) {
         Long sessionId = dbService.saveUserMessage(userId, request.message());
@@ -76,7 +80,7 @@ public class ChatbotService {
         try {
             return chatClient.prompt()
                     .messages(messages)
-                    .tools(reservationService)
+                    .tools(reservationService, couponService)
                     .toolContext(Map.of("userId", userId))
                     .call()
                     .content();

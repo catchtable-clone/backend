@@ -4,10 +4,7 @@ import com.catchtable.coupon.entity.Coupon;
 import com.catchtable.coupon.service.CouponService;
 import com.catchtable.global.exception.CustomException;
 import com.catchtable.global.exception.ErrorCode;
-import com.catchtable.notification.event.ReservationCanceledEvent;
-import com.catchtable.notification.event.ReservationChangedEvent;
-import com.catchtable.notification.event.ReservationVisitedEvent;
-import com.catchtable.notification.event.VacancyEvent;
+import com.catchtable.notification.event.*;
 import com.catchtable.payment.entity.Payment;
 import com.catchtable.payment.repository.PaymentRepository;
 import com.catchtable.payment.service.PaymentService;
@@ -88,12 +85,13 @@ public class ReservationService {
         Reservation saved = createReservationCore(
                 currentUserId, availableRemain.get().getId(), member, null);
 
+        StoreRemain storeRemain = saved.getStoreRemain();
         eventPublisher.publishEvent(new ReservationConfirmedEvent(
                 saved.getId(),
                 currentUserId,
-                saved.getStoreRemain().getStore().getStoreName(),
-                saved.getStoreRemain().getRemainDate().toString(),
-                saved.getStoreRemain().getRemainTime().toString()
+                storeRemain.getStore().getStoreName(),
+                storeRemain.getRemainDate().toString(),
+                storeRemain.getRemainTime().toString()
         ));
 
         return String.format(
@@ -105,6 +103,7 @@ public class ReservationService {
     public ReservationCreateResponseDto create(Long userId, ReservationCreateRequestDto request) {
         Reservation saved = createReservationCore(userId, request.remainId(), request.member(), request.couponId());
 
+        StoreRemain storeRemain = saved.getStoreRemain();
         eventPublisher.publishEvent(new ReservationConfirmedEvent(
                 saved.getId(),
                 userId,
