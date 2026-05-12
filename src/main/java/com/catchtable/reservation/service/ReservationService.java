@@ -13,6 +13,7 @@ import com.catchtable.payment.repository.PaymentRepository;
 import com.catchtable.payment.service.PaymentService;
 import com.catchtable.remain.entity.StoreRemain;
 import com.catchtable.remain.repository.StoreRemainRepository;
+import com.catchtable.remain.service.StoreRemainService;
 import com.catchtable.reservation.dto.create.ReservationCreateRequestDto;
 import com.catchtable.reservation.dto.create.ReservationCreateResponseDto;
 import com.catchtable.reservation.dto.update.ReservationStatusUpdateRequestDto;
@@ -27,13 +28,21 @@ import com.catchtable.store.entity.Store;
 import com.catchtable.user.entity.User;
 import com.catchtable.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.tool.annotation.Tool;
+import org.springframework.ai.tool.annotation.ToolParam;
+import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
+import java.util.Optional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ReservationService {
@@ -43,19 +52,66 @@ public class ReservationService {
     private final ReservationRepository reservationRepository;
     private final UserRepository userRepository;
     private final StoreRemainRepository storeRemainRepository;
+    private final StoreRemainService storeRemainService;
     private final CouponService couponService;
     private final ApplicationEventPublisher eventPublisher;
     private final PaymentRepository paymentRepository;
     private final PaymentService paymentService;
 
-    // ============================================================
-    // Public API
-    // ============================================================
+    @Tool(description = "사용자의 자연어 요청을 기반으로 레스토랑 예약을 생성합니다. " +
+            "매장 이름은 사용자가 말한 그대로 넘겨주세요. 임의로 변경하지 마세요. " +
+            "매장 이름, 예약 날짜, 예약 시간, 인원수 정보가 모두 필요합니다. " +
+            "사용자가 예약을 요청하면 반드시 이 함수를 호출하세요.")
+    @Transactional
+    public String createReservationFromAi(
+            @ToolParam(description = "매장 이름 (예: 모수 서울, 경원집)") String storeName,
+            @ToolParam(description = "예약 날짜, ISO 형식 (예: 2025-05-11)") LocalDate date,
+            @ToolParam(description = "예약 시간, HH:mm 형식 (예: 14:00)") LocalTime time,
+            @ToolParam(description = "예약 인원수 (예: 2)") int member,
+            ToolContext toolContext
+    ) {
+        Long currentUserId = (Long) toolContext.getContext().get("userId");
 
+        log.info("=== AI Tool 호출 === storeName='{}', date={}, time={}, member={}, userId={}",
+                storeName, date, time, member, currentUserId);
+
+        Optional<StoreRemain> availableRemain =
+                storeRemainService.findAvailableRemain(storeName, date, time);
+
+        log.info("=== 잔여석 조회 결과: {}",
+                availableRemain.isPresent() ? "있음 (id=" + availableRemain.get().getId() + ")" : "없음");
+
+        if (availableRemain.isEmpty()) {
+            return "죄송합니다. 요청하신 시간에 예약 가능한 자리가 없습니다.";
+        }
+
+        Reservation saved = createReservationCore(
+                currentUserId, availableRemain.get().getId(), member, null);
+
+        eventPublisher.publishEvent(new ReservationConfirmedEvent(
+                saved.getId(),
+                currentUserId,
+                saved.getStoreRemain().getStore().getStoreName(),
+                saved.getStoreRemain().getRemainDate().toString(),
+                saved.getStoreRemain().getRemainTime().toString()
+        ));
+
+        return String.format(
+                "네, %s 레스토랑 %s %s 시간으로 %d명 예약이 완료되었습니다. 예약 번호는 %d번입니다.",
+                storeName, date, time, member, saved.getId());
+    }
+    
     @Transactional
     public ReservationCreateResponseDto create(Long userId, ReservationCreateRequestDto request) {
         Reservation saved = createReservationCore(userId, request.remainId(), request.member(), request.couponId());
 
+        eventPublisher.publishEvent(new ReservationConfirmedEvent(
+                saved.getId(),
+                userId,
+                storeRemain.getStore().getStoreName(),
+                storeRemain.getRemainDate().toString(),
+                storeRemain.getRemainTime().toString()
+        ));
         String orderId = "CATCH-" + saved.getId() + "-" + System.currentTimeMillis();
         Payment payment = Payment.builder()
                 .reservation(saved)
@@ -72,6 +128,13 @@ public class ReservationService {
         Reservation reservation = getActiveReservation(reservationId, userId);
         StoreRemain storeRemain = reservation.getStoreRemain();
 
+        eventPublisher.publishEvent(new ReservationCanceledEvent(
+                reservation.getId(),
+                reservation.getUser().getId(),
+                storeRemain.getStore().getStoreName(),
+                storeRemain.getRemainDate().toString(),
+                storeRemain.getRemainTime().toString()
+        ));
         if (reservation.getStatus() == ReservationStatus.PENDING) {
             // 결제 미완료: PAYMENT_FAILED로 기록 (사용자 예약 취소 내역과 구분)
             paymentRepository.findByReservation_Id(reservationId).ifPresent(Payment::markFailed);
@@ -209,6 +272,7 @@ public class ReservationService {
         }
     }
 
+    // Basic Logic
     /**
      * 사용자가 직접 "방문 확정" 버튼을 눌러 예약을 VISITED 상태로 전환한다.
      * CONFIRMED 상태에서만 호출 가능. 호출 후 ReservationVisitedEvent 발행으로 알림이 자동 발송된다.
@@ -236,7 +300,6 @@ public class ReservationService {
         ));
     }
 
-    // ============================================================
     // Internal core
     // ============================================================
 
@@ -285,6 +348,7 @@ public class ReservationService {
         } catch (OptimisticLockingFailureException e) {
             throw new CustomException(ErrorCode.OPTIMISTIC_LOCK_CONFLICT);
         }
+
         eventPublisher.publishEvent(new VacancyEvent(storeRemain.getId()));
         if (reservation.getCoupon() != null) {
             couponService.returnCoupon(reservation.getCoupon().getId());
