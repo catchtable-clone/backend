@@ -19,8 +19,4 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     // 해당 예약을 통해 이미 리뷰를 작성했는지 확인 (중복 리뷰 방지)
     boolean existsByReservationIdAndIsDeletedFalse(Long reservationId);
-
-    // 단일 매장의 평균 평점 조회 (리뷰 변경 시 매장 캐시 갱신용)
-    @Query("SELECT AVG(r.star) FROM Review r WHERE r.store.id = :storeId AND r.isDeleted = false")
-    Double findAverageStarByStoreId(@Param("storeId") Long storeId);
 }
