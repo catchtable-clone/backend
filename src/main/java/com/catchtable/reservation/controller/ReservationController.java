@@ -143,4 +143,15 @@ public class ReservationController {
                 .status(SuccessCode.RESERVATION_UPDATE_SUCCESS.getHttpStatus())
                 .body(ApiResponse.success(SuccessCode.RESERVATION_UPDATE_SUCCESS, responseData));
     }
+
+    @PatchMapping("/{reservationId}/visit")
+    public ResponseEntity<ApiResponse<Void>> markAsVisited(
+            @PathVariable Long reservationId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        reservationService.markAsVisited(reservationId, userDetails.getUserId());
+        return ResponseEntity
+                .status(SuccessCode.RESERVATION_UPDATE_SUCCESS.getHttpStatus())
+                .body(ApiResponse.success(SuccessCode.RESERVATION_UPDATE_SUCCESS));
+    }
 }
