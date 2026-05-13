@@ -35,56 +35,43 @@ public class StoreRemainService {
         Store store = storeRepository.findById(request.storeId())
                 .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
 
-        // 매장의 문자열 형태("10:00") 영업 시간을 LocalTime으로 파싱
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
         LocalTime openTime;
         LocalTime closeTime;
-        
+
         try {
             openTime = LocalTime.parse(store.getOpenTime(), formatter);
             closeTime = LocalTime.parse(store.getCloseTime(), formatter);
         } catch (Exception e) {
-            log.error("매장 영업 시간 파싱 실패. storeId: {}, openTime: {}, closeTime: {}", 
+            log.error("매장 영업 시간 파싱 실패. storeId: {}, openTime: {}, closeTime: {}",
                     store.getId(), store.getOpenTime(), store.getCloseTime());
             throw new CustomException(ErrorCode.BAD_REQUEST);
         }
 
-        // 해당 월의 1일과 말일 계산
         YearMonth targetMonth = YearMonth.of(request.year(), request.month());
         LocalDate startDate = targetMonth.atDay(1);
         LocalDate endDate = targetMonth.atEndOfMonth();
 
         List<StoreRemain> remainsToSave = new ArrayList<>();
 
-        // 1일부터 말일까지 생성
         for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
-            
             LocalTime currentTime = openTime;
-            
-            // 시간별 루프 (오픈 시간부터 마감 시간 1시간 전까지)
             while (currentTime.isBefore(closeTime)) {
-
                 if (currentTime.plusHours(1).isAfter(closeTime)) {
                     break;
                 }
-
-                // 엔티티 생성 (잔여 팀 수는 매장의 team)
                 StoreRemain remain = StoreRemain.builder()
                         .store(store)
                         .remainDate(date)
                         .remainTime(currentTime)
                         .remainTeam(store.getTeam())
                         .build();
-                        
                 remainsToSave.add(remain);
-                
                 currentTime = currentTime.plusHours(1);
             }
         }
 
-        // 저장
         storeRemainRepository.saveAll(remainsToSave);
-
     }
 
     @Transactional(readOnly = true)
@@ -105,6 +92,54 @@ public class StoreRemainService {
     @Transactional(readOnly = true)
     public Optional<StoreRemain> findAvailableRemain(String storeName, LocalDate date, LocalTime time) {
         return storeRemainRepository.findByStoreNameAndDateTime(storeName, date, time)
-                .filter(remain -> remain.getRemainTeam() > 0); // 잔여 팀이 1 이상인 경우만 필터링
+                .filter(remain -> remain.getRemainTeam() > 0);
+    }
+
+    /**
+     * 모든 활성 매장에 대해 지정된 날짜의 슬롯을 생성한다.
+     * 이미 그 날짜 슬롯이 하나라도 있는 매장은 스킵.
+     *
+     * @return 슬롯이 생성된 매장 수
+     */
+    @Transactional
+    public int generateDailySlotsForAllStores(LocalDate targetDate) {
+        List<Store> stores = storeRepository.findAllByIsDeletedFalse();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
+
+        int createdStoreCount = 0;
+        for (Store store : stores) {
+            if (storeRemainRepository.existsByStoreIdAndRemainDate(store.getId(), targetDate)) {
+                continue;
+            }
+
+            try {
+                LocalTime openTime = LocalTime.parse(store.getOpenTime(), formatter);
+                LocalTime closeTime = LocalTime.parse(store.getCloseTime(), formatter);
+
+                List<StoreRemain> slots = new ArrayList<>();
+                LocalTime currentTime = openTime;
+                while (currentTime.isBefore(closeTime)) {
+                    if (currentTime.plusHours(1).isAfter(closeTime)) {
+                        break;
+                    }
+                    slots.add(StoreRemain.builder()
+                            .store(store)
+                            .remainDate(targetDate)
+                            .remainTime(currentTime)
+                            .remainTeam(store.getTeam())
+                            .build());
+                    currentTime = currentTime.plusHours(1);
+                }
+
+                if (!slots.isEmpty()) {
+                    storeRemainRepository.saveAll(slots);
+                    createdStoreCount++;
+                }
+            } catch (Exception e) {
+                log.error("[슬롯 자동 생성 실패] storeId={}, targetDate={}, error={}",
+                        store.getId(), targetDate, e.getMessage());
+            }
+        }
+        return createdStoreCount;
     }
 }
