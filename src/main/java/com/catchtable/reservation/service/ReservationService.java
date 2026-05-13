@@ -6,6 +6,7 @@ import com.catchtable.global.exception.CustomException;
 import com.catchtable.global.exception.ErrorCode;
 import com.catchtable.notification.event.ReservationCanceledEvent;
 import com.catchtable.notification.event.ReservationChangedEvent;
+import com.catchtable.notification.event.ReservationConfirmedEvent;
 import com.catchtable.notification.event.ReservationVisitedEvent;
 import com.catchtable.notification.event.VacancyEvent;
 import com.catchtable.payment.entity.Payment;
@@ -104,6 +105,7 @@ public class ReservationService {
     @Transactional
     public ReservationCreateResponseDto create(Long userId, ReservationCreateRequestDto request) {
         Reservation saved = createReservationCore(userId, request.remainId(), request.member(), request.couponId());
+        StoreRemain storeRemain = saved.getStoreRemain();
 
         eventPublisher.publishEvent(new ReservationConfirmedEvent(
                 saved.getId(),
