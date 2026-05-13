@@ -10,13 +10,16 @@ import com.catchtable.review.dto.create.ReviewCreateRequestDto;
 import com.catchtable.review.dto.read.ReviewResponseDto;
 import com.catchtable.review.dto.update.ReviewUpdateRequestDto;
 import com.catchtable.review.entity.Review;
+import com.catchtable.review.event.ReviewCreatedEvent;
+import com.catchtable.review.event.ReviewDeletedEvent;
+import com.catchtable.review.event.ReviewUpdatedEvent;
 import com.catchtable.review.repository.ReviewRepository;
 import com.catchtable.store.entity.Store;
 import com.catchtable.store.repository.StoreRepository;
-import com.catchtable.store.service.StoreService;
 import com.catchtable.user.entity.User;
 import com.catchtable.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,7 +33,7 @@ public class ReviewService {
     private final ReservationRepository reservationRepository;
     private final UserRepository userRepository;
     private final StoreRepository storeRepository;
-    private final StoreService storeService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public Long createReview(Long userId, ReviewCreateRequestDto request) {
@@ -66,9 +69,8 @@ public class ReviewService {
 
         reviewRepository.save(review);
 
-        // 리뷰 카운트 증가 + 평균 평점 갱신
-        storeService.increaseReviewCount(store.getId());
-        storeService.recalculateAverageStar(store.getId());
+        // 리뷰 카운트 + 평균 평점 갱신은 트랜잭션 commit 후 비동기로 처리한다
+        eventPublisher.publishEvent(new ReviewCreatedEvent(store.getId(), request.star()));
 
         return review.getId();
     }
@@ -108,11 +110,13 @@ public class ReviewService {
             throw new CustomException(ErrorCode.REVIEW_NOT_FOUND); // 이미 삭제된 리뷰
         }
 
+        Integer oldStar = review.getStar();
         review.updateReview(request.star(), request.content(), request.reviewImage());
 
-        // 별점이 변경된 경우 매장 평균 평점 갱신
-        if (request.star() != null) {
-            storeService.recalculateAverageStar(review.getStore().getId());
+        // 별점이 변경된 경우 매장 평균 평점 비동기 갱신
+        if (request.star() != null && !request.star().equals(oldStar)) {
+            eventPublisher.publishEvent(new ReviewUpdatedEvent(
+                    review.getStore().getId(), oldStar, request.star()));
         }
         return review.getId();
     }
@@ -128,11 +132,11 @@ public class ReviewService {
             throw new CustomException(ErrorCode.REVIEW_NOT_FOUND);
         }
 
+        Long storeId = review.getStore().getId();
+        int deletedStar = review.getStar();
         review.delete();
 
-        // 리뷰 카운트 감소 + 평균 평점 갱신
-        Long storeId = review.getStore().getId();
-        storeService.decreaseReviewCount(storeId);
-        storeService.recalculateAverageStar(storeId);
+        // 리뷰 카운트 감소 + 평균 평점 비동기 갱신
+        eventPublisher.publishEvent(new ReviewDeletedEvent(storeId, deletedStar));
     }
 }

@@ -6,6 +6,7 @@ import com.catchtable.global.exception.CustomException;
 import com.catchtable.global.exception.ErrorCode;
 import com.catchtable.notification.event.ReservationCanceledEvent;
 import com.catchtable.notification.event.ReservationChangedEvent;
+import com.catchtable.notification.event.ReservationConfirmedEvent;
 import com.catchtable.notification.event.ReservationVisitedEvent;
 import com.catchtable.notification.event.VacancyEvent;
 import com.catchtable.payment.entity.Payment;
@@ -105,13 +106,7 @@ public class ReservationService {
     public ReservationCreateResponseDto create(Long userId, ReservationCreateRequestDto request) {
         Reservation saved = createReservationCore(userId, request.remainId(), request.member(), request.couponId());
 
-        eventPublisher.publishEvent(new ReservationConfirmedEvent(
-                saved.getId(),
-                userId,
-                storeRemain.getStore().getStoreName(),
-                storeRemain.getRemainDate().toString(),
-                storeRemain.getRemainTime().toString()
-        ));
+        // ConfirmedEvent는 결제 완료 시점(PaymentService.confirmPayment)에서 발행한다.
         String orderId = "CATCH-" + saved.getId() + "-" + System.currentTimeMillis();
         Payment payment = Payment.builder()
                 .reservation(saved)
@@ -123,23 +118,27 @@ public class ReservationService {
         return new ReservationCreateResponseDto(saved.getId(), orderId, DEPOSIT_AMOUNT, saved.getStatus());
     }
 
+    /**
+     * 결제 미완료(PENDING) 예약을 PAYMENT_FAILED로 전환 + 좌석 복원 + payment 정리.
+     * 스케줄러가 timeout 지난 예약을 발견했을 때 호출.
+     */
+    @Transactional
+    public void expirePending(Long reservationId) {
+        Reservation reservation = reservationRepository.findById(reservationId).orElse(null);
+        if (reservation == null || reservation.getStatus() != ReservationStatus.PENDING) {
+            return;
+        }
+        handlePendingFailure(reservation);
+    }
+
     @Transactional
     public void cancelReservation(Long reservationId, Long userId) {
         Reservation reservation = getActiveReservation(reservationId, userId);
         StoreRemain storeRemain = reservation.getStoreRemain();
 
-        eventPublisher.publishEvent(new ReservationCanceledEvent(
-                reservation.getId(),
-                reservation.getUser().getId(),
-                storeRemain.getStore().getStoreName(),
-                storeRemain.getRemainDate().toString(),
-                storeRemain.getRemainTime().toString()
-        ));
         if (reservation.getStatus() == ReservationStatus.PENDING) {
             // 결제 미완료: PAYMENT_FAILED로 기록 (사용자 예약 취소 내역과 구분)
-            paymentRepository.findByReservation_Id(reservationId).ifPresent(Payment::markFailed);
-            restoreInventory(reservation);
-            reservation.changeStatus(ReservationStatus.PAYMENT_FAILED);
+            handlePendingFailure(reservation);
         } else {
             // 결제 완료(CONFIRMED): PortOne 환불 후 CANCELED로 변경
             paymentService.refundPayment(reservation);
@@ -338,6 +337,17 @@ public class ReservationService {
         reservation.changeStatus(targetStatus);
         restoreInventory(reservation);
         return reservation;
+    }
+
+    /**
+     * 결제 미완료 예약의 공통 정리 로직 (cancelReservation의 PENDING 분기 + expirePending 공용).
+     * payment를 FAILED로 표시하고, 좌석을 복원하고, 예약 상태를 PAYMENT_FAILED로 전환한다.
+     */
+    private void handlePendingFailure(Reservation reservation) {
+        paymentRepository.findByReservation_Id(reservation.getId())
+                .ifPresent(Payment::markFailed);
+        restoreInventory(reservation);
+        reservation.changeStatus(ReservationStatus.PAYMENT_FAILED);
     }
 
     private void restoreInventory(Reservation reservation) {

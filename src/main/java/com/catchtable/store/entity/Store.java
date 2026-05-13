@@ -97,8 +97,32 @@ public class Store {
         this.closeTime = closeTime;
     }
 
-    public void updateAverageStar(Double newAverageStar) {
-        this.averageStar = newAverageStar != null ? newAverageStar : 0.0;
+    /**
+     * 자체 리뷰 생성 시 호출.
+     * 외부 시드된 average_star, review_count를 base로 두고 평균에 합산.
+     * 외부 시드가 없는 매장(0.0/0)도 동일 수식으로 정확히 동작.
+     */
+    public void applyReviewCreated(int newStar) {
+        double total = this.averageStar * this.reviewCount + newStar;
+        this.reviewCount += 1;
+        this.averageStar = total / this.reviewCount;
+    }
+
+    public void applyReviewDeleted(int deletedStar) {
+        if (this.reviewCount <= 1) {
+            this.reviewCount = 0;
+            this.averageStar = 0.0;
+            return;
+        }
+        double total = this.averageStar * this.reviewCount - deletedStar;
+        this.reviewCount -= 1;
+        this.averageStar = total / this.reviewCount;
+    }
+
+    public void applyReviewUpdated(int oldStar, int newStar) {
+        if (this.reviewCount == 0) return;
+        double total = this.averageStar * this.reviewCount + (newStar - oldStar);
+        this.averageStar = total / this.reviewCount;
     }
 
     public void changeStatus(StoreStatus newStatus) {

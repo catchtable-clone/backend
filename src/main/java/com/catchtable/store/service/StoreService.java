@@ -10,7 +10,6 @@ import com.catchtable.store.dto.update.StoreUpdateRequest;
 import com.catchtable.store.dto.update.StoreUpdateResponse;
 import com.catchtable.remain.dto.read.RemainDateResponse;
 import com.catchtable.remain.repository.StoreRemainRepository;
-import com.catchtable.review.repository.ReviewRepository;
 import com.catchtable.store.entity.Category;
 import com.catchtable.store.entity.District;
 import com.catchtable.store.entity.Store;
@@ -38,7 +37,6 @@ public class StoreService {
     private final StoreRepository storeRepository;
     private final UserRepository userRepository;
     private final StoreRemainRepository storeRemainRepository;
-    private final ReviewRepository reviewRepository;
 
     // 매장 등록
     @Transactional
@@ -174,24 +172,28 @@ public class StoreService {
         return StoreStatusUpdateResponse.from(store.getId(), store.getStatus().name());
     }
 
-    @Transactional
-    public void increaseReviewCount(Long storeId) {
-        storeRepository.increaseReviewCount(storeId);
-    }
-
-    @Transactional
-    public void decreaseReviewCount(Long storeId) {
-        storeRepository.decreaseReviewCount(storeId);
-    }
-
     /**
-     * 매장 평균 평점 재계산 (리뷰 등록·수정·삭제 시 호출)
+     * 자체 리뷰 생성 시 호출 — 외부 시드된 별점/리뷰수를 base로 평균에 합산.
+     * 리스너에서 비동기로 호출되므로 리뷰 작성 자체엔 영향을 주지 않는다.
      */
     @Transactional
-    public void recalculateAverageStar(Long storeId) {
+    public void applyReviewCreated(Long storeId, int newStar) {
         Store store = storeRepository.findByIdAndIsDeletedFalse(storeId)
                 .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
-        Double newAverage = reviewRepository.findAverageStarByStoreId(storeId);
-        store.updateAverageStar(newAverage);
+        store.applyReviewCreated(newStar);
+    }
+
+    @Transactional
+    public void applyReviewDeleted(Long storeId, int deletedStar) {
+        Store store = storeRepository.findByIdAndIsDeletedFalse(storeId)
+                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
+        store.applyReviewDeleted(deletedStar);
+    }
+
+    @Transactional
+    public void applyReviewUpdated(Long storeId, int oldStar, int newStar) {
+        Store store = storeRepository.findByIdAndIsDeletedFalse(storeId)
+                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
+        store.applyReviewUpdated(oldStar, newStar);
     }
 }
