@@ -66,9 +66,8 @@ public class ReviewService {
 
         reviewRepository.save(review);
 
-        // 리뷰 카운트 증가 + 평균 평점 갱신
-        storeService.increaseReviewCount(store.getId());
-        storeService.recalculateAverageStar(store.getId());
+        // 리뷰 카운트 + 평균 평점 갱신
+        storeService.applyReviewCreated(store.getId(), request.star());
 
         return review.getId();
     }
@@ -108,11 +107,12 @@ public class ReviewService {
             throw new CustomException(ErrorCode.REVIEW_NOT_FOUND); // 이미 삭제된 리뷰
         }
 
+        Integer oldStar = review.getStar();
         review.updateReview(request.star(), request.content(), request.reviewImage());
 
         // 별점이 변경된 경우 매장 평균 평점 갱신
-        if (request.star() != null) {
-            storeService.recalculateAverageStar(review.getStore().getId());
+        if (request.star() != null && !request.star().equals(oldStar)) {
+            storeService.applyReviewUpdated(review.getStore().getId(), oldStar, request.star());
         }
         return review.getId();
     }
@@ -128,11 +128,11 @@ public class ReviewService {
             throw new CustomException(ErrorCode.REVIEW_NOT_FOUND);
         }
 
+        Long storeId = review.getStore().getId();
+        int deletedStar = review.getStar();
         review.delete();
 
         // 리뷰 카운트 감소 + 평균 평점 갱신
-        Long storeId = review.getStore().getId();
-        storeService.decreaseReviewCount(storeId);
-        storeService.recalculateAverageStar(storeId);
+        storeService.applyReviewDeleted(storeId, deletedStar);
     }
 }

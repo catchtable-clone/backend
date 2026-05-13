@@ -67,6 +67,21 @@ public class ReservationService {
         return new ReservationCreateResponseDto(saved.getId(), orderId, DEPOSIT_AMOUNT, saved.getStatus());
     }
 
+    /**
+     * 결제 미완료(PENDING) 예약을 PAYMENT_FAILED로 전환 + 좌석 복원 + payment 정리.
+     * 스케줄러가 timeout 지난 예약을 발견했을 때 호출.
+     */
+    @Transactional
+    public void expirePending(Long reservationId) {
+        Reservation reservation = reservationRepository.findById(reservationId).orElse(null);
+        if (reservation == null || reservation.getStatus() != ReservationStatus.PENDING) {
+            return;
+        }
+        paymentRepository.findByReservation_Id(reservationId).ifPresent(Payment::markFailed);
+        restoreInventory(reservation);
+        reservation.changeStatus(ReservationStatus.PAYMENT_FAILED);
+    }
+
     @Transactional
     public void cancelReservation(Long reservationId, Long userId) {
         Reservation reservation = getActiveReservation(reservationId, userId);
