@@ -4,7 +4,6 @@ import com.catchtable.store.entity.Store;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
-import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -79,16 +78,4 @@ public interface StoreRepository extends JpaRepository<Store, Long>, JpaSpecific
                              @Param("centerLng") double centerLng,
                              Pageable pageable);
 
-    /**
-     * 리뷰 수 증감은 벌크 UPDATE이므로 영속성 컨텍스트와 DB가 일치하도록
-     * 호출 전 flush, 호출 후 clear 한다.
-     * 이로써 같은 트랜잭션 내 후속 findByIdAndIsDeletedFalse() 가 stale 캐시를 반환하지 않는다.
-     */
-    @Modifying(flushAutomatically = true, clearAutomatically = true)
-    @Query("UPDATE Store s SET s.reviewCount = s.reviewCount + 1 WHERE s.id = :storeId")
-    void increaseReviewCount(@Param("storeId") Long storeId);
-
-    @Modifying(flushAutomatically = true, clearAutomatically = true)
-    @Query("UPDATE Store s SET s.reviewCount = s.reviewCount - 1 WHERE s.id = :storeId AND s.reviewCount > 0")
-    void decreaseReviewCount(@Param("storeId") Long storeId);
 }
