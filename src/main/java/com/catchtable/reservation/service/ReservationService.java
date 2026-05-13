@@ -6,6 +6,7 @@ import com.catchtable.global.exception.CustomException;
 import com.catchtable.global.exception.ErrorCode;
 import com.catchtable.notification.event.ReservationCanceledEvent;
 import com.catchtable.notification.event.ReservationChangedEvent;
+import com.catchtable.notification.event.ReservationConfirmedEvent;
 import com.catchtable.notification.event.ReservationVisitedEvent;
 import com.catchtable.notification.event.VacancyEvent;
 import com.catchtable.payment.entity.Payment;
@@ -105,13 +106,7 @@ public class ReservationService {
     public ReservationCreateResponseDto create(Long userId, ReservationCreateRequestDto request) {
         Reservation saved = createReservationCore(userId, request.remainId(), request.member(), request.couponId());
 
-        eventPublisher.publishEvent(new ReservationConfirmedEvent(
-                saved.getId(),
-                userId,
-                storeRemain.getStore().getStoreName(),
-                storeRemain.getRemainDate().toString(),
-                storeRemain.getRemainTime().toString()
-        ));
+        // ConfirmedEvent는 결제 완료 시점(PaymentService.confirmPayment)에서 발행한다.
         String orderId = "CATCH-" + saved.getId() + "-" + System.currentTimeMillis();
         Payment payment = Payment.builder()
                 .reservation(saved)
@@ -143,13 +138,6 @@ public class ReservationService {
         Reservation reservation = getActiveReservation(reservationId, userId);
         StoreRemain storeRemain = reservation.getStoreRemain();
 
-        eventPublisher.publishEvent(new ReservationCanceledEvent(
-                reservation.getId(),
-                reservation.getUser().getId(),
-                storeRemain.getStore().getStoreName(),
-                storeRemain.getRemainDate().toString(),
-                storeRemain.getRemainTime().toString()
-        ));
         if (reservation.getStatus() == ReservationStatus.PENDING) {
             // 결제 미완료: PAYMENT_FAILED로 기록 (사용자 예약 취소 내역과 구분)
             paymentRepository.findByReservation_Id(reservationId).ifPresent(Payment::markFailed);
