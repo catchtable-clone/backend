@@ -14,6 +14,13 @@ java {
     }
 }
 
+// spring-ai-bom을 dependencyManagement 블록으로 이동
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.ai:spring-ai-bom:1.1.4"
+    }
+}
+
 configurations {
     compileOnly {
         extendsFrom annotationProcessor
@@ -25,9 +32,10 @@ repositories {
 }
 
 dependencies {
-    implementation platform('org.springframework.ai:spring-ai-bom:1.1.4')
     implementation 'org.springframework.ai:spring-ai-starter-model-google-genai'
     implementation 'org.jetbrains.kotlin:kotlin-reflect'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'io.github.cdimascio:dotenv-java:3.0.0'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'io.jsonwebtoken:jjwt-api:0.12.6'

@@ -62,6 +62,7 @@ public enum ErrorCode implements ResponseCode {
     RESERVATION_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 예약입니다."),
     NOT_RESERVATION_OWNER(HttpStatus.FORBIDDEN, "본인의 예약만 접근할 수 있습니다."),
     ALREADY_CANCELED(HttpStatus.BAD_REQUEST, "이미 취소된 예약입니다."),
+    NOT_VISITABLE_STATUS(HttpStatus.BAD_REQUEST, "이미 방문 완료 처리되었습니다."),
 
     // Remain
     REMAIN_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 예약 시간대입니다."),
@@ -96,7 +97,14 @@ public enum ErrorCode implements ResponseCode {
 
     // Notification
     NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 알림입니다."),
-    NOT_NOTIFICATION_OWNER(HttpStatus.FORBIDDEN, "본인의 알림만 접근할 수 있습니다.");
+    NOT_NOTIFICATION_OWNER(HttpStatus.FORBIDDEN, "본인의 알림만 접근할 수 있습니다."),
+
+    // Payment
+    PAYMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 결제입니다."),
+    PAYMENT_VERIFICATION_FAILED(HttpStatus.BAD_REQUEST, "결제 검증에 실패했습니다."),
+    PAYMENT_AMOUNT_MISMATCH(HttpStatus.BAD_REQUEST, "결제 금액이 일치하지 않습니다."),
+    PAYMENT_PORTONE_API_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "포트원 API 호출 중 오류가 발생했습니다."),
+    PAYMENT_REFUND_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "결제 환불 처리 중 오류가 발생했습니다.");
 
     private final HttpStatus httpStatus;
     private final String message;
