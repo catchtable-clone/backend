@@ -43,7 +43,7 @@ public class ReservationCleanupScheduler {
             try {
                 reservationService.expirePending(r.getId());
             } catch (Exception e) {
-                log.warn("PENDING cleanup 실패: reservationId={}, reason={}", r.getId(), e.getMessage());
+                log.warn("PENDING cleanup 실패: reservationId={}, reason={}", r.getId(), e.getMessage(), e);
             }
         }
     }

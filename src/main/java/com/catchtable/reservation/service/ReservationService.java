@@ -128,9 +128,7 @@ public class ReservationService {
         if (reservation == null || reservation.getStatus() != ReservationStatus.PENDING) {
             return;
         }
-        paymentRepository.findByReservation_Id(reservationId).ifPresent(Payment::markFailed);
-        restoreInventory(reservation);
-        reservation.changeStatus(ReservationStatus.PAYMENT_FAILED);
+        handlePendingFailure(reservation);
     }
 
     @Transactional
@@ -140,9 +138,7 @@ public class ReservationService {
 
         if (reservation.getStatus() == ReservationStatus.PENDING) {
             // 결제 미완료: PAYMENT_FAILED로 기록 (사용자 예약 취소 내역과 구분)
-            paymentRepository.findByReservation_Id(reservationId).ifPresent(Payment::markFailed);
-            restoreInventory(reservation);
-            reservation.changeStatus(ReservationStatus.PAYMENT_FAILED);
+            handlePendingFailure(reservation);
         } else {
             // 결제 완료(CONFIRMED): PortOne 환불 후 CANCELED로 변경
             paymentService.refundPayment(reservation);
@@ -341,6 +337,17 @@ public class ReservationService {
         reservation.changeStatus(targetStatus);
         restoreInventory(reservation);
         return reservation;
+    }
+
+    /**
+     * 결제 미완료 예약의 공통 정리 로직 (cancelReservation의 PENDING 분기 + expirePending 공용).
+     * payment를 FAILED로 표시하고, 좌석을 복원하고, 예약 상태를 PAYMENT_FAILED로 전환한다.
+     */
+    private void handlePendingFailure(Reservation reservation) {
+        paymentRepository.findByReservation_Id(reservation.getId())
+                .ifPresent(Payment::markFailed);
+        restoreInventory(reservation);
+        reservation.changeStatus(ReservationStatus.PAYMENT_FAILED);
     }
 
     private void restoreInventory(Reservation reservation) {

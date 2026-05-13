@@ -174,6 +174,7 @@ public class StoreService {
 
     /**
      * 자체 리뷰 생성 시 호출 — 외부 시드된 별점/리뷰수를 base로 평균에 합산.
+     * 리스너에서 비동기로 호출되므로 리뷰 작성 자체엔 영향을 주지 않는다.
      */
     @Transactional
     public void applyReviewCreated(Long storeId, int newStar) {
