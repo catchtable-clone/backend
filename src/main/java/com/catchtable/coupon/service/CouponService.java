@@ -6,6 +6,7 @@ import com.catchtable.coupon.dto.issue.CouponIssueResponse;
 import com.catchtable.coupon.dto.read.CouponReadResponse;
 import com.catchtable.coupon.dto.read.CouponTemplateActiveResponse;
 import com.catchtable.coupon.entity.Coupon;
+import com.catchtable.coupon.entity.CouponStatus;
 import com.catchtable.coupon.entity.CouponTemplate;
 import com.catchtable.coupon.repository.CouponRepository;
 import com.catchtable.coupon.repository.CouponTemplateRepository;
@@ -14,12 +15,17 @@ import com.catchtable.global.exception.ErrorCode;
 import com.catchtable.user.entity.User;
 import com.catchtable.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.tool.annotation.Tool;
+import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CouponService {
@@ -95,5 +101,36 @@ public class CouponService {
                 .orElseThrow(() -> new CustomException(ErrorCode.COUPON_NOT_FOUND));
 
         coupon.returnCoupon();
+    }
+
+    @Tool(description = "사용자가 예약 시 사용할 수 있는 쿠폰 목록을 조회합니다. " +
+            "쿠폰 ID와 할인 정보를 포함하여 사용자에게 어떤 쿠폰을 사용할지 물어볼 때 사용됩니다.")
+    @Transactional(readOnly = true)
+    public String getAvailableCouponsForAi(ToolContext toolContext) {
+        Long userId = (Long) toolContext.getContext().get("userId");
+        log.info("AI Tool 호출: getAvailableCouponsForAi, userId={}", userId);
+
+        List<Coupon> availableCoupons = couponRepository.findAllByUserId(userId).stream()
+                .filter(coupon -> coupon.getStatus() == CouponStatus.UNUSED && coupon.getCouponTemplate().getExpiredAt().isAfter(LocalDateTime.now()))
+                .collect(Collectors.toList());
+
+        if (availableCoupons.isEmpty()) {
+            return "사용 가능한 쿠폰이 없습니다.";
+        }
+
+        return availableCoupons.stream()
+                .map(coupon -> {
+                    String discountInfo;
+                    if (coupon.getCouponTemplate().getDiscountRate() != null) {
+                        discountInfo = coupon.getCouponTemplate().getDiscountRate() + "% 할인";
+                    } else {
+                        discountInfo = coupon.getCouponTemplate().getAmount() + "원 할인";
+                    }
+                    return String.format("%s (ID: %d, %s)",
+                            coupon.getCouponTemplate().getCouponName(),
+                            coupon.getId(),
+                            discountInfo);
+                })
+                .collect(Collectors.joining(", "));
     }
 }

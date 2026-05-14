@@ -9,6 +9,7 @@ import com.catchtable.notification.event.ReservationChangedEvent;
 import com.catchtable.notification.event.ReservationConfirmedEvent;
 import com.catchtable.notification.event.ReservationVisitedEvent;
 import com.catchtable.notification.event.VacancyEvent;
+import com.catchtable.notification.event.*;
 import com.catchtable.payment.entity.Payment;
 import com.catchtable.payment.repository.PaymentRepository;
 import com.catchtable.payment.service.PaymentService;
@@ -69,12 +70,13 @@ public class ReservationService {
             @ToolParam(description = "예약 날짜, ISO 형식 (예: 2025-05-11)") LocalDate date,
             @ToolParam(description = "예약 시간, HH:mm 형식 (예: 14:00)") LocalTime time,
             @ToolParam(description = "예약 인원수 (예: 2)") int member,
+            @ToolParam(description = "사용할 쿠폰의 ID (선택 사항, 없으면 null)") Long couponId,
             ToolContext toolContext
     ) {
         Long currentUserId = (Long) toolContext.getContext().get("userId");
 
-        log.info("=== AI Tool 호출 === storeName='{}', date={}, time={}, member={}, userId={}",
-                storeName, date, time, member, currentUserId);
+        log.info("=== AI Tool 호출: createReservationFromAi ===\nuserId: {},\nstoreName: '{}',\ndate: {},\ntime: {},\nmember: {},\ncouponId: {}",
+                currentUserId, storeName, date, time, member, couponId);
 
         Optional<StoreRemain> availableRemain =
                 storeRemainService.findAvailableRemain(storeName, date, time);
@@ -83,20 +85,23 @@ public class ReservationService {
                 availableRemain.isPresent() ? "있음 (id=" + availableRemain.get().getId() + ")" : "없음");
 
         if (availableRemain.isEmpty()) {
+            log.warn("AI 예약 실패: 사용 가능한 재고 없음. storeName='{}', date={}, time={}", storeName, date, time);
             return "죄송합니다. 요청하신 시간에 예약 가능한 자리가 없습니다.";
         }
 
         Reservation saved = createReservationCore(
-                currentUserId, availableRemain.get().getId(), member, null);
+                currentUserId, availableRemain.get().getId(), member, couponId);
 
+        StoreRemain storeRemain = saved.getStoreRemain();
         eventPublisher.publishEvent(new ReservationConfirmedEvent(
                 saved.getId(),
                 currentUserId,
-                saved.getStoreRemain().getStore().getStoreName(),
-                saved.getStoreRemain().getRemainDate().toString(),
-                saved.getStoreRemain().getRemainTime().toString()
+                storeRemain.getStore().getStoreName(),
+                storeRemain.getRemainDate().toString(),
+                storeRemain.getRemainTime().toString()
         ));
 
+        log.info("AI 예약 성공: reservationId={}", saved.getId());
         return String.format(
                 "네, %s 레스토랑 %s %s 시간으로 %d명 예약이 완료되었습니다. 예약 번호는 %d번입니다.",
                 storeName, date, time, member, saved.getId());
