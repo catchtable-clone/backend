@@ -13,6 +13,9 @@ RUN ./gradlew bootJar --no-daemon -x test
 
 # ── 2단계: 실행 ────────────────────────────────────────────
 FROM eclipse-temurin:21.0.6_7-jre-noble
+
+ENV TZ=Asia/Seoul
+
 WORKDIR /app
 
 # HEALTHCHECK용 wget 설치 (eclipse-temurin jre-noble 이미지에 미포함)
