@@ -19,6 +19,7 @@ import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -99,5 +100,11 @@ public class StoreRemainService {
                         remain.getRemainTeam()
                 ))
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<StoreRemain> findAvailableRemain(String storeName, LocalDate date, LocalTime time) {
+        return storeRemainRepository.findByStoreNameAndDateTime(storeName, date, time)
+                .filter(remain -> remain.getRemainTeam() > 0); // 잔여 팀이 1 이상인 경우만 필터링
     }
 }

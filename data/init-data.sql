@@ -54,6 +54,8 @@ CREATE TABLE IF NOT EXISTS stores (
     is_deleted BOOLEAN NOT NULL
 );
 
+DROP TABLE IF EXISTS temp_stores;
+
 CREATE TEMP TABLE temp_stores (
                                   store_name text, store_image text, category text,
                                   latitude double precision, longitude double precision,
@@ -64,7 +66,7 @@ CREATE TEMP TABLE temp_stores (
 COPY temp_stores FROM '/tmp/data/store_data.csv' WITH (FORMAT csv, HEADER true);
 
 INSERT INTO stores (store_name, store_image, category, latitude, longitude, address, district, team, open_time,
-                    close_time, status, review_count, bookmark_count, is_deleted, created_at)
+                    close_time, status, review_count, bookmark_count, average_star, is_deleted, created_at)
 SELECT store_name,
        NULLIF(store_image, ''),
        category,
@@ -78,6 +80,26 @@ SELECT store_name,
        'ACTIVE',
        0,
        0,
+       0.0,
        false,
        NOW()
 FROM temp_stores;
+
+
+-- 1. 쿠폰 템플릿 생성 (AI 테스트용 5000원 할인 쿠폰)
+INSERT INTO coupon_templates (id, coupon_name, amount, discount_rate, started_at, expired_at, remain, created_at, updated_at, is_deleted)
+VALUES (100, 'AI 테스트용 쿠폰', 5000, 10, '2026-01-01 00:00:00', '2026-12-31 23:59:59', 100, NOW(), NOW(), false)
+ON CONFLICT (id) DO NOTHING; -- 이미 100번 템플릿이 있으면 무시
+
+-- 2. 4번 사용자에게 위 템플릿으로 쿠폰 발급
+INSERT INTO coupons (user_id, coupon_template_id, status, created_at, updated_at, is_deleted)
+VALUES (4, 100, 'UNUSED', NOW(), NOW(), false)
+ON CONFLICT DO NOTHING; -- 이미 해당 유저가 이 쿠폰을 가지고 있으면 무시
+
+-- (PostgreSQL 사용 시) 시퀀스 값 업데이트
+SELECT setval('coupon_templates_id_seq', (SELECT MAX(id) FROM coupon_templates));
+SELECT setval('coupons_id_seq', (SELECT MAX(id) FROM coupons));
+
+
+-- 4번 사용자의 role을 'ADMIN'으로 업데이트
+UPDATE users SET role = 'ADMIN' WHERE id = 4;

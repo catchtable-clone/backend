@@ -6,13 +6,16 @@ import com.catchtable.global.exception.CustomException;
 import com.catchtable.global.exception.ErrorCode;
 import com.catchtable.notification.event.ReservationCanceledEvent;
 import com.catchtable.notification.event.ReservationChangedEvent;
+import com.catchtable.notification.event.ReservationConfirmedEvent;
 import com.catchtable.notification.event.ReservationVisitedEvent;
 import com.catchtable.notification.event.VacancyEvent;
+import com.catchtable.notification.event.*;
 import com.catchtable.payment.entity.Payment;
 import com.catchtable.payment.repository.PaymentRepository;
 import com.catchtable.payment.service.PaymentService;
 import com.catchtable.remain.entity.StoreRemain;
 import com.catchtable.remain.repository.StoreRemainRepository;
+import com.catchtable.remain.service.StoreRemainService;
 import com.catchtable.reservation.dto.create.ReservationCreateRequestDto;
 import com.catchtable.reservation.dto.create.ReservationCreateResponseDto;
 import com.catchtable.reservation.dto.update.ReservationStatusUpdateRequestDto;
@@ -27,13 +30,21 @@ import com.catchtable.store.entity.Store;
 import com.catchtable.user.entity.User;
 import com.catchtable.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.tool.annotation.Tool;
+import org.springframework.ai.tool.annotation.ToolParam;
+import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
+import java.util.Optional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ReservationService {
@@ -43,19 +54,64 @@ public class ReservationService {
     private final ReservationRepository reservationRepository;
     private final UserRepository userRepository;
     private final StoreRemainRepository storeRemainRepository;
+    private final StoreRemainService storeRemainService;
     private final CouponService couponService;
     private final ApplicationEventPublisher eventPublisher;
     private final PaymentRepository paymentRepository;
     private final PaymentService paymentService;
 
-    // ============================================================
-    // Public API
-    // ============================================================
+    @Tool(description = "사용자의 자연어 요청을 기반으로 레스토랑 예약을 생성합니다. " +
+            "매장 이름은 사용자가 말한 그대로 넘겨주세요. 임의로 변경하지 마세요. " +
+            "매장 이름, 예약 날짜, 예약 시간, 인원수 정보가 모두 필요합니다. " +
+            "사용자가 예약을 요청하면 반드시 이 함수를 호출하세요.")
+    @Transactional
+    public String createReservationFromAi(
+            @ToolParam(description = "매장 이름 (예: 모수 서울, 경원집)") String storeName,
+            @ToolParam(description = "예약 날짜, ISO 형식 (예: 2025-05-11)") LocalDate date,
+            @ToolParam(description = "예약 시간, HH:mm 형식 (예: 14:00)") LocalTime time,
+            @ToolParam(description = "예약 인원수 (예: 2)") int member,
+            @ToolParam(description = "사용할 쿠폰의 ID (선택 사항, 없으면 null)") Long couponId,
+            ToolContext toolContext
+    ) {
+        Long currentUserId = (Long) toolContext.getContext().get("userId");
 
+        log.info("=== AI Tool 호출: createReservationFromAi ===\nuserId: {},\nstoreName: '{}',\ndate: {},\ntime: {},\nmember: {},\ncouponId: {}",
+                currentUserId, storeName, date, time, member, couponId);
+
+        Optional<StoreRemain> availableRemain =
+                storeRemainService.findAvailableRemain(storeName, date, time);
+
+        log.info("=== 잔여석 조회 결과: {}",
+                availableRemain.isPresent() ? "있음 (id=" + availableRemain.get().getId() + ")" : "없음");
+
+        if (availableRemain.isEmpty()) {
+            log.warn("AI 예약 실패: 사용 가능한 재고 없음. storeName='{}', date={}, time={}", storeName, date, time);
+            return "죄송합니다. 요청하신 시간에 예약 가능한 자리가 없습니다.";
+        }
+
+        Reservation saved = createReservationCore(
+                currentUserId, availableRemain.get().getId(), member, couponId);
+
+        StoreRemain storeRemain = saved.getStoreRemain();
+        eventPublisher.publishEvent(new ReservationConfirmedEvent(
+                saved.getId(),
+                currentUserId,
+                storeRemain.getStore().getStoreName(),
+                storeRemain.getRemainDate().toString(),
+                storeRemain.getRemainTime().toString()
+        ));
+
+        log.info("AI 예약 성공: reservationId={}", saved.getId());
+        return String.format(
+                "네, %s 레스토랑 %s %s 시간으로 %d명 예약이 완료되었습니다. 예약 번호는 %d번입니다.",
+                storeName, date, time, member, saved.getId());
+    }
+    
     @Transactional
     public ReservationCreateResponseDto create(Long userId, ReservationCreateRequestDto request) {
         Reservation saved = createReservationCore(userId, request.remainId(), request.member(), request.couponId());
 
+        // ConfirmedEvent는 결제 완료 시점(PaymentService.confirmPayment)에서 발행한다.
         String orderId = "CATCH-" + saved.getId() + "-" + System.currentTimeMillis();
         Payment payment = Payment.builder()
                 .reservation(saved)
@@ -67,6 +123,19 @@ public class ReservationService {
         return new ReservationCreateResponseDto(saved.getId(), orderId, DEPOSIT_AMOUNT, saved.getStatus());
     }
 
+    /**
+     * 결제 미완료(PENDING) 예약을 PAYMENT_FAILED로 전환 + 좌석 복원 + payment 정리.
+     * 스케줄러가 timeout 지난 예약을 발견했을 때 호출.
+     */
+    @Transactional
+    public void expirePending(Long reservationId) {
+        Reservation reservation = reservationRepository.findById(reservationId).orElse(null);
+        if (reservation == null || reservation.getStatus() != ReservationStatus.PENDING) {
+            return;
+        }
+        handlePendingFailure(reservation);
+    }
+
     @Transactional
     public void cancelReservation(Long reservationId, Long userId) {
         Reservation reservation = getActiveReservation(reservationId, userId);
@@ -74,9 +143,7 @@ public class ReservationService {
 
         if (reservation.getStatus() == ReservationStatus.PENDING) {
             // 결제 미완료: PAYMENT_FAILED로 기록 (사용자 예약 취소 내역과 구분)
-            paymentRepository.findByReservation_Id(reservationId).ifPresent(Payment::markFailed);
-            restoreInventory(reservation);
-            reservation.changeStatus(ReservationStatus.PAYMENT_FAILED);
+            handlePendingFailure(reservation);
         } else {
             // 결제 완료(CONFIRMED): PortOne 환불 후 CANCELED로 변경
             paymentService.refundPayment(reservation);
@@ -209,7 +276,34 @@ public class ReservationService {
         }
     }
 
-    // ============================================================
+    // Basic Logic
+    /**
+     * 사용자가 직접 "방문 확정" 버튼을 눌러 예약을 VISITED 상태로 전환한다.
+     * CONFIRMED 상태에서만 호출 가능. 호출 후 ReservationVisitedEvent 발행으로 알림이 자동 발송된다.
+     */
+    @Transactional
+    public void markAsVisited(Long reservationId, Long userId) {
+        Reservation reservation = reservationRepository.findByIdWithUserAndStoreRemainAndStore(reservationId)
+                .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
+
+        reservation.validateOwner(userId);
+
+        if (reservation.getStatus() != ReservationStatus.CONFIRMED) {
+            throw new CustomException(ErrorCode.NOT_VISITABLE_STATUS);
+        }
+
+        reservation.changeStatus(ReservationStatus.VISITED);
+
+        StoreRemain storeRemain = reservation.getStoreRemain();
+        eventPublisher.publishEvent(new ReservationVisitedEvent(
+                reservation.getId(),
+                reservation.getUser().getId(),
+                storeRemain.getStore().getStoreName(),
+                storeRemain.getRemainDate().toString(),
+                storeRemain.getRemainTime().toString()
+        ));
+    }
+
     // Internal core
     // ============================================================
 
@@ -250,6 +344,17 @@ public class ReservationService {
         return reservation;
     }
 
+    /**
+     * 결제 미완료 예약의 공통 정리 로직 (cancelReservation의 PENDING 분기 + expirePending 공용).
+     * payment를 FAILED로 표시하고, 좌석을 복원하고, 예약 상태를 PAYMENT_FAILED로 전환한다.
+     */
+    private void handlePendingFailure(Reservation reservation) {
+        paymentRepository.findByReservation_Id(reservation.getId())
+                .ifPresent(Payment::markFailed);
+        restoreInventory(reservation);
+        reservation.changeStatus(ReservationStatus.PAYMENT_FAILED);
+    }
+
     private void restoreInventory(Reservation reservation) {
         StoreRemain storeRemain = reservation.getStoreRemain();
         try {
@@ -258,6 +363,7 @@ public class ReservationService {
         } catch (OptimisticLockingFailureException e) {
             throw new CustomException(ErrorCode.OPTIMISTIC_LOCK_CONFLICT);
         }
+
         eventPublisher.publishEvent(new VacancyEvent(storeRemain.getId()));
         if (reservation.getCoupon() != null) {
             couponService.returnCoupon(reservation.getCoupon().getId());

@@ -57,6 +57,9 @@ PRD.md
 ### Uploads ###
 uploads/
 
+### Python migration scripts (로컬 일회성 작업용) ###
+scripts/
+
 ### Static seed images (로컬에서만 사용, ready_image.png는 예외) ###
 src/main/resources/static/images/*
 !src/main/resources/static/images/ready_image.png
