@@ -21,16 +21,16 @@ public class StoreRemainController {
 
     private final StoreRemainService storeRemainService;
 
-    //나중에 스케줄러
-    @PostMapping
-    public ResponseEntity<ApiResponse<Void>> generateMonthlyRemain(
-            @Valid @RequestBody StoreRemainCreateRequestDto request
-    ) {
-        storeRemainService.generateMonthlyRemain(request);
-        return ResponseEntity
-                .status(SuccessCode.REMAIN_CREATE_SUCCESS.getHttpStatus())
-                .body(ApiResponse.success(SuccessCode.REMAIN_CREATE_SUCCESS));
-    }
+//    스케줄러 도입 후 사용 안 함. 기존 swagger 에서 수동으로 생성하던 POST /api/v1/remains 주석 처리.
+//    @PostMapping
+//    public ResponseEntity<ApiResponse<Void>> generateMonthlyRemain(
+//            @Valid @RequestBody StoreRemainCreateRequestDto request
+//    ) {
+//        storeRemainService.generateMonthlyRemain(request);
+//        return ResponseEntity
+//                .status(SuccessCode.REMAIN_CREATE_SUCCESS.getHttpStatus())
+//                .body(ApiResponse.success(SuccessCode.REMAIN_CREATE_SUCCESS));
+//    }
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<StoreRemainResponseDto>>> getStoreRemains(
