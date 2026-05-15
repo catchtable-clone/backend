@@ -1,5 +1,6 @@
 package com.catchtable.remain.repository;
 
+import com.catchtable.remain.dto.projection.StoreRemainTimeView;
 import com.catchtable.remain.entity.StoreRemain;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -31,4 +32,10 @@ public interface StoreRemainRepository extends JpaRepository<StoreRemain, Long> 
             @Param("date") LocalDate date,
             @Param("time") LocalTime time
     );
+
+    @Query("SELECT sr.store.id AS storeId, sr.remainTime AS remainTime FROM StoreRemain sr " +
+           "WHERE sr.remainDate = :date AND sr.store.id IN :storeIds")
+    List<StoreRemainTimeView> findStoreIdAndTimesByDateAndStoreIds(
+            @Param("date") LocalDate date,
+            @Param("storeIds") List<Long> storeIds);
 }
