@@ -18,8 +18,10 @@ import java.time.LocalTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -97,49 +99,73 @@ public class StoreRemainService {
 
     /**
      * 모든 활성 매장에 대해 지정된 날짜의 슬롯을 생성한다.
-     * 이미 그 날짜 슬롯이 하나라도 있는 매장은 스킵.
+     * 매장별로 기대 슬롯과 실제 슬롯을 비교하여 부족한 슬롯만 채워 넣는다.
      *
-     * @return 슬롯이 생성된 매장 수
+     * @return 슬롯이 보충된 매장 수
      */
     @Transactional
     public int generateDailySlotsForAllStores(LocalDate targetDate) {
         List<Store> stores = storeRepository.findAllByIsDeletedFalse();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
 
-        int createdStoreCount = 0;
+        int filledStoreCount = 0;
         for (Store store : stores) {
-            if (storeRemainRepository.existsByStoreIdAndRemainDate(store.getId(), targetDate)) {
-                continue;
-            }
-
             try {
                 LocalTime openTime = LocalTime.parse(store.getOpenTime(), formatter);
                 LocalTime closeTime = LocalTime.parse(store.getCloseTime(), formatter);
 
-                List<StoreRemain> slots = new ArrayList<>();
-                LocalTime currentTime = openTime;
-                while (currentTime.isBefore(closeTime)) {
-                    if (currentTime.plusHours(1).isAfter(closeTime)) {
-                        break;
-                    }
-                    slots.add(StoreRemain.builder()
-                            .store(store)
-                            .remainDate(targetDate)
-                            .remainTime(currentTime)
-                            .remainTeam(store.getTeam())
-                            .build());
-                    currentTime = currentTime.plusHours(1);
+                List<LocalTime> expectedTimes = buildSlotTimes(openTime, closeTime);
+                if (expectedTimes.isEmpty()) {
+                    continue;
                 }
 
-                if (!slots.isEmpty()) {
-                    storeRemainRepository.saveAll(slots);
-                    createdStoreCount++;
+                Set<LocalTime> existingTimes = new HashSet<>(
+                        storeRemainRepository.findRemainTimesByStoreIdAndRemainDate(store.getId(), targetDate)
+                );
+
+                List<StoreRemain> missingSlots = new ArrayList<>();
+                for (LocalTime time : expectedTimes) {
+                    if (existingTimes.contains(time)) {
+                        continue;
+                    }
+                    missingSlots.add(StoreRemain.builder()
+                            .store(store)
+                            .remainDate(targetDate)
+                            .remainTime(time)
+                            .remainTeam(store.getTeam())
+                            .build());
                 }
+
+                if (missingSlots.isEmpty()) {
+                    continue;
+                }
+
+                storeRemainRepository.saveAll(missingSlots);
+                filledStoreCount++;
+                log.info("[슬롯 보충] storeId={}, targetDate={}, 예상={}, 실제={}, 생성={}",
+                        store.getId(), targetDate, expectedTimes.size(), existingTimes.size(), missingSlots.size());
             } catch (Exception e) {
                 log.error("[슬롯 자동 생성 실패] storeId={}, targetDate={}, error={}",
                         store.getId(), targetDate, e.getMessage());
             }
         }
-        return createdStoreCount;
+        return filledStoreCount;
+    }
+
+    /**
+     * 영업시간 범위로 1시간 단위 슬롯 시간 목록을 생성한다.
+     * 마지막 슬롯은 closeTime을 넘지 않아야 한다.
+     */
+    private List<LocalTime> buildSlotTimes(LocalTime openTime, LocalTime closeTime) {
+        List<LocalTime> times = new ArrayList<>();
+        LocalTime current = openTime;
+        while (current.isBefore(closeTime)) {
+            if (current.plusHours(1).isAfter(closeTime)) {
+                break;
+            }
+            times.add(current);
+            current = current.plusHours(1);
+        }
+        return times;
     }
 }
