@@ -18,8 +18,10 @@ import java.time.LocalTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -28,8 +30,12 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class StoreRemainService {
 
+    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
+    private static final int STORE_CHUNK_SIZE = 500;
+
     private final StoreRemainRepository storeRemainRepository;
     private final StoreRepository storeRepository;
+    private final StoreRemainSlotWriter storeRemainSlotWriter;
 
     @Transactional
     public void generateMonthlyRemain(StoreRemainCreateRequestDto request) {
@@ -37,13 +43,12 @@ public class StoreRemainService {
         Store store = storeRepository.findById(request.storeId())
                 .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
 
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
         LocalTime openTime;
         LocalTime closeTime;
 
         try {
-            openTime = LocalTime.parse(store.getOpenTime(), formatter);
-            closeTime = LocalTime.parse(store.getCloseTime(), formatter);
+            openTime = LocalTime.parse(store.getOpenTime(), TIME_FORMATTER);
+            closeTime = LocalTime.parse(store.getCloseTime(), TIME_FORMATTER);
         } catch (Exception e) {
             log.error("매장 영업 시간 파싱 실패. storeId: {}, openTime: {}, closeTime: {}",
                     store.getId(), store.getOpenTime(), store.getCloseTime());
@@ -54,22 +59,17 @@ public class StoreRemainService {
         LocalDate startDate = targetMonth.atDay(1);
         LocalDate endDate = targetMonth.atEndOfMonth();
 
+        List<LocalTime> slotTimes = buildSlotTimes(openTime, closeTime);
         List<StoreRemain> remainsToSave = new ArrayList<>();
 
         for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
-            LocalTime currentTime = openTime;
-            while (currentTime.isBefore(closeTime)) {
-                if (currentTime.plusHours(1).isAfter(closeTime)) {
-                    break;
-                }
-                StoreRemain remain = StoreRemain.builder()
+            for (LocalTime time : slotTimes) {
+                remainsToSave.add(StoreRemain.builder()
                         .store(store)
                         .remainDate(date)
-                        .remainTime(currentTime)
+                        .remainTime(time)
                         .remainTeam(store.getTeam())
-                        .build();
-                remainsToSave.add(remain);
-                currentTime = currentTime.plusHours(1);
+                        .build());
             }
         }
 
@@ -99,57 +99,109 @@ public class StoreRemainService {
 
     /**
      * 모든 활성 매장에 대해 지정된 날짜의 슬롯을 생성한다.
-     * 매장별로 기대 슬롯과 실제 슬롯을 비교하여 부족한 슬롯만 채워 넣는다.
+     * 단일 호출 편의용 - 내부적으로 매장 목록을 조회한 뒤 generateDailySlotsForStores에 위임한다.
+     * 30일 같은 범위 루프에서는 매장 조회 중복을 피하기 위해 generateDailySlotsForStores를 직접 호출하라.
      *
      * @return 슬롯이 보충된 매장 수
      */
     @Transactional
     public int generateDailySlotsForAllStores(LocalDate targetDate) {
         List<Store> stores = storeRepository.findAllByIsDeletedFalse();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
+        return generateDailySlotsForStores(stores, targetDate);
+    }
+
+    /**
+     * 주어진 매장 목록에 대해 지정된 날짜의 슬롯을 생성한다.
+     * - 해당 날짜의 기존 슬롯을 단 1회 조회하여 메모리에서 매장별 차집합 계산 (N+1 쿼리 제거)
+     * - 매장 N개씩 청크 단위 트랜잭션(REQUIRES_NEW)으로 저장
+     *   -> 청크 안에서 batch_size 효과 발휘 + 청크 단위 실패 격리
+     *
+     * @return 슬롯이 보충된 매장 수
+     */
+    public int generateDailySlotsForStores(List<Store> stores, LocalDate targetDate) {
+        Map<Long, Set<LocalTime>> existingByStore = fetchExistingTimesByStore(targetDate);
 
         int filledStoreCount = 0;
-        for (Store store : stores) {
-            try {
-                LocalTime openTime = LocalTime.parse(store.getOpenTime(), formatter);
-                LocalTime closeTime = LocalTime.parse(store.getCloseTime(), formatter);
+        for (int i = 0; i < stores.size(); i += STORE_CHUNK_SIZE) {
+            int end = Math.min(i + STORE_CHUNK_SIZE, stores.size());
+            List<Store> chunk = stores.subList(i, end);
 
-                List<LocalTime> expectedTimes = buildSlotTimes(openTime, closeTime);
-                if (expectedTimes.isEmpty()) {
-                    continue;
-                }
+            List<StoreRemain> chunkMissingSlots = new ArrayList<>();
+            int chunkFilledCount = 0;
 
-                Set<LocalTime> existingTimes = new HashSet<>(
-                        storeRemainRepository.findRemainTimesByStoreIdAndRemainDate(store.getId(), targetDate)
-                );
-
-                List<StoreRemain> missingSlots = new ArrayList<>();
-                for (LocalTime time : expectedTimes) {
-                    if (existingTimes.contains(time)) {
-                        continue;
+            for (Store store : chunk) {
+                try {
+                    List<StoreRemain> storeMissing = buildMissingSlotsForStore(store, targetDate, existingByStore);
+                    if (!storeMissing.isEmpty()) {
+                        chunkMissingSlots.addAll(storeMissing);
+                        chunkFilledCount++;
                     }
-                    missingSlots.add(StoreRemain.builder()
-                            .store(store)
-                            .remainDate(targetDate)
-                            .remainTime(time)
-                            .remainTeam(store.getTeam())
-                            .build());
+                } catch (Exception e) {
+                    log.error("[슬롯 계산 실패] storeId={}, targetDate={}, error={}",
+                            store.getId(), targetDate, e.getMessage());
                 }
+            }
 
-                if (missingSlots.isEmpty()) {
-                    continue;
-                }
+            if (chunkMissingSlots.isEmpty()) {
+                continue;
+            }
 
-                storeRemainRepository.saveAll(missingSlots);
-                filledStoreCount++;
-                log.info("[슬롯 보충] storeId={}, targetDate={}, 예상={}, 실제={}, 생성={}",
-                        store.getId(), targetDate, expectedTimes.size(), existingTimes.size(), missingSlots.size());
+            try {
+                storeRemainSlotWriter.saveSlots(chunkMissingSlots);
+                filledStoreCount += chunkFilledCount;
+                log.info("[슬롯 청크 저장] targetDate={}, 매장범위=[{}~{}], 매장수={}, 슬롯수={}",
+                        targetDate, chunk.get(0).getId(), chunk.get(chunk.size() - 1).getId(),
+                        chunkFilledCount, chunkMissingSlots.size());
             } catch (Exception e) {
-                log.error("[슬롯 자동 생성 실패] storeId={}, targetDate={}, error={}",
-                        store.getId(), targetDate, e.getMessage());
+                log.error("[슬롯 청크 저장 실패] targetDate={}, 매장범위=[{}~{}], error={}",
+                        targetDate, chunk.get(0).getId(), chunk.get(chunk.size() - 1).getId(),
+                        e.getMessage());
             }
         }
         return filledStoreCount;
+    }
+
+    /**
+     * 매장 1개에 대해 부족한 슬롯 목록을 메모리에서 계산한다 (DB 접근 없음).
+     */
+    private List<StoreRemain> buildMissingSlotsForStore(
+            Store store, LocalDate targetDate, Map<Long, Set<LocalTime>> existingByStore) {
+        LocalTime openTime = LocalTime.parse(store.getOpenTime(), TIME_FORMATTER);
+        LocalTime closeTime = LocalTime.parse(store.getCloseTime(), TIME_FORMATTER);
+
+        List<LocalTime> expectedTimes = buildSlotTimes(openTime, closeTime);
+        if (expectedTimes.isEmpty()) {
+            return List.of();
+        }
+
+        Set<LocalTime> existingTimes = existingByStore.getOrDefault(store.getId(), Set.of());
+
+        List<StoreRemain> missingSlots = new ArrayList<>();
+        for (LocalTime time : expectedTimes) {
+            if (existingTimes.contains(time)) {
+                continue;
+            }
+            missingSlots.add(StoreRemain.builder()
+                    .store(store)
+                    .remainDate(targetDate)
+                    .remainTime(time)
+                    .remainTeam(store.getTeam())
+                    .build());
+        }
+        return missingSlots;
+    }
+
+    /**
+     * 지정된 날짜의 모든 매장 슬롯 시간을 단 1회 쿼리로 조회하여 매장별 Set으로 묶는다.
+     */
+    private Map<Long, Set<LocalTime>> fetchExistingTimesByStore(LocalDate targetDate) {
+        Map<Long, Set<LocalTime>> map = new HashMap<>();
+        for (Object[] row : storeRemainRepository.findStoreIdAndTimesByDate(targetDate)) {
+            Long storeId = (Long) row[0];
+            LocalTime time = (LocalTime) row[1];
+            map.computeIfAbsent(storeId, k -> new HashSet<>()).add(time);
+        }
+        return map;
     }
 
     /**

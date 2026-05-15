@@ -110,7 +110,6 @@ public class ReservationService {
     @Transactional
     public ReservationCreateResponseDto create(Long userId, ReservationCreateRequestDto request) {
         Reservation saved = createReservationCore(userId, request.remainId(), request.member(), request.couponId());
-        StoreRemain storeRemain = saved.getStoreRemain();
 
         // ConfirmedEvent는 결제 완료 시점(PaymentService.confirmPayment)에서 발행한다.
         String orderId = "CATCH-" + saved.getId() + "-" + System.currentTimeMillis();

@@ -32,8 +32,6 @@ public interface StoreRemainRepository extends JpaRepository<StoreRemain, Long> 
             @Param("time") LocalTime time
     );
 
-    boolean existsByStoreIdAndRemainDate(Long storeId, LocalDate remainDate);
-
-    @Query("SELECT sr.remainTime FROM StoreRemain sr WHERE sr.store.id = :storeId AND sr.remainDate = :date")
-    List<LocalTime> findRemainTimesByStoreIdAndRemainDate(@Param("storeId") Long storeId, @Param("date") LocalDate date);
+    @Query("SELECT sr.store.id, sr.remainTime FROM StoreRemain sr WHERE sr.remainDate = :date")
+    List<Object[]> findStoreIdAndTimesByDate(@Param("date") LocalDate date);
 }
