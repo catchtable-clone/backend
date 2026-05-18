@@ -150,9 +150,16 @@ public class StoreRemainService {
     public List<StoreSlotPlan> buildSlotPlans(List<Store> stores) {
         List<StoreSlotPlan> plans = new ArrayList<>(stores.size());
         for (Store store : stores) {
+            String openTimeStr = store.getOpenTime();
+            String closeTimeStr = store.getCloseTime();
+            if (openTimeStr == null || closeTimeStr == null) {
+                log.warn("[영업시간 누락] storeId={}, openTime={}, closeTime={}",
+                        store.getId(), openTimeStr, closeTimeStr);
+                continue;
+            }
             try {
-                LocalTime openTime = LocalTime.parse(store.getOpenTime(), TIME_FORMATTER);
-                LocalTime closeTime = LocalTime.parse(store.getCloseTime(), TIME_FORMATTER);
+                LocalTime openTime = LocalTime.parse(openTimeStr, TIME_FORMATTER);
+                LocalTime closeTime = LocalTime.parse(closeTimeStr, TIME_FORMATTER);
                 List<LocalTime> expectedTimes = buildSlotTimes(openTime, closeTime);
                 if (expectedTimes.isEmpty()) {
                     continue;
@@ -160,7 +167,7 @@ public class StoreRemainService {
                 plans.add(new StoreSlotPlan(store, expectedTimes));
             } catch (Exception e) {
                 log.error("[영업시간 파싱 실패] storeId={}, openTime={}, closeTime={}",
-                        store.getId(), store.getOpenTime(), store.getCloseTime());
+                        store.getId(), openTimeStr, closeTimeStr);
             }
         }
         return plans;
