@@ -139,9 +139,8 @@ public class ReservationService {
         User user = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        List<Reservation> reservations = reservationRepository.findAllByUser(user).stream()
-                .filter(r -> r.getStatus() == ReservationStatus.PENDING || r.getStatus() == ReservationStatus.CONFIRMED)
-                .toList();
+        List<Reservation> reservations = reservationRepository.findAllByUserAndStatusIn(
+                user, List.of(ReservationStatus.PENDING, ReservationStatus.CONFIRMED));
 
         if (reservations.isEmpty()) {
             return "현재 예정된 예약이 없습니다.";
@@ -166,9 +165,8 @@ public class ReservationService {
         User user = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        List<Reservation> reservations = reservationRepository.findAllByUser(user).stream()
-                .filter(r -> r.getStatus() == ReservationStatus.CANCELED || r.getStatus() == ReservationStatus.NOSHOW)
-                .toList();
+        List<Reservation> reservations = reservationRepository.findAllByUserAndStatusIn(
+                user, List.of(ReservationStatus.CANCELED, ReservationStatus.NOSHOW));
 
         if (reservations.isEmpty()) {
             return "취소되거나 노쇼 처리된 예약 내역이 없습니다.";
@@ -296,16 +294,16 @@ public class ReservationService {
 
         List<Reservation> reservations = reservationRepository.findAllByUser(user);
 
-        // PENDING 예약에 대해 orderId를 일괄 조회 (결제 진행 버튼용)
+        // PENDING 예약에 대해 orderId를 단일 IN 쿼리로 일괄 조회 (결제 진행 버튼용)
         List<Long> pendingIds = reservations.stream()
                 .filter(r -> r.getStatus() == ReservationStatus.PENDING)
                 .map(Reservation::getId)
                 .toList();
 
         Map<Long, String> orderIdByReservationId = new HashMap<>();
-        for (Long pendingId : pendingIds) {
-            paymentRepository.findByReservation_Id(pendingId)
-                    .ifPresent(p -> orderIdByReservationId.put(pendingId, p.getOrderId()));
+        if (!pendingIds.isEmpty()) {
+            paymentRepository.findAllByReservationIdIn(pendingIds)
+                    .forEach(p -> orderIdByReservationId.put(p.getReservation().getId(), p.getOrderId()));
         }
 
         return reservations.stream()

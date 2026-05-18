@@ -83,6 +83,8 @@ public interface StoreRepository extends JpaRepository<Store, Long>, JpaSpecific
     @Query("SELECT s.storeName FROM Store s WHERE s.isDeleted = false AND LOWER(s.storeName) LIKE LOWER(CONCAT('%', :name, '%')) ORDER BY s.storeName ASC")
     List<String> findNamesByNameContaining(@Param("name") String name, Pageable pageable);
 
+    Optional<Store> findByStoreNameIgnoreCaseAndIsDeletedFalse(String storeName);
+
     @Query(value = """
             SELECT * FROM stores s
             WHERE s.is_deleted = false

@@ -85,10 +85,7 @@ public class StoreRemainService {
             @ToolParam(description = "매장 이름 (정확한 이름)") String storeName,
             @ToolParam(description = "조회할 날짜, ISO 형식 (예: 2025-05-20)") LocalDate date
     ) {
-        Store store = storeRepository.findAllByIsDeletedFalse().stream()
-                .filter(s -> s.getStoreName().equalsIgnoreCase(storeName))
-                .findFirst()
-                .orElse(null);
+        Store store = storeRepository.findByStoreNameIgnoreCaseAndIsDeletedFalse(storeName).orElse(null);
 
         if (store == null) {
             return "'" + storeName + "' 매장을 찾을 수 없습니다. 매장 이름을 다시 확인해주세요.";

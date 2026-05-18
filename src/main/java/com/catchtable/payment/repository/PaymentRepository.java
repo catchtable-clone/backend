@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface PaymentRepository extends JpaRepository<Payment, Long> {
@@ -23,4 +24,6 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     Optional<Payment> findByOrderIdWithAllForUpdate(@Param("orderId") String orderId);
 
     Optional<Payment> findByReservation_Id(Long reservationId);
+
+    List<Payment> findAllByReservationIdIn(List<Long> reservationIds);
 }
