@@ -53,6 +53,7 @@ PRD.md
 
 ### Data ###
 *.csv
+store_ratings.sql
 
 ### Uploads ###
 uploads/
