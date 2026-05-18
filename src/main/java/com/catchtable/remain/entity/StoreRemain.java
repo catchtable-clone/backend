@@ -18,7 +18,13 @@ import java.time.LocalTime;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
-@Table(name = "store_remain")
+@Table(
+        name = "store_remain",
+        indexes = {
+                @Index(name = "idx_store_remain_date_store", columnList = "remain_date, store_id"),
+                @Index(name = "idx_store_remain_store_date", columnList = "store_id, remain_date")
+        }
+)
 public class StoreRemain {
 
     @Id

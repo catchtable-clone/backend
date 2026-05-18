@@ -48,6 +48,7 @@ public class SecurityConfig {
                                 "/swagger-resources/**",
                                 "/actuator/health",
                                 "/actuator/info",
+                                "/actuator/prometheus",
                                 "/images/**"
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET,

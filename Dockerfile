@@ -23,15 +23,22 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends wget \
  && rm -rf /var/lib/apt/lists/*
 
+# OpenTelemetry Java Agent — 코드 수정 없이 트레이스 자동 수집
+# Spring MVC, JDBC, HikariCP, HTTP Client 등 자동 계측
+ARG OTEL_AGENT_VERSION=2.10.0
+RUN wget -qO /opentelemetry-javaagent.jar \
+      https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v${OTEL_AGENT_VERSION}/opentelemetry-javaagent.jar \
+ && chmod 644 /opentelemetry-javaagent.jar
+
 # 비루트 유저로 실행
 RUN useradd -r -u 1001 spring
 USER spring
 
 COPY --from=builder /app/build/libs/*.jar app.jar
 
-# t3.micro(1GB RAM) 환경 고려한 JVM 메모리 튜닝
-# 컨테이너에 할당된 메모리의 70%를 힙으로 사용 (나머지 30%는 metaspace, 스택, 네이티브)
-ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=70.0 -XX:InitialRAMPercentage=50.0"
+# t3.small 환경 고려한 JVM 메모리 튜닝 + OTel Agent 자동 활성화
+# OTEL_EXPORTER_OTLP_ENDPOINT가 설정 안 되면 트레이스 전송만 실패할 뿐 앱은 정상 동작
+ENV JAVA_TOOL_OPTIONS="-javaagent:/opentelemetry-javaagent.jar -XX:MaxRAMPercentage=70.0 -XX:InitialRAMPercentage=50.0 -XX:+UseG1GC"
 
 EXPOSE 8080
 
