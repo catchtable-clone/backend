@@ -19,6 +19,9 @@ import com.catchtable.global.exception.CustomException;
 import com.catchtable.global.exception.ErrorCode;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
+import org.springframework.ai.tool.annotation.Tool;
+import org.springframework.ai.tool.annotation.ToolParam;
+import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -29,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -67,6 +71,34 @@ public class StoreService {
         return storeRepository.findPopular(PageRequest.of(0, limit)).stream()
                 .map(StoreListResponse::from)
                 .toList();
+    }
+
+    @Tool(description = "사용자 주변의 인기 매장을 조회합니다. '내 주변 맛집', '근처 인기 매장', '주변 맛집 추천' 등의 요청에 사용하세요. 위치 정보가 없으면 사용할 수 없습니다.")
+    @Transactional(readOnly = true)
+    public String getNearbyPopularStoresForAi(ToolContext toolContext) {
+        Object lat = toolContext.getContext().get("latitude");
+        Object lon = toolContext.getContext().get("longitude");
+
+        if (lat == null || lon == null) {
+            return "위치 정보가 없어 주변 맛집을 조회할 수 없습니다. 위치 권한을 허용한 후 다시 시도해주세요.";
+        }
+
+        double latitude = ((Number) lat).doubleValue();
+        double longitude = ((Number) lon).doubleValue();
+        double radiusMeters = 3000;
+
+        List<Store> stores = storeRepository.findNearbyByPopularity(latitude, longitude, radiusMeters, PageRequest.of(0, 10));
+
+        if (stores.isEmpty()) {
+            return "3km 이내에 등록된 매장이 없습니다.";
+        }
+
+        return stores.stream()
+                .map(s -> String.format("[%s](/stores/%d) — 별점 %.1f, 리뷰 %d개",
+                        s.getStoreName(), s.getId(),
+                        s.getAverageStar() != null ? s.getAverageStar() : 0.0,
+                        s.getReviewCount() != null ? s.getReviewCount() : 0))
+                .collect(Collectors.joining("\n"));
     }
 
     // 내 주변 매장 (좌표 거리 정렬 + DB 페이지네이션)

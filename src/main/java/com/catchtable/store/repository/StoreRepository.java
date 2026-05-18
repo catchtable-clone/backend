@@ -58,6 +58,31 @@ public interface StoreRepository extends JpaRepository<Store, Long>, JpaSpecific
      * limit를 넘기면 멀리 있는 매장이 잘려나가므로, 분포가 화면 중앙 주변에 균등하게 모인다.
      * 거리 계산은 PostGIS ST_DistanceSphere 사용.
      */
+    /**
+     * 반경 내 매장을 인기순(별점→리뷰수→북마크수)으로 정렬.
+     * radiusMeters 이내 매장만 필터링 후 인기 기준으로 정렬.
+     */
+    @Query(value = """
+            SELECT * FROM stores s
+            WHERE s.is_deleted = false
+              AND ST_DistanceSphere(
+                    ST_MakePoint(s.longitude, s.latitude),
+                    ST_MakePoint(:lon, :lat)
+                  ) <= :radiusMeters
+            ORDER BY COALESCE(s.average_star, 0) DESC,
+                     COALESCE(s.review_count, 0) DESC,
+                     COALESCE(s.bookmark_count, 0) DESC,
+                     s.id ASC
+            """,
+           nativeQuery = true)
+    List<Store> findNearbyByPopularity(@Param("lat") double latitude,
+                                       @Param("lon") double longitude,
+                                       @Param("radiusMeters") double radiusMeters,
+                                       Pageable pageable);
+
+    @Query("SELECT s.storeName FROM Store s WHERE s.isDeleted = false AND LOWER(s.storeName) LIKE LOWER(CONCAT('%', :name, '%')) ORDER BY s.storeName ASC")
+    List<String> findNamesByNameContaining(@Param("name") String name, Pageable pageable);
+
     @Query(value = """
             SELECT * FROM stores s
             WHERE s.is_deleted = false

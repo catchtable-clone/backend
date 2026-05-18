@@ -81,20 +81,19 @@ public class ChatbotDbService {
         return recent.reversed();
     }
 
-    // 대화 내역 조회 (API 응답용)
+    // 대화 내역 조회 (API 응답용) — 세션 없으면 빈 목록 반환
     @Transactional(readOnly = true)
     public List<ChatMessageListResponse> getMessages(Long userId) {
         User user = userRepository.getById(userId);
 
-        ChatSession session = chatSessionRepository.findByUserAndIsDeletedFalse(user)
-                .orElseThrow(() -> new CustomException(ErrorCode.CHAT_SESSION_NOT_FOUND));
-
-        return chatMessageRepository.findByChatSessionOrderByCreatedAtAsc(session).stream()
-                .map(message -> new ChatMessageListResponse(
-                        message.getId(),
-                        message.getRole(),
-                        message.getContent(),
-                        message.getCreatedAt()))
-                .toList();
+        return chatSessionRepository.findByUserAndIsDeletedFalse(user)
+                .map(session -> chatMessageRepository.findByChatSessionOrderByCreatedAtAsc(session).stream()
+                        .map(message -> new ChatMessageListResponse(
+                                message.getId(),
+                                message.getRole(),
+                                message.getContent(),
+                                message.getCreatedAt()))
+                        .toList())
+                .orElse(List.of());
     }
 }
