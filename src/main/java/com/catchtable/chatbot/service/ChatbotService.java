@@ -13,8 +13,10 @@ import com.catchtable.global.exception.ErrorCode;
 import com.catchtable.remain.service.StoreRemainService;
 import com.catchtable.reservation.service.ReservationService;
 import com.catchtable.store.service.StoreService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
@@ -28,7 +30,6 @@ import java.util.Map;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class ChatbotService {
 
     private static final int MAX_HISTORY_SIZE = 20;
@@ -40,6 +41,20 @@ public class ChatbotService {
     private final CouponService couponService;
     private final StoreService storeService;
     private final StoreRemainService storeRemainService;
+    private final CircuitBreaker aiCircuitBreaker;
+
+    public ChatbotService(ChatClient chatClient, ChatbotDbService dbService,
+                          ReservationService reservationService, CouponService couponService,
+                          StoreService storeService, StoreRemainService storeRemainService,
+                          CircuitBreakerRegistry circuitBreakerRegistry) {
+        this.chatClient = chatClient;
+        this.dbService = dbService;
+        this.reservationService = reservationService;
+        this.couponService = couponService;
+        this.storeService = storeService;
+        this.storeRemainService = storeRemainService;
+        this.aiCircuitBreaker = circuitBreakerRegistry.circuitBreaker("ai-api");
+    }
 
     public ChatMessageResponse sendMessage(Long userId, ChatMessageRequest request) {
         Long sessionId = dbService.saveUserMessage(userId, request.message());
@@ -75,17 +90,23 @@ public class ChatbotService {
 
     private String callAi(List<ChatMessage> history, Long userId, Double latitude, Double longitude, String summarySuffix) {
         List<Message> messages = buildMessages(history, userId, summarySuffix);
+        Map<String, Object> context = new java.util.HashMap<>();
+        context.put("userId", userId);
+        if (latitude != null) context.put("latitude", latitude);
+        if (longitude != null) context.put("longitude", longitude);
+
         try {
-            Map<String, Object> context = new java.util.HashMap<>();
-            context.put("userId", userId);
-            if (latitude != null) context.put("latitude", latitude);
-            if (longitude != null) context.put("longitude", longitude);
-            return chatClient.prompt()
-                    .messages(messages)
-                    .tools(reservationService, couponService, storeService, storeRemainService)
-                    .toolContext(context)
-                    .call()
-                    .content();
+            return aiCircuitBreaker.executeSupplier(() ->
+                    chatClient.prompt()
+                            .messages(messages)
+                            .tools(reservationService, couponService, storeService, storeRemainService)
+                            .toolContext(context)
+                            .call()
+                            .content()
+            );
+        } catch (CallNotPermittedException e) {
+            log.warn("AI API 서킷브레이커 OPEN 상태 — 요청 차단됨");
+            throw new CustomException(ErrorCode.CHAT_AI_CIRCUIT_OPEN);
         } catch (Exception e) {
             handleAiException(e);
             return null;
