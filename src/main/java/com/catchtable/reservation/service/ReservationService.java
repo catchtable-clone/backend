@@ -1,15 +1,15 @@
 package com.catchtable.reservation.service;
 
+import com.catchtable.chatbot.dto.create.PendingPaymentHolder;
+import com.catchtable.chatbot.dto.create.PendingPaymentInfo;
 import com.catchtable.coupon.entity.Coupon;
 import com.catchtable.coupon.service.CouponService;
 import com.catchtable.global.exception.CustomException;
 import com.catchtable.global.exception.ErrorCode;
 import com.catchtable.notification.event.ReservationCanceledEvent;
 import com.catchtable.notification.event.ReservationChangedEvent;
-import com.catchtable.notification.event.ReservationConfirmedEvent;
 import com.catchtable.notification.event.ReservationVisitedEvent;
 import com.catchtable.notification.event.VacancyEvent;
-import com.catchtable.notification.event.*;
 import com.catchtable.payment.entity.Payment;
 import com.catchtable.payment.repository.PaymentRepository;
 import com.catchtable.payment.service.PaymentService;
@@ -27,6 +27,7 @@ import com.catchtable.reservation.entity.Reservation;
 import com.catchtable.reservation.entity.ReservationStatus;
 import com.catchtable.reservation.repository.ReservationRepository;
 import com.catchtable.store.entity.Store;
+import com.catchtable.store.repository.StoreRepository;
 import com.catchtable.user.entity.User;
 import com.catchtable.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -36,13 +37,17 @@ import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -59,14 +64,30 @@ public class ReservationService {
     private final ApplicationEventPublisher eventPublisher;
     private final PaymentRepository paymentRepository;
     private final PaymentService paymentService;
+    private final StoreRepository storeRepository;
+
+    // ============================================================
+    // AI Tools
+    // ============================================================
+
+    @Tool(description = "매장 이름으로 검색합니다. 사용자가 말한 매장명이 정확하지 않을 수 있으므로, " +
+            "예약 전에 이 함수로 유사한 매장 이름을 찾아 사용자에게 확인을 받으세요.")
+    public List<String> searchStoresByName(
+            @ToolParam(description = "검색할 매장 이름 또는 키워드") String name
+    ) {
+        List<String> results = storeRepository.findNamesByNameContaining(name, PageRequest.of(0, 5));
+        if (results.isEmpty()) {
+            return List.of("검색 결과가 없습니다. 다른 키워드로 검색해보세요.");
+        }
+        return results;
+    }
 
     @Tool(description = "사용자의 자연어 요청을 기반으로 레스토랑 예약을 생성합니다. " +
-            "매장 이름은 사용자가 말한 그대로 넘겨주세요. 임의로 변경하지 마세요. " +
-            "매장 이름, 예약 날짜, 예약 시간, 인원수 정보가 모두 필요합니다. " +
-            "사용자가 예약을 요청하면 반드시 이 함수를 호출하세요.")
+            "반드시 searchStoresByName으로 매장명을 확인한 후 호출하세요. " +
+            "매장 이름, 예약 날짜, 예약 시간, 인원수가 모두 필요합니다.")
     @Transactional
     public String createReservationFromAi(
-            @ToolParam(description = "매장 이름 (예: 모수 서울, 경원집)") String storeName,
+            @ToolParam(description = "매장 이름 (정확한 이름 사용)") String storeName,
             @ToolParam(description = "예약 날짜, ISO 형식 (예: 2025-05-11)") LocalDate date,
             @ToolParam(description = "예약 시간, HH:mm 형식 (예: 14:00)") LocalTime time,
             @ToolParam(description = "예약 인원수 (예: 2)") int member,
@@ -86,25 +107,97 @@ public class ReservationService {
 
         if (availableRemain.isEmpty()) {
             log.warn("AI 예약 실패: 사용 가능한 재고 없음. storeName='{}', date={}, time={}", storeName, date, time);
-            return "죄송합니다. 요청하신 시간에 예약 가능한 자리가 없습니다.";
+            return "STORE_OR_SLOT_NOT_FOUND: 요청하신 매장(" + storeName + ")의 " + date + " " + time + " 시간대에 예약 가능한 자리가 없습니다.";
         }
 
         Reservation saved = createReservationCore(
                 currentUserId, availableRemain.get().getId(), member, couponId);
 
-        StoreRemain storeRemain = saved.getStoreRemain();
-        eventPublisher.publishEvent(new ReservationConfirmedEvent(
-                saved.getId(),
-                currentUserId,
-                storeRemain.getStore().getStoreName(),
-                storeRemain.getRemainDate().toString(),
-                storeRemain.getRemainTime().toString()
-        ));
+        // Payment 레코드 생성 (결제창 호출을 위해 orderId 필요)
+        String orderId = "CATCH-" + saved.getId() + "-" + System.currentTimeMillis();
+        Payment payment = Payment.builder()
+                .reservation(saved)
+                .orderId(orderId)
+                .amount(DEPOSIT_AMOUNT)
+                .build();
+        paymentRepository.save(payment);
 
-        log.info("AI 예약 성공: reservationId={}", saved.getId());
+        log.info("AI 예약 성공: reservationId={}, orderId={}", saved.getId(), orderId);
+
+        PendingPaymentHolder.set(new PendingPaymentInfo(saved.getId(), orderId, DEPOSIT_AMOUNT));
+
         return String.format(
-                "네, %s 레스토랑 %s %s 시간으로 %d명 예약이 완료되었습니다. 예약 번호는 %d번입니다.",
+                "네, %s 레스토랑 %s %s 시간으로 %d명 예약이 완료되었습니다. " +
+                "보증금 10,000원 결제 후 예약이 최종 확정됩니다. 예약 번호는 %d번입니다.",
                 storeName, date, time, member, saved.getId());
+    }
+
+    @Tool(description = "사용자의 예약 목록을 조회합니다. '내 예약 보여줘', '예약 현황' 등의 요청에 사용하세요.")
+    @Transactional(readOnly = true)
+    public String getMyReservationsForAi(ToolContext toolContext) {
+        Long currentUserId = (Long) toolContext.getContext().get("userId");
+        User user = userRepository.findById(currentUserId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        List<Reservation> reservations = reservationRepository.findAllByUserAndStatusIn(
+                user, List.of(ReservationStatus.PENDING, ReservationStatus.CONFIRMED));
+
+        if (reservations.isEmpty()) {
+            return "현재 예정된 예약이 없습니다.";
+        }
+
+        return reservations.stream().map(r -> {
+            StoreRemain sr = r.getStoreRemain();
+            return String.format("예약번호 %d: %s %s %s, %d명, 상태: %s",
+                    r.getId(),
+                    sr.getStore().getStoreName(),
+                    sr.getRemainDate(),
+                    sr.getRemainTime(),
+                    r.getMember(),
+                    r.getStatus() == ReservationStatus.PENDING ? "결제 대기" : "확정");
+        }).collect(Collectors.joining("\n"));
+    }
+
+    @Tool(description = "취소되거나 노쇼 처리된 예약 내역을 조회합니다. '취소된 예약 보여줘', '노쇼 내역', '취소 내역' 등의 요청에 사용하세요.")
+    @Transactional(readOnly = true)
+    public String getCanceledReservationsForAi(ToolContext toolContext) {
+        Long currentUserId = (Long) toolContext.getContext().get("userId");
+        User user = userRepository.findById(currentUserId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        List<Reservation> reservations = reservationRepository.findAllByUserAndStatusIn(
+                user, List.of(ReservationStatus.CANCELED, ReservationStatus.NOSHOW));
+
+        if (reservations.isEmpty()) {
+            return "취소되거나 노쇼 처리된 예약 내역이 없습니다.";
+        }
+
+        return reservations.stream().map(r -> {
+            StoreRemain sr = r.getStoreRemain();
+            String statusLabel = r.getStatus() == ReservationStatus.CANCELED ? "취소" : "노쇼";
+            return String.format("예약번호 %d: %s %s %s, %d명, 상태: %s",
+                    r.getId(),
+                    sr.getStore().getStoreName(),
+                    sr.getRemainDate(),
+                    sr.getRemainTime(),
+                    r.getMember(),
+                    statusLabel);
+        }).collect(Collectors.joining("\n"));
+    }
+
+    @Tool(description = "예약을 취소합니다. '예약 취소해줘', '예약번호 X 취소' 등의 요청에 사용하세요.")
+    @Transactional
+    public String cancelReservationFromAi(
+            @ToolParam(description = "취소할 예약 번호 (예약 ID)") Long reservationId,
+            ToolContext toolContext
+    ) {
+        Long currentUserId = (Long) toolContext.getContext().get("userId");
+        try {
+            cancelReservation(reservationId, currentUserId);
+            return "예약번호 " + reservationId + "번 예약이 취소되었습니다.";
+        } catch (CustomException e) {
+            return "예약 취소에 실패했습니다: " + e.getMessage();
+        }
     }
     
     @Transactional
@@ -201,11 +294,24 @@ public class ReservationService {
 
         List<Reservation> reservations = reservationRepository.findAllByUser(user);
 
+        // PENDING 예약에 대해 orderId를 단일 IN 쿼리로 일괄 조회 (결제 진행 버튼용)
+        List<Long> pendingIds = reservations.stream()
+                .filter(r -> r.getStatus() == ReservationStatus.PENDING)
+                .map(Reservation::getId)
+                .toList();
+
+        Map<Long, String> orderIdByReservationId = new HashMap<>();
+        if (!pendingIds.isEmpty()) {
+            paymentRepository.findAllByReservationIdIn(pendingIds)
+                    .forEach(p -> orderIdByReservationId.put(p.getReservation().getId(), p.getOrderId()));
+        }
+
         return reservations.stream()
                 .filter(r -> r.getStatus() != ReservationStatus.PAYMENT_FAILED)
                 .map(reservation -> {
             StoreRemain storeRemain = reservation.getStoreRemain();
             Store store = storeRemain.getStore();
+            String orderId = orderIdByReservationId.get(reservation.getId());
 
             return new ReservationListResponseDto(
                     reservation.getId(),
@@ -218,7 +324,8 @@ public class ReservationService {
                     storeRemain.getRemainDate(),
                     storeRemain.getRemainTime(),
                     reservation.getMember(),
-                    reservation.getCreatedAt()
+                    reservation.getCreatedAt(),
+                    orderId
             );
         }).toList();
     }
