@@ -15,6 +15,7 @@ public record ReservationListResponseDto(
         LocalDate remainDate,
         LocalTime remainTime,
         Integer member,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        String orderId
 ) {
 }

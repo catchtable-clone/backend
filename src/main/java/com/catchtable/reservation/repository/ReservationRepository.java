@@ -18,6 +18,8 @@ import java.util.Optional;
 public interface ReservationRepository extends JpaRepository<Reservation, Long> {
     List<Reservation> findAllByUser(User user);
 
+    List<Reservation> findAllByUserAndStatusIn(User user, List<ReservationStatus> statuses);
+
     // 결제 미완료 PENDING 예약 자동 정리 — 좌석 복원·payment 정리에 storeRemain까지 즉시 로딩
     @Query("SELECT r FROM Reservation r JOIN FETCH r.storeRemain " +
             "WHERE r.status = :status AND r.createdAt < :threshold")
