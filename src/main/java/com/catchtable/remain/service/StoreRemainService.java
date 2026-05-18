@@ -11,6 +11,9 @@ import com.catchtable.store.entity.Store;
 import com.catchtable.store.repository.StoreRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.chat.model.ToolContext;
+import org.springframework.ai.tool.annotation.Tool;
+import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -75,6 +78,34 @@ public class StoreRemainService {
         }
 
         storeRemainRepository.saveAll(remainsToSave);
+    }
+
+    @Tool(description = "특정 매장의 특정 날짜에 예약 가능한 시간대를 조회합니다. '로코페페 5월 20일 예약 가능한 시간', '○○ 매장 언제 예약돼' 등의 요청에 사용하세요.")
+    @Transactional(readOnly = true)
+    public String getAvailableTimeSlotsForAi(
+            @ToolParam(description = "매장 이름 (정확한 이름)") String storeName,
+            @ToolParam(description = "조회할 날짜, ISO 형식 (예: 2025-05-20)") LocalDate date
+    ) {
+        Store store = storeRepository.findByStoreNameIgnoreCaseAndIsDeletedFalse(storeName).orElse(null);
+
+        if (store == null) {
+            return "'" + storeName + "' 매장을 찾을 수 없습니다. 매장 이름을 다시 확인해주세요.";
+        }
+
+        List<StoreRemain> remains = storeRemainRepository.findAllByStoreIdAndDate(store.getId(), date)
+                .stream()
+                .filter(r -> r.getRemainTeam() > 0)
+                .toList();
+
+        if (remains.isEmpty()) {
+            return date + "에 " + storeName + " 예약 가능한 시간대가 없습니다.";
+        }
+
+        String times = remains.stream()
+                .map(r -> r.getRemainTime().format(DateTimeFormatter.ofPattern("HH:mm")))
+                .collect(java.util.stream.Collectors.joining(", "));
+
+        return date + " " + storeName + " 예약 가능한 시간: " + times;
     }
 
     @Transactional(readOnly = true)

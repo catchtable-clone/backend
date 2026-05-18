@@ -5,8 +5,6 @@ import com.catchtable.coupon.entity.CouponStatus;
 import com.catchtable.coupon.entity.CouponTemplate;
 import com.catchtable.coupon.repository.CouponRepository;
 import com.catchtable.coupon.service.CouponService;
-import com.catchtable.global.exception.ErrorCode;
-import com.catchtable.notification.service.VacancyNotificationEmailService;
 import com.catchtable.remain.entity.StoreRemain;
 import com.catchtable.remain.repository.StoreRemainRepository;
 import com.catchtable.reservation.dto.create.ReservationCreateRequestDto;
