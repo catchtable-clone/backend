@@ -7,13 +7,27 @@ services:
     env_file: .env
     expose:
       - "8080"
-    # t3.micro(1GB) 메모리 한계 고려: app은 최대 700MB로 제한
+    # t3.small(2GB) 환경. 모니터링 스택과 공존하기 위해 app은 600M로 제한.
+    # OTel Agent가 약 80MB 추가 사용하므로 500M → 600M로 상향.
+    environment:
+      # JVM 옵션은 Dockerfile의 ENV에 기본값으로 정의됨 (javaagent + 메모리 튜닝).
+      # 여기선 OpenTelemetry Agent의 송신 대상만 지정.
+      OTEL_SERVICE_NAME: catchtable-backend
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+      OTEL_TRACES_EXPORTER: otlp
+      OTEL_METRICS_EXPORTER: none   # 메트릭은 Micrometer/Prometheus로 처리
+      OTEL_LOGS_EXPORTER: none      # 로그는 Promtail/Loki로 처리
+      OTEL_RESOURCE_ATTRIBUTES: deployment.environment=production
+      # 샘플링: 전체 요청 대비 트레이스 수집 비율 (1.0=100%, 부하 시 0.1로 낮추기 권장)
+      OTEL_TRACES_SAMPLER: parentbased_traceidratio
+      OTEL_TRACES_SAMPLER_ARG: "1.0"
     deploy:
       resources:
         limits:
-          memory: 700M
+          memory: 600M
         reservations:
-          memory: 500M
+          memory: 400M
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
       interval: 30s
@@ -23,6 +37,11 @@ services:
     restart: unless-stopped
     networks:
       - catchtable-net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   nginx:
     image: nginx:1.26.3-alpine
@@ -50,6 +69,179 @@ services:
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew --quiet; sleep 12h & wait $${!}; done;'"
     restart: unless-stopped
 
+  # ============================================================
+  # 모니터링 스택 (Prometheus + Loki + Promtail + Jaeger + Grafana)
+  # ============================================================
+
+  prometheus:
+    image: prom/prometheus:v2.55.0
+    container_name: catchtable-prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=7d'
+      - '--storage.tsdb.retention.size=1GB'
+      - '--web.enable-lifecycle'
+    expose:
+      - "9090"
+    deploy:
+      resources:
+        limits:
+          memory: 350M
+    restart: unless-stopped
+    networks:
+      - catchtable-net
+
+  loki:
+    image: grafana/loki:3.2.0
+    container_name: catchtable-loki
+    volumes:
+      - ./monitoring/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki-data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    expose:
+      - "3100"
+    deploy:
+      resources:
+        limits:
+          memory: 250M
+    restart: unless-stopped
+    networks:
+      - catchtable-net
+
+  promtail:
+    image: grafana/promtail:3.2.0
+    container_name: catchtable-promtail
+    volumes:
+      - ./monitoring/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - promtail-positions:/tmp
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+    deploy:
+      resources:
+        limits:
+          memory: 100M
+    restart: unless-stopped
+    networks:
+      - catchtable-net
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.62.0
+    container_name: catchtable-jaeger
+    user: "0"  # named volume mkdir 퍼미션 회피 (내부 도구라 보안 영향 없음)
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+      SPAN_STORAGE_TYPE: badger
+      BADGER_EPHEMERAL: "false"
+      BADGER_DIRECTORY_VALUE: /badger/data
+      BADGER_DIRECTORY_KEY: /badger/key
+      BADGER_SPAN_STORE_TTL: 168h0m0s
+    volumes:
+      - jaeger-data:/badger
+    ports:
+      - "16686:16686"  # Jaeger UI (외부 접근)
+    expose:
+      - "4317"   # OTLP gRPC (앱에서 전송)
+      - "4318"   # OTLP HTTP
+    deploy:
+      resources:
+        limits:
+          memory: 350M
+    restart: unless-stopped
+    networks:
+      - catchtable-net
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    container_name: catchtable-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3001:3000"  # Grafana UI (외부 접근, 3000은 프론트 dev와 충돌 회피)
+    depends_on:
+      - prometheus
+      - loki
+      - jaeger
+    deploy:
+      resources:
+        limits:
+          memory: 200M
+    restart: unless-stopped
+    networks:
+      - catchtable-net
+
+  # ============================================================
+  # 고도화 작업 시작 시 주석 해제 (5대 고도화 항목 1, 3번 진행 시)
+  # ============================================================
+
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: catchtable-redis
+  #   command:
+  #     - redis-server
+  #     - --maxmemory
+  #     - 80mb
+  #     - --maxmemory-policy
+  #     - allkeys-lru
+  #     - --appendonly
+  #     - "yes"
+  #   expose:
+  #     - "6379"
+  #   volumes:
+  #     - redis-data:/data
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         memory: 100M
+  #   restart: unless-stopped
+  #   networks:
+  #     - catchtable-net
+
+  # kafka:
+  #   image: bitnami/kafka:3.8
+  #   container_name: catchtable-kafka
+  #   environment:
+  #     # KRaft 모드 (Zookeeper 불필요, 메모리 절약)
+  #     KAFKA_CFG_NODE_ID: 0
+  #     KAFKA_CFG_PROCESS_ROLES: controller,broker
+  #     KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 0@kafka:9093
+  #     KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+  #     KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+  #     KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+  #     KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+  #     # 메모리 다이어트
+  #     KAFKA_HEAP_OPTS: "-Xms256m -Xmx256m"
+  #   expose:
+  #     - "9092"
+  #   volumes:
+  #     - kafka-data:/bitnami/kafka
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         memory: 400M
+  #   restart: unless-stopped
+  #   networks:
+  #     - catchtable-net
+
 networks:
   catchtable-net:
     driver: bridge
+
+volumes:
+  prometheus-data:
+  loki-data:
+  jaeger-data:
+  grafana-data:
+  promtail-positions:
+  # redis-data:
+  # kafka-data:
