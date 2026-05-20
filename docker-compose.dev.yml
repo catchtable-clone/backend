@@ -15,5 +15,11 @@ services:
       - ./data/init-data.sql:/docker-entrypoint-initdb.d/init-data.sql
       - ./data:/tmp/data
 
+  redis:
+    image: redis:7-alpine
+    container_name: catchtable-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+
 volumes:
   catchtable-data:
