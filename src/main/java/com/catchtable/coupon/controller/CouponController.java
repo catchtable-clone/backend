@@ -11,6 +11,7 @@ import com.catchtable.global.common.SuccessCode;
 import com.catchtable.global.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -47,8 +48,9 @@ public class CouponController {
     @GetMapping("/templates/active")
     public ResponseEntity<ApiResponse<List<CouponTemplateActiveResponse>>> getActiveTemplates() {
         List<CouponTemplateActiveResponse> response = couponService.getActiveTemplates();
-        return ResponseEntity
-                .ok(ApiResponse.success(SuccessCode.COUPON_LIST_OK, response));
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(ApiResponse.success(SuccessCode.COUPON_LIST_OK, response));
     }
 
     @GetMapping("/me")
