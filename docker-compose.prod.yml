@@ -181,31 +181,31 @@ services:
       - catchtable-net
 
   # ============================================================
-  # 고도화 작업 시작 시 주석 해제 (5대 고도화 항목 1, 3번 진행 시)
+  # 고도화 인프라 (Kafka는 해당 작업 시작 시 주석 해제)
   # ============================================================
 
-  # redis:
-  #   image: redis:7-alpine
-  #   container_name: catchtable-redis
-  #   command:
-  #     - redis-server
-  #     - --maxmemory
-  #     - 80mb
-  #     - --maxmemory-policy
-  #     - allkeys-lru
-  #     - --appendonly
-  #     - "yes"
-  #   expose:
-  #     - "6379"
-  #   volumes:
-  #     - redis-data:/data
-  #   deploy:
-  #     resources:
-  #       limits:
-  #         memory: 100M
-  #   restart: unless-stopped
-  #   networks:
-  #     - catchtable-net
+  redis:
+    image: redis:7-alpine
+    container_name: catchtable-redis
+    command:
+      - redis-server
+      - --maxmemory
+      - 80mb
+      - --maxmemory-policy
+      - allkeys-lru
+      - --appendonly
+      - "yes"
+    expose:
+      - "6379"
+    volumes:
+      - redis-data:/data
+    deploy:
+      resources:
+        limits:
+          memory: 100M
+    restart: unless-stopped
+    networks:
+      - catchtable-net
 
   # kafka:
   #   image: bitnami/kafka:3.8
@@ -243,5 +243,5 @@ volumes:
   jaeger-data:
   grafana-data:
   promtail-positions:
-  # redis-data:
+  redis-data:
   # kafka-data:
