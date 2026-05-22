@@ -38,6 +38,7 @@ import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -61,7 +62,7 @@ public class ReservationService {
     private final StoreRemainRepository storeRemainRepository;
     private final StoreRemainService storeRemainService;
     private final CouponService couponService;
-    private final ApplicationEventPublisher eventPublisher;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
     private final PaymentRepository paymentRepository;
     private final PaymentService paymentService;
     private final StoreRepository storeRepository;
@@ -242,7 +243,7 @@ public class ReservationService {
             paymentService.refundPayment(reservation);
             restoreInventory(reservation);
             reservation.changeStatus(ReservationStatus.CANCELED);
-            eventPublisher.publishEvent(new ReservationCanceledEvent(
+            kafkaTemplate.send("notification.reservation.canceled", new ReservationCanceledEvent(
                     reservation.getId(),
                     userId,
                     storeRemain.getStore().getStoreName(),
@@ -268,7 +269,7 @@ public class ReservationService {
         }
 
         StoreRemain newStoreRemain = newReservation.getStoreRemain();
-        eventPublisher.publishEvent(new ReservationChangedEvent(
+        kafkaTemplate.send("notification.reservation.changed", new ReservationChangedEvent(
                 newReservation.getId(),
                 userId,
                 newStoreRemain.getStore().getStoreName(),
@@ -373,7 +374,7 @@ public class ReservationService {
         reservation.changeStatus(request.status());
 
         if (request.status() == ReservationStatus.VISITED) {
-            eventPublisher.publishEvent(new ReservationVisitedEvent(
+            kafkaTemplate.send("notification.reservation.visited", new ReservationVisitedEvent(
                     reservation.getId(),
                     reservation.getUser().getId(),
                     reservation.getStoreRemain().getStore().getStoreName(),
@@ -402,7 +403,7 @@ public class ReservationService {
         reservation.changeStatus(ReservationStatus.VISITED);
 
         StoreRemain storeRemain = reservation.getStoreRemain();
-        eventPublisher.publishEvent(new ReservationVisitedEvent(
+        kafkaTemplate.send("notification.reservation.visited", new ReservationVisitedEvent(
                 reservation.getId(),
                 reservation.getUser().getId(),
                 storeRemain.getStore().getStoreName(),
@@ -471,7 +472,7 @@ public class ReservationService {
             throw new CustomException(ErrorCode.OPTIMISTIC_LOCK_CONFLICT);
         }
 
-        eventPublisher.publishEvent(new VacancyEvent(storeRemain.getId()));
+        kafkaTemplate.send("notification.vacancy.opened", new VacancyEvent(storeRemain.getId()));
         if (reservation.getCoupon() != null) {
             couponService.returnCoupon(reservation.getCoupon().getId());
         }
