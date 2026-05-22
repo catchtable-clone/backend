@@ -17,11 +17,10 @@ datasources:
     editable: true
     jsonData:
       derivedFields:
-        # 로그 안의 traceId(OTel) 를 클릭하면 Jaeger 트레이스로 점프
         - datasourceUid: jaeger
-          matcherRegex: "traceId=(\\w+)"
+          matcherRegex: 'trace_id=(\w+)'
           name: TraceID
-          url: "$${__value.raw}"
+          url: '$${__value.raw}'
 
   - name: Jaeger
     type: jaeger

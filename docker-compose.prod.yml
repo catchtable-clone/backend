@@ -7,21 +7,22 @@ services:
     env_file: .env
     expose:
       - "8080"
-    # t3.small(2GB) 환경. 모니터링 스택과 공존하기 위해 app은 600M로 제한.
-    # OTel Agent가 약 80MB 추가 사용하므로 500M → 600M로 상향.
+    # t3.small 메모리 한도 고려한 app 한도 (OTel Agent 80MB 포함 600M)
     environment:
-      # JVM 옵션은 Dockerfile의 ENV에 기본값으로 정의됨 (javaagent + 메모리 튜닝).
-      # 여기선 OpenTelemetry Agent의 송신 대상만 지정.
       OTEL_SERVICE_NAME: catchtable-backend
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+      # OTel Collector로 전송 (Collector에서 path 기반 노이즈 필터링 후 Jaeger로 전달)
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       OTEL_EXPORTER_OTLP_PROTOCOL: grpc
       OTEL_TRACES_EXPORTER: otlp
       OTEL_METRICS_EXPORTER: none   # 메트릭은 Micrometer/Prometheus로 처리
       OTEL_LOGS_EXPORTER: none      # 로그는 Promtail/Loki로 처리
       OTEL_RESOURCE_ATTRIBUTES: deployment.environment=production
-      # 샘플링: 전체 요청 대비 트레이스 수집 비율 (1.0=100%, 부하 시 0.1로 낮추기 권장)
+      # 샘플링 100% — 노이즈 제거는 Collector에서 path 기반으로 처리
       OTEL_TRACES_SAMPLER: parentbased_traceidratio
       OTEL_TRACES_SAMPLER_ARG: "1.0"
+      OTEL_INSTRUMENTATION_SPRING_SCHEDULING_ENABLED: "false"
+      OTEL_INSTRUMENTATION_LOGBACK_APPENDER_ENABLED: "true"
+      OTEL_INSTRUMENTATION_LOGBACK_MDC_ENABLED: "true"
     deploy:
       resources:
         limits:
@@ -56,6 +57,10 @@ services:
     depends_on:
       app:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 50M
     restart: unless-stopped
     networks:
       - catchtable-net
@@ -67,11 +72,11 @@ services:
       - ./certbot/conf:/etc/letsencrypt
       - ./certbot/www:/var/www/certbot
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew --quiet; sleep 12h & wait $${!}; done;'"
+    deploy:
+      resources:
+        limits:
+          memory: 30M
     restart: unless-stopped
-
-  # ============================================================
-  # 모니터링 스택 (Prometheus + Loki + Promtail + Jaeger + Grafana)
-  # ============================================================
 
   prometheus:
     image: prom/prometheus:v2.55.0
@@ -106,7 +111,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 250M
+          memory: 200M
     restart: unless-stopped
     networks:
       - catchtable-net
@@ -130,6 +135,24 @@ services:
     networks:
       - catchtable-net
 
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.115.0
+    container_name: catchtable-otel-collector
+    volumes:
+      - ./monitoring/otel-collector-config.yml:/etc/otelcol-contrib/config.yaml:ro
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    expose:
+      - "4317"   # OTLP gRPC (app에서 전송)
+    depends_on:
+      - jaeger
+    deploy:
+      resources:
+        limits:
+          memory: 150M
+    restart: unless-stopped
+    networks:
+      - catchtable-net
+
   jaeger:
     image: jaegertracing/all-in-one:1.62.0
     container_name: catchtable-jaeger
@@ -140,7 +163,7 @@ services:
       BADGER_EPHEMERAL: "false"
       BADGER_DIRECTORY_VALUE: /badger/data
       BADGER_DIRECTORY_KEY: /badger/key
-      BADGER_SPAN_STORE_TTL: 168h0m0s
+      BADGER_SPAN_STORE_TTL: 72h0m0s
     volumes:
       - jaeger-data:/badger
     ports:
@@ -151,7 +174,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 350M
+          memory: 250M
     restart: unless-stopped
     networks:
       - catchtable-net
