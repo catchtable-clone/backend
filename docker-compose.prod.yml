@@ -7,21 +7,22 @@ services:
     env_file: .env
     expose:
       - "8080"
-    # t3.small(2GB) 환경. 모니터링 스택과 공존하기 위해 app은 600M로 제한.
-    # OTel Agent가 약 80MB 추가 사용하므로 500M → 600M로 상향.
+    # t3.small 메모리 한도 고려한 app 한도 (OTel Agent 80MB 포함 600M)
     environment:
-      # JVM 옵션은 Dockerfile의 ENV에 기본값으로 정의됨 (javaagent + 메모리 튜닝).
-      # 여기선 OpenTelemetry Agent의 송신 대상만 지정.
       OTEL_SERVICE_NAME: catchtable-backend
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+      # OTel Collector로 전송 (Collector에서 path 기반 노이즈 필터링 후 Jaeger로 전달)
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       OTEL_EXPORTER_OTLP_PROTOCOL: grpc
       OTEL_TRACES_EXPORTER: otlp
       OTEL_METRICS_EXPORTER: none   # 메트릭은 Micrometer/Prometheus로 처리
       OTEL_LOGS_EXPORTER: none      # 로그는 Promtail/Loki로 처리
       OTEL_RESOURCE_ATTRIBUTES: deployment.environment=production
-      # 샘플링: 전체 요청 대비 트레이스 수집 비율 (1.0=100%, 부하 시 0.1로 낮추기 권장)
+      # 샘플링 100% — 노이즈 제거는 Collector에서 path 기반으로 처리
       OTEL_TRACES_SAMPLER: parentbased_traceidratio
       OTEL_TRACES_SAMPLER_ARG: "1.0"
+      OTEL_INSTRUMENTATION_SPRING_SCHEDULING_ENABLED: "false"
+      OTEL_INSTRUMENTATION_LOGBACK_APPENDER_ENABLED: "true"
+      OTEL_INSTRUMENTATION_LOGBACK_MDC_ENABLED: "true"
     deploy:
       resources:
         limits:
@@ -56,6 +57,10 @@ services:
     depends_on:
       app:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 50M
     restart: unless-stopped
     networks:
       - catchtable-net
@@ -67,11 +72,11 @@ services:
       - ./certbot/conf:/etc/letsencrypt
       - ./certbot/www:/var/www/certbot
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew --quiet; sleep 12h & wait $${!}; done;'"
+    deploy:
+      resources:
+        limits:
+          memory: 30M
     restart: unless-stopped
-
-  # ============================================================
-  # 모니터링 스택 (Prometheus + Loki + Promtail + Jaeger + Grafana)
-  # ============================================================
 
   prometheus:
     image: prom/prometheus:v2.55.0
@@ -106,7 +111,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 250M
+          memory: 200M
     restart: unless-stopped
     networks:
       - catchtable-net
@@ -130,6 +135,24 @@ services:
     networks:
       - catchtable-net
 
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.115.0
+    container_name: catchtable-otel-collector
+    volumes:
+      - ./monitoring/otel-collector-config.yml:/etc/otelcol-contrib/config.yaml:ro
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    expose:
+      - "4317"   # OTLP gRPC (app에서 전송)
+    depends_on:
+      - jaeger
+    deploy:
+      resources:
+        limits:
+          memory: 150M
+    restart: unless-stopped
+    networks:
+      - catchtable-net
+
   jaeger:
     image: jaegertracing/all-in-one:1.62.0
     container_name: catchtable-jaeger
@@ -140,7 +163,7 @@ services:
       BADGER_EPHEMERAL: "false"
       BADGER_DIRECTORY_VALUE: /badger/data
       BADGER_DIRECTORY_KEY: /badger/key
-      BADGER_SPAN_STORE_TTL: 168h0m0s
+      BADGER_SPAN_STORE_TTL: 72h0m0s
     volumes:
       - jaeger-data:/badger
     ports:
@@ -151,7 +174,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 350M
+          memory: 250M
     restart: unless-stopped
     networks:
       - catchtable-net
@@ -181,57 +204,71 @@ services:
       - catchtable-net
 
   # ============================================================
-  # 고도화 작업 시작 시 주석 해제 (5대 고도화 항목 1, 3번 진행 시)
+  # 고도화 인프라 (Kafka는 해당 작업 시작 시 주석 해제)
   # ============================================================
 
-  # redis:
-  #   image: redis:7-alpine
-  #   container_name: catchtable-redis
-  #   command:
-  #     - redis-server
-  #     - --maxmemory
-  #     - 80mb
-  #     - --maxmemory-policy
-  #     - allkeys-lru
-  #     - --appendonly
-  #     - "yes"
-  #   expose:
-  #     - "6379"
-  #   volumes:
-  #     - redis-data:/data
-  #   deploy:
-  #     resources:
-  #       limits:
-  #         memory: 100M
-  #   restart: unless-stopped
-  #   networks:
-  #     - catchtable-net
+  redis:
+    image: redis:7-alpine
+    container_name: catchtable-redis
+    command:
+      - redis-server
+      - --maxmemory
+      - 80mb
+      - --maxmemory-policy
+      - allkeys-lru
+      - --appendonly
+      - "yes"
+    expose:
+      - "6379"
+    volumes:
+      - redis-data:/data
+    deploy:
+      resources:
+        limits:
+          memory: 100M
+    restart: unless-stopped
+    networks:
+      - catchtable-net
 
-  # kafka:
-  #   image: bitnami/kafka:3.8
-  #   container_name: catchtable-kafka
-  #   environment:
-  #     # KRaft 모드 (Zookeeper 불필요, 메모리 절약)
-  #     KAFKA_CFG_NODE_ID: 0
-  #     KAFKA_CFG_PROCESS_ROLES: controller,broker
-  #     KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 0@kafka:9093
-  #     KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
-  #     KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-  #     KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
-  #     KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-  #     # 메모리 다이어트
-  #     KAFKA_HEAP_OPTS: "-Xms256m -Xmx256m"
-  #   expose:
-  #     - "9092"
-  #   volumes:
-  #     - kafka-data:/bitnami/kafka
-  #   deploy:
-  #     resources:
-  #       limits:
-  #         memory: 400M
-  #   restart: unless-stopped
-  #   networks:
-  #     - catchtable-net
+  kafka:
+    image: apache/kafka:3.7.0
+    container_name: catchtable-kafka-prod
+    user: "0"  # 볼륨 마운트 폴더에 로그를 쓰고 지울 수 있도록 최고 관리자 권한 부여
+
+    # 외부(내 PC 등)로 포트를 무방비하게 노출하지 않고, 오직 'catchtable-net' 내부에서만 통신하도록 격리
+    expose:
+      - "9092"
+      - "9093"
+
+    environment:
+      # KRaft 모드 핵심 식별자 설정
+      KAFKA_CLUSTER_ID: "MkU3OEV5NURaZW52OTYyM2RjY1JqcA" # 운영 환경 고유 클러스터 ID
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+
+      # 모든 인터페이스(0.0.0.0)로 귀를 열어두고, 운영 서버 안의 다른 컨테이너(Spring Boot)에는 서비스 명인 'kafka:9092'로 광고합니다.
+      KAFKA_LISTENERS: 'PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:9092'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@127.0.0.1:9093' # 루프백 주소로 바인딩 충돌 방지
+
+      # 메모리 제한 설정 (서버 스펙에 맞게 조정 가능, 최소 256m~512m 추천)
+      KAFKA_HEAP_OPTS: "-Xms256m -Xmx256m"
+    # 임시 폴더인 /tmp 대신 컨테이너가 내려가도 데이터와 오프셋 장부가 보존되도록 볼륨 볼륨 마운트 경로 고정
+    volumes:
+      - kafka-prod-data:/var/lib/kafka/data
+
+    # 리소스 상한선 설정 (메모리 릭으로 인한 전체 서버 다운 방지)
+    deploy:
+      resources:
+        limits:
+          memory: 400M
+
+    restart: unless-stopped
+    networks:
+      - catchtable-net
 
 networks:
   catchtable-net:
@@ -243,5 +280,5 @@ volumes:
   jaeger-data:
   grafana-data:
   promtail-positions:
-  # redis-data:
-  # kafka-data:
+  kafka-prod-data:
+  redis-data:

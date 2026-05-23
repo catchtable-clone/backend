@@ -14,6 +14,44 @@ services:
       - catchtable-data:/var/lib/postgresql/data
       - ./data/init-data.sql:/docker-entrypoint-initdb.d/init-data.sql
       - ./data:/tmp/data
+    networks:
+      - catchtable-dev-net
+
+  kafka:
+    image: apache/kafka:3.7.0
+    container_name: catchtable-kafka-dev
+    user: "0"
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_CLUSTER_ID: "MkU3OEV5NURaZW52OTYyM2RjY1JqcA"
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+
+      KAFKA_LISTENERS: 'PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093'
+
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://localhost:9092'
+
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@127.0.0.1:9093'
+    volumes:
+      - kafka-data-dev:/tmp/kafka-logs
+    networks:
+      - catchtable-dev-net
+
+networks:
+  catchtable-dev-net:
+    driver: bridge
+
+  redis:
+    image: redis:7-alpine
+    container_name: catchtable-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
 
 volumes:
   catchtable-data:
+  kafka-data-dev:
