@@ -6,6 +6,7 @@ import com.catchtable.coupon.entity.Coupon;
 import com.catchtable.coupon.service.CouponService;
 import com.catchtable.global.exception.CustomException;
 import com.catchtable.global.exception.ErrorCode;
+import com.catchtable.global.lock.DistributedLockExecutor;
 import com.catchtable.notification.event.ReservationCanceledEvent;
 import com.catchtable.notification.event.ReservationChangedEvent;
 import com.catchtable.notification.event.ReservationVisitedEvent;
@@ -39,7 +40,9 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -65,6 +68,8 @@ public class ReservationService {
     private final PaymentRepository paymentRepository;
     private final PaymentService paymentService;
     private final StoreRepository storeRepository;
+    private final DistributedLockExecutor lockExecutor;
+    private final PlatformTransactionManager transactionManager;
 
     // ============================================================
     // AI Tools
@@ -85,7 +90,6 @@ public class ReservationService {
     @Tool(description = "사용자의 자연어 요청을 기반으로 레스토랑 예약을 생성합니다. " +
             "반드시 searchStoresByName으로 매장명을 확인한 후 호출하세요. " +
             "매장 이름, 예약 날짜, 예약 시간, 인원수가 모두 필요합니다.")
-    @Transactional
     public String createReservationFromAi(
             @ToolParam(description = "매장 이름 (정확한 이름 사용)") String storeName,
             @ToolParam(description = "예약 날짜, ISO 형식 (예: 2025-05-11)") LocalDate date,
@@ -110,26 +114,34 @@ public class ReservationService {
             return "STORE_OR_SLOT_NOT_FOUND: 요청하신 매장(" + storeName + ")의 " + date + " " + time + " 시간대에 예약 가능한 자리가 없습니다.";
         }
 
-        Reservation saved = createReservationCore(
-                currentUserId, availableRemain.get().getId(), member, couponId);
+        Long remainId = availableRemain.get().getId();
+        String lockKey = "lock:reservation:remain:" + remainId;
 
-        // Payment 레코드 생성 (결제창 호출을 위해 orderId 필요)
-        String orderId = "CATCH-" + saved.getId() + "-" + System.currentTimeMillis();
-        Payment payment = Payment.builder()
-                .reservation(saved)
-                .orderId(orderId)
-                .amount(DEPOSIT_AMOUNT)
-                .build();
-        paymentRepository.save(payment);
+        return lockExecutor.executeWithLock(lockKey, 3, 5, () -> {
+            TransactionTemplate tx = new TransactionTemplate(transactionManager);
+            return tx.execute(status -> {
+                Reservation saved = createReservationCore(
+                        currentUserId, remainId, member, couponId);
 
-        log.info("AI 예약 성공: reservationId={}, orderId={}", saved.getId(), orderId);
+                // Payment 레코드 생성 (결제창 호출을 위해 orderId 필요)
+                String orderId = "CATCH-" + saved.getId() + "-" + System.currentTimeMillis();
+                Payment payment = Payment.builder()
+                        .reservation(saved)
+                        .orderId(orderId)
+                        .amount(DEPOSIT_AMOUNT)
+                        .build();
+                paymentRepository.save(payment);
 
-        PendingPaymentHolder.set(new PendingPaymentInfo(saved.getId(), orderId, DEPOSIT_AMOUNT));
+                log.info("AI 예약 성공: reservationId={}, orderId={}", saved.getId(), orderId);
 
-        return String.format(
-                "네, %s 레스토랑 %s %s 시간으로 %d명 예약이 완료되었습니다. " +
-                "보증금 10,000원 결제 후 예약이 최종 확정됩니다. 예약 번호는 %d번입니다.",
-                storeName, date, time, member, saved.getId());
+                PendingPaymentHolder.set(new PendingPaymentInfo(saved.getId(), orderId, DEPOSIT_AMOUNT));
+
+                return String.format(
+                        "네, %s 레스토랑 %s %s 시간으로 %d명 예약이 완료되었습니다. " +
+                        "보증금 10,000원 결제 후 예약이 최종 확정됩니다. 예약 번호는 %d번입니다.",
+                        storeName, date, time, member, saved.getId());
+            });
+        });
     }
 
     @Tool(description = "사용자의 예약 목록을 조회합니다. '내 예약 보여줘', '예약 현황' 등의 요청에 사용하세요.")
@@ -200,20 +212,27 @@ public class ReservationService {
         }
     }
     
-    @Transactional
     public ReservationCreateResponseDto create(Long userId, ReservationCreateRequestDto request) {
-        Reservation saved = createReservationCore(userId, request.remainId(), request.member(), request.couponId());
+        String lockKey = "lock:reservation:remain:" + request.remainId();
 
-        // ConfirmedEvent는 결제 완료 시점(PaymentService.confirmPayment)에서 발행한다.
-        String orderId = "CATCH-" + saved.getId() + "-" + System.currentTimeMillis();
-        Payment payment = Payment.builder()
-                .reservation(saved)
-                .orderId(orderId)
-                .amount(DEPOSIT_AMOUNT)
-                .build();
-        paymentRepository.save(payment);
+        return lockExecutor.executeWithLock(lockKey, 3, 5, () -> {
+            TransactionTemplate tx = new TransactionTemplate(transactionManager);
+            return tx.execute(status -> {
+                Reservation saved = createReservationCore(
+                        userId, request.remainId(), request.member(), request.couponId());
 
-        return new ReservationCreateResponseDto(saved.getId(), orderId, DEPOSIT_AMOUNT, saved.getStatus());
+                // ConfirmedEvent는 결제 완료 시점(PaymentService.confirmPayment)에서 발행한다.
+                String orderId = "CATCH-" + saved.getId() + "-" + System.currentTimeMillis();
+                Payment payment = Payment.builder()
+                        .reservation(saved)
+                        .orderId(orderId)
+                        .amount(DEPOSIT_AMOUNT)
+                        .build();
+                paymentRepository.save(payment);
+
+                return new ReservationCreateResponseDto(saved.getId(), orderId, DEPOSIT_AMOUNT, saved.getStatus());
+            });
+        });
     }
 
     /**
@@ -252,39 +271,45 @@ public class ReservationService {
         }
     }
 
-    @Transactional
     public ReservationUpdateResponseDto updateReservation(Long reservationId, Long userId, ReservationUpdateRequestDto request) {
-        Reservation oldReservation = cancelReservationCore(reservationId, userId, ReservationStatus.REPLACED);
-        StoreRemain oldStoreRemain = oldReservation.getStoreRemain();
+        String lockKey = "lock:reservation:remain:" + request.newRemainId();
 
-        // 기존 결제를 새 예약으로 이전
-        Payment oldPayment = paymentRepository.findByReservation_Id(reservationId).orElse(null);
+        return lockExecutor.executeWithLock(lockKey, 3, 5, () -> {
+            TransactionTemplate tx = new TransactionTemplate(transactionManager);
+            return tx.execute(status -> {
+                Reservation oldReservation = cancelReservationCore(reservationId, userId, ReservationStatus.REPLACED);
+                StoreRemain oldStoreRemain = oldReservation.getStoreRemain();
 
-        Reservation newReservation = createReservationCore(userId, request.newRemainId(), request.newMember(), request.couponId());
-        newReservation.changeStatus(ReservationStatus.CONFIRMED);
+                // 기존 결제를 새 예약으로 이전
+                Payment oldPayment = paymentRepository.findByReservation_Id(reservationId).orElse(null);
 
-        if (oldPayment != null) {
-            oldPayment.transferToReservation(newReservation);
-        }
+                Reservation newReservation = createReservationCore(userId, request.newRemainId(), request.newMember(), request.couponId());
+                newReservation.changeStatus(ReservationStatus.CONFIRMED);
 
-        StoreRemain newStoreRemain = newReservation.getStoreRemain();
-        eventPublisher.publishEvent(new ReservationChangedEvent(
-                newReservation.getId(),
-                userId,
-                newStoreRemain.getStore().getStoreName(),
-                oldStoreRemain.getRemainDate().toString(),
-                oldStoreRemain.getRemainTime().toString(),
-                newStoreRemain.getRemainDate().toString(),
-                newStoreRemain.getRemainTime().toString()
-        ));
+                if (oldPayment != null) {
+                    oldPayment.transferToReservation(newReservation);
+                }
 
-        return new ReservationUpdateResponseDto(
-                newReservation.getId(),
-                newReservation.getStoreRemain().getId(),
-                newReservation.getMember(),
-                newReservation.getStatus().name().toLowerCase(),
-                newReservation.getUpdatedAt() != null ? newReservation.getUpdatedAt() : java.time.LocalDateTime.now()
-        );
+                StoreRemain newStoreRemain = newReservation.getStoreRemain();
+                eventPublisher.publishEvent(new ReservationChangedEvent(
+                        newReservation.getId(),
+                        userId,
+                        newStoreRemain.getStore().getStoreName(),
+                        oldStoreRemain.getRemainDate().toString(),
+                        oldStoreRemain.getRemainTime().toString(),
+                        newStoreRemain.getRemainDate().toString(),
+                        newStoreRemain.getRemainTime().toString()
+                ));
+
+                return new ReservationUpdateResponseDto(
+                        newReservation.getId(),
+                        newReservation.getStoreRemain().getId(),
+                        newReservation.getMember(),
+                        newReservation.getStatus().name().toLowerCase(),
+                        newReservation.getUpdatedAt() != null ? newReservation.getUpdatedAt() : java.time.LocalDateTime.now()
+                );
+            });
+        });
     }
 
     @Transactional(readOnly = true)

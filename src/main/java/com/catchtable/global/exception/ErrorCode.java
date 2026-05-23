@@ -68,6 +68,7 @@ public enum ErrorCode implements ResponseCode {
     REMAIN_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 예약 시간대입니다."),
     REMAIN_EXHAUSTED(HttpStatus.BAD_REQUEST, "해당 시간대의 예약이 마감되었습니다."),
     OPTIMISTIC_LOCK_CONFLICT(HttpStatus.CONFLICT, "이미 다른 사용자가 예약하여 마감되었습니다. 다시 시도해주세요."),
+    LOCK_TIMEOUT(HttpStatus.CONFLICT, "예약 요청이 많아 처리하지 못했습니다. 잠시 후 다시 시도해주세요."),
 
     // Review
     REVIEW_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 리뷰입니다."),
