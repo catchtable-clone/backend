@@ -9,6 +9,9 @@ services:
       - "8080"
     # t3.small 메모리 한도 고려한 app 한도 (OTel Agent 80MB 포함 600M)
     environment:
+      # Redis (Redisson) — 같은 네트워크의 redis 서비스로 연결
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: "6379"
       OTEL_SERVICE_NAME: catchtable-backend
       # OTel Collector로 전송 (Collector에서 path 기반 노이즈 필터링 후 Jaeger로 전달)
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
