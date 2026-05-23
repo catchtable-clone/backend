@@ -1,14 +1,16 @@
 package com.catchtable.notification.event;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
+import lombok.NoArgsConstructor;
 
 @Getter
-@RequiredArgsConstructor
+@NoArgsConstructor
+@AllArgsConstructor
 public class ReservationReminderEvent {
-    private final Long reservationId;
-    private final Long userId;
-    private final String storeName;
-    private final String remainDate;
-    private final String remainTime;
+    private Long reservationId;
+    private Long userId;
+    private String storeName;
+    private String remainDate;
+    private String remainTime;
 }
