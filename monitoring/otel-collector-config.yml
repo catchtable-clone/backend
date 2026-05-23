@@ -5,15 +5,15 @@ receivers:
         endpoint: 0.0.0.0:4317
 
 processors:
-  # OTel Semantic Conventions v1.23.0 이후 속성명 변경 (http.target → url.path 등) 호환 위해
-  # coalesce(??)로 구버전·신버전 속성 둘 다 시도.
+  # OTel Java Agent 2.x는 새 Semantic Conventions(url.path, http.response.status_code) 사용.
+  # error_mode: ignore로 attribute 누락 시 안전 처리.
   filter/drop_noise:
     error_mode: ignore
     traces:
       span:
-        - 'IsMatch(attributes["http.target"] ?? attributes["url.path"] ?? "", "^/actuator.*")'
-        - 'IsMatch(attributes["http.target"] ?? attributes["url.path"] ?? "", "^/favicon.*")'
-        - '(attributes["http.status_code"] ?? attributes["http.response.status_code"]) == 404 and not IsMatch(attributes["http.target"] ?? attributes["url.path"] ?? "", "^/(api|swagger-ui|api-docs).*")'
+        - 'IsMatch(attributes["url.path"], "^/actuator.*")'
+        - 'IsMatch(attributes["url.path"], "^/favicon.*")'
+        - 'attributes["http.response.status_code"] == 404 and not IsMatch(attributes["url.path"], "^/(api|swagger-ui|api-docs).*")'
 
   batch:
     timeout: 5s
