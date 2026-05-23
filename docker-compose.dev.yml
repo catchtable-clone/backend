@@ -49,6 +49,12 @@ networks:
   catchtable-dev-net:
     driver: bridge
 
+  redis:
+    image: redis:7-alpine
+    container_name: catchtable-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+
 volumes:
   catchtable-data:
   kafka-data-dev:
