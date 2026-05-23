@@ -1,10 +1,12 @@
 package com.catchtable.notification.event;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
+import lombok.NoArgsConstructor;
 
 @Getter
-@RequiredArgsConstructor
+@NoArgsConstructor
+@AllArgsConstructor
 public class VacancyEvent {
-    private final Long remainId;
+    private Long remainId;
 }
