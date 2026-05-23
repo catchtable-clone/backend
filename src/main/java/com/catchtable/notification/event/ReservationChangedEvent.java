@@ -1,16 +1,18 @@
 package com.catchtable.notification.event;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
+import lombok.NoArgsConstructor;
 
 @Getter
-@RequiredArgsConstructor
+@NoArgsConstructor
+@AllArgsConstructor
 public class ReservationChangedEvent {
-    private final Long newReservationId;
-    private final Long userId;
-    private final String storeName;
-    private final String oldRemainDate;
-    private final String oldRemainTime;
-    private final String newRemainDate;
-    private final String newRemainTime;
+    private Long newReservationId;
+    private Long userId;
+    private String storeName;
+    private String oldRemainDate;
+    private String oldRemainTime;
+    private String newRemainDate;
+    private String newRemainTime;
 }

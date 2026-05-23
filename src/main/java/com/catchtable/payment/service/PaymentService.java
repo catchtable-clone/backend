@@ -11,7 +11,7 @@ import com.catchtable.remain.entity.StoreRemain;
 import com.catchtable.reservation.entity.Reservation;
 import com.catchtable.reservation.entity.ReservationStatus;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
@@ -21,7 +21,7 @@ import org.springframework.web.client.RestClient;
 public class PaymentService {
 
     private final PaymentRepository paymentRepository;
-    private final ApplicationEventPublisher eventPublisher;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
     private final RestClient portoneRestClient;
 
     @Transactional
@@ -54,7 +54,9 @@ public class PaymentService {
         reservation.changeStatus(ReservationStatus.CONFIRMED);
 
         StoreRemain storeRemain = reservation.getStoreRemain();
-        eventPublisher.publishEvent(new ReservationConfirmedEvent(
+        
+        // Spring 이벤트 대신 카프카 템플릿을 사용하여 메시지 발행
+        kafkaTemplate.send("notification.reservation.confirmed", new ReservationConfirmedEvent(
                 reservation.getId(),
                 reservation.getUser().getId(),
                 storeRemain.getStore().getStoreName(),
