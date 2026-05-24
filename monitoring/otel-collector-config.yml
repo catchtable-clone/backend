@@ -11,9 +11,13 @@ processors:
     error_mode: ignore
     traces:
       span:
+        # HTTP 노이즈: 헬스체크, favicon, API 외 404 (봇 스캔 등)
         - 'IsMatch(attributes["url.path"], "^/actuator.*")'
         - 'IsMatch(attributes["url.path"], "^/favicon.*")'
         - 'attributes["http.response.status_code"] == 404 and not IsMatch(attributes["url.path"], "^/(api|swagger-ui|api-docs).*")'
+        # Kafka 백그라운드 프로토콜 trace 차단 (consumer poll/heartbeat/rebalance 등).
+        # Producer.send와 @KafkaListener의 실제 메시지 처리 trace는 그대로 보존 — 부하 테스트 분석에 필요.
+        - 'name == "Heartbeat" or name == "OffsetCommit" or name == "JoinGroup" or name == "SyncGroup" or name == "FindCoordinator" or name == "Coordinator Discover" or name == "Fetch"'
 
   batch:
     timeout: 5s
