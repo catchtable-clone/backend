@@ -1,21 +1,30 @@
 package com.catchtable.global.exception;
 
 import com.catchtable.global.common.ApiResponse;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-@RestControllerAdvice
+// basePackages 제한: 액추에이터(/actuator/prometheus 등 org.springframework.boot.actuate.*)
+// 엔드포인트의 예외까지 이 advice가 가로채면, ApiResponse(JSON)를 openmetrics 응답으로
+// 직렬화하려다 HttpMessageNotWritableException → 스크랩 500 → 모니터링 DOWN 오표시가 발생.
+// 본인 컨트롤러(com.catchtable.*)로만 적용 범위를 한정해 액추에이터를 건드리지 않게 한다.
+@RestControllerAdvice(basePackages = "com.catchtable")
 public class GlobalExceptionHandler {
 
     // CustomException 통합 처리 (403, 404, 400 등 ErrorCode 기반)
     @ExceptionHandler(CustomException.class)
     protected ResponseEntity<ApiResponse<Void>> handleCustomException(CustomException e) {
         ErrorCode errorCode = e.getErrorCode();
-        return ResponseEntity
-                .status(errorCode.getHttpStatus())
-                .body(ApiResponse.error(errorCode));
+        ResponseEntity.BodyBuilder builder = ResponseEntity.status(errorCode.getHttpStatus());
+        // 일시적 장애(503)는 Retry-After 헤더로 클라이언트 자동 재시도 안내.
+        // 회로 wait-duration-in-open-state(10s) 와 동일 값을 사용.
+        if (errorCode == ErrorCode.COUPON_ISSUE_TEMPORARILY_UNAVAILABLE) {
+            builder.header(HttpHeaders.RETRY_AFTER, "10");
+        }
+        return builder.body(ApiResponse.error(errorCode));
     }
 
     // 400 - 입력값 검증 실패 (@Valid 에러)

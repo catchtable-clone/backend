@@ -11,7 +11,15 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "coupons")
+@Table(
+        name = "coupons",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uq_coupons_user_template",
+                        columnNames = {"user_id", "coupon_template_id"}
+                )
+        }
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
