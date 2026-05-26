@@ -9,20 +9,10 @@ services:
       - "8080"
     # t3.small 메모리 한도 고려한 app 한도 (OTel Agent 80MB 포함 600M)
     environment:
-      OTEL_SERVICE_NAME: catchtable-backend
-      # OTel Collector로 전송 (Collector에서 path 기반 노이즈 필터링 후 Jaeger로 전달)
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
-      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
-      OTEL_TRACES_EXPORTER: otlp
-      OTEL_METRICS_EXPORTER: none   # 메트릭은 Micrometer/Prometheus로 처리
-      OTEL_LOGS_EXPORTER: none      # 로그는 Promtail/Loki로 처리
-      OTEL_RESOURCE_ATTRIBUTES: deployment.environment=production
-      # 샘플링 100% — 노이즈 제거는 Collector에서 path 기반으로 처리
-      OTEL_TRACES_SAMPLER: parentbased_traceidratio
-      OTEL_TRACES_SAMPLER_ARG: "1.0"
-      OTEL_INSTRUMENTATION_SPRING_SCHEDULING_ENABLED: "false"
-      OTEL_INSTRUMENTATION_LOGBACK_APPENDER_ENABLED: "true"
-      OTEL_INSTRUMENTATION_LOGBACK_MDC_ENABLED: "true"
+      # 분산 트레이싱(Jaeger + OTel Collector) 제거 — OTel javaagent SDK 전체 비활성화.
+      # 메트릭은 Micrometer/Prometheus, 로그는 Promtail/Loki가 담당하므로 트레이싱만 끔.
+      # 트레이싱 복원 시: 이 줄 제거 후 export/sampler 설정 복구 + otel-collector/jaeger 서비스 재추가.
+      OTEL_SDK_DISABLED: "true"
     deploy:
       resources:
         limits:
@@ -135,50 +125,6 @@ services:
     networks:
       - catchtable-net
 
-  otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.152.1
-    container_name: catchtable-otel-collector
-    volumes:
-      - ./monitoring/otel-collector-config.yml:/etc/otelcol-contrib/config.yaml:ro
-    command: ["--config=/etc/otelcol-contrib/config.yaml"]
-    expose:
-      - "4317"   # OTLP gRPC (app에서 전송)
-    depends_on:
-      - jaeger
-    deploy:
-      resources:
-        limits:
-          memory: 150M
-    restart: unless-stopped
-    networks:
-      - catchtable-net
-
-  jaeger:
-    image: jaegertracing/all-in-one:1.62.0
-    container_name: catchtable-jaeger
-    user: "0"  # named volume mkdir 퍼미션 회피 (내부 도구라 보안 영향 없음)
-    environment:
-      COLLECTOR_OTLP_ENABLED: "true"
-      SPAN_STORAGE_TYPE: badger
-      BADGER_EPHEMERAL: "false"
-      BADGER_DIRECTORY_VALUE: /badger/data
-      BADGER_DIRECTORY_KEY: /badger/key
-      BADGER_SPAN_STORE_TTL: 72h0m0s
-    volumes:
-      - jaeger-data:/badger
-    ports:
-      - "16686:16686"  # Jaeger UI (외부 접근)
-    expose:
-      - "4317"   # OTLP gRPC (앱에서 전송)
-      - "4318"   # OTLP HTTP
-    deploy:
-      resources:
-        limits:
-          memory: 400M
-    restart: unless-stopped
-    networks:
-      - catchtable-net
-
   grafana:
     image: grafana/grafana:11.3.0
     container_name: catchtable-grafana
@@ -194,7 +140,6 @@ services:
     depends_on:
       - prometheus
       - loki
-      - jaeger
     deploy:
       resources:
         limits:
@@ -277,7 +222,6 @@ networks:
 volumes:
   prometheus-data:
   loki-data:
-  jaeger-data:
   grafana-data:
   promtail-positions:
   kafka-prod-data:

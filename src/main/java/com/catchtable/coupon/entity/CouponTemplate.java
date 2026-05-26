@@ -1,7 +1,5 @@
 package com.catchtable.coupon.entity;
 
-import com.catchtable.global.exception.CustomException;
-import com.catchtable.global.exception.ErrorCode;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -50,11 +48,4 @@ public class CouponTemplate {
     @Column(name = "is_deleted", nullable = false)
     @Builder.Default
     private Boolean isDeleted = false;
-
-    public void decreaseRemain() {
-        if (this.remain <= 0) {
-            throw new CustomException(ErrorCode.COUPON_EXHAUSTED);
-        }
-        this.remain--;
-    }
 }
