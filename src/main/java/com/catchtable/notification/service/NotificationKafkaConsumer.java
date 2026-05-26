@@ -72,14 +72,6 @@ public class NotificationKafkaConsumer {
         log.info("[Kafka Consumer] 예약 취소 이벤트 수신: reservationId={}", event.getReservationId());
         User user = findUserOrThrow(event.getUserId());
 
-
-        // --- DLQ 테스트용 강제 에러 발생 코드 시작 ---
-//        if (true) {
-//            log.warn("=== DLQ 테스트: 강제로 에러를 발생시킵니다! ===");
-//            throw new RuntimeException("DLQ 테스트용 임시 예외");
-//        }
-
-
         String title = "예약이 취소되었습니다.";
         String content = String.format("'%s' 매장 %s %s 예약이 취소되었습니다.",
                 event.getStoreName(),
