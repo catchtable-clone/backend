@@ -12,16 +12,19 @@ import com.catchtable.global.exception.ErrorCode;
 import com.catchtable.user.entity.User;
 import com.catchtable.user.entity.UserRole;
 import com.catchtable.user.repository.UserRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -43,8 +46,23 @@ class CouponServiceTest {
     @Mock
     private RedisCouponIssuer redisCouponIssuer;
 
+    @Mock
+    private TransactionTemplate transactionTemplate;
+
     @InjectMocks
     private CouponService couponService;
+
+    @BeforeEach
+    void stubTransactionTemplate() {
+        // CouponService 가 TransactionTemplate.execute() 로 짧은 트랜잭션을 묶기 때문에
+        // 단위 테스트에서는 콜백을 즉시 실행하도록 stub 한다.
+        // lenient — 트랜잭션을 안 쓰는 테스트(쿠폰 사용/반환/조회 등)에서 미사용 경고 방지.
+        Mockito.lenient().when(transactionTemplate.execute(Mockito.any()))
+                .thenAnswer(invocation -> {
+                    TransactionCallback<?> callback = invocation.getArgument(0);
+                    return callback.doInTransaction(null);
+                });
+    }
 
     private User createUser(Long id) {
         return User.builder()
@@ -132,8 +150,7 @@ class CouponServiceTest {
         User user = createUser(1L);
         CouponTemplate template = createTemplate(10, LocalDateTime.now().plusDays(30));
 
-        given(redisCouponIssuer.tryIssue(1L, 1L))
-                .willReturn(CompletableFuture.completedFuture(IssueResult.SUCCESS));
+        given(redisCouponIssuer.tryIssue(1L, 1L)).willReturn(IssueResult.SUCCESS);
         given(userRepository.getById(1L)).willReturn(user);
         given(couponTemplateRepository.findById(1L)).willReturn(Optional.of(template));
         given(couponRepository.save(any(Coupon.class))).willAnswer(invocation -> {
@@ -152,8 +169,7 @@ class CouponServiceTest {
     @Test
     @DisplayName("쿠폰 발급 실패 - Redis 장애로 회로 폴백 시 503 매핑")
     void issueCouponFailRedisUnavailable() {
-        given(redisCouponIssuer.tryIssue(1L, 1L))
-                .willReturn(CompletableFuture.completedFuture(IssueResult.UNAVAILABLE));
+        given(redisCouponIssuer.tryIssue(1L, 1L)).willReturn(IssueResult.UNAVAILABLE);
 
         assertThatThrownBy(() -> couponService.issueCoupon(1L, 1L))
                 .isInstanceOf(CustomException.class)
@@ -164,8 +180,7 @@ class CouponServiceTest {
     @Test
     @DisplayName("쿠폰 발급 실패 - 중복 발급 (Redis Lua 가 DUPLICATE 반환)")
     void issueCouponFailDuplicate() {
-        given(redisCouponIssuer.tryIssue(1L, 1L))
-                .willReturn(CompletableFuture.completedFuture(IssueResult.DUPLICATE));
+        given(redisCouponIssuer.tryIssue(1L, 1L)).willReturn(IssueResult.DUPLICATE);
 
         assertThatThrownBy(() -> couponService.issueCoupon(1L, 1L))
                 .isInstanceOf(CustomException.class)
@@ -176,8 +191,7 @@ class CouponServiceTest {
     @Test
     @DisplayName("쿠폰 발급 실패 - 수량 소진 (Redis Lua 가 EXHAUSTED 반환)")
     void issueCouponFailExhausted() {
-        given(redisCouponIssuer.tryIssue(1L, 1L))
-                .willReturn(CompletableFuture.completedFuture(IssueResult.EXHAUSTED));
+        given(redisCouponIssuer.tryIssue(1L, 1L)).willReturn(IssueResult.EXHAUSTED);
 
         assertThatThrownBy(() -> couponService.issueCoupon(1L, 1L))
                 .isInstanceOf(CustomException.class)
@@ -191,8 +205,7 @@ class CouponServiceTest {
         User user = createUser(1L);
         CouponTemplate template = createTemplate(10, LocalDateTime.now().plusDays(30));
 
-        given(redisCouponIssuer.tryIssue(1L, 1L))
-                .willReturn(CompletableFuture.completedFuture(IssueResult.SUCCESS));
+        given(redisCouponIssuer.tryIssue(1L, 1L)).willReturn(IssueResult.SUCCESS);
         given(userRepository.getById(1L)).willReturn(user);
         given(couponTemplateRepository.findById(1L)).willReturn(Optional.of(template));
         given(couponRepository.save(any(Coupon.class)))

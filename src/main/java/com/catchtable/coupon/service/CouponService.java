@@ -22,10 +22,10 @@ import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -37,6 +37,7 @@ public class CouponService {
     private final CouponTemplateRepository couponTemplateRepository;
     private final UserRepository userRepository;
     private final RedisCouponIssuer redisCouponIssuer;
+    private final TransactionTemplate transactionTemplate;
 
     // 쿠폰 템플릿 생성 + Redis 재고 워밍업
     @Transactional
@@ -45,8 +46,8 @@ public class CouponService {
         CouponTemplate template = request.toEntity();
         CouponTemplate saved = couponTemplateRepository.save(template);
 
-        // Lua가 참조할 재고 카운터와 발급자 SET을 만료 시각까지 유지.
-        // 워밍업 없이는 첫 Lua 호출이 NOT_AVAILABLE 로 떨어진다.
+        // Lua가 참조할 재고 카운터를 만료 시각까지 유지.
+        // 발급자 SET 의 TTL 은 Lua 스크립트가 SADD 시점에 stock TTL 로 동기화한다.
         redisCouponIssuer.warmUp(saved.getId(), saved.getRemain(), saved.getExpiredAt());
         return CouponTemplateCreateResponse.from(saved);
     }
@@ -54,14 +55,17 @@ public class CouponService {
     /**
      * 선착순 발급.
      *
+     * 트랜잭션 범위:
+     *  - Redis 호출은 트랜잭션 밖에서. 트랜잭션 안에서 네트워크 I/O 를 호출하면
+     *    DB 커넥션이 Redis 응답 대기 동안 점유되어 HikariCP 풀이 빠르게 고갈된다.
+     *  - DB INSERT 만 TransactionTemplate 으로 짧게 묶는다.
+     *
      * 1) Redis Lua: 재고/중복/차감/SADD 를 단일 EVAL 로 원자 결정.
-     *    - @TimeLimiter + @CircuitBreaker 로 Redis 장애가 톰캣 워커를 점령하지 않게 격리.
-     * 2) Lua 통과 = 발급 확정. 같은 트랜잭션 안에서 coupons row 1건 INSERT.
+     * 2) Lua 통과 = 발급 확정. 짧은 트랜잭션에서 coupons row 1건 INSERT.
      * 3) DB INSERT 실패 시 Redis 상태 보상(stock INCR + issued SREM).
      */
-    @Transactional
     public CouponIssueResponse issueCoupon(Long templateId, Long userId) {
-        IssueResult result = unwrapIssueResult(templateId, userId);
+        IssueResult result = redisCouponIssuer.tryIssue(templateId, userId);
         switch (result) {
             case DUPLICATE -> throw new CustomException(ErrorCode.DUPLICATE_COUPON);
             case EXHAUSTED -> throw new CustomException(ErrorCode.COUPON_EXHAUSTED);
@@ -71,17 +75,19 @@ public class CouponService {
         }
 
         try {
-            User user = userRepository.getById(userId);
-            CouponTemplate template = couponTemplateRepository.findById(templateId)
-                    .orElseThrow(() -> new CustomException(ErrorCode.COUPON_TEMPLATE_NOT_FOUND));
+            return transactionTemplate.execute(status -> {
+                User user = userRepository.getById(userId);
+                CouponTemplate template = couponTemplateRepository.findById(templateId)
+                        .orElseThrow(() -> new CustomException(ErrorCode.COUPON_TEMPLATE_NOT_FOUND));
 
-            Coupon saved = couponRepository.save(
-                    Coupon.builder()
-                            .user(user)
-                            .couponTemplate(template)
-                            .build()
-            );
-            return CouponIssueResponse.from(saved);
+                Coupon saved = couponRepository.save(
+                        Coupon.builder()
+                                .user(user)
+                                .couponTemplate(template)
+                                .build()
+                );
+                return CouponIssueResponse.from(saved);
+            });
         } catch (RuntimeException e) {
             // Redis 는 발급 확정 상태인데 DB INSERT 실패 → 보상.
             try {
@@ -90,22 +96,6 @@ public class CouponService {
                 log.error("쿠폰 발급 Redis 보상 실패. templateId={}, userId={}", templateId, userId, compEx);
             }
             throw e;
-        }
-    }
-
-    /**
-     * @TimeLimiter 가 요구하는 CompletableFuture 시그니처를 동기 값으로 풀어낸다.
-     * 인프라 장애로 폴백된 경우 UNAVAILABLE 이 그대로 흘러나오고,
-     * 비즈니스 예외(ignore-exceptions 통과)는 그대로 던져진다.
-     */
-    private IssueResult unwrapIssueResult(Long templateId, Long userId) {
-        try {
-            return redisCouponIssuer.tryIssue(templateId, userId).join();
-        } catch (CompletionException e) {
-            Throwable cause = e.getCause();
-            if (cause instanceof CustomException ce) throw ce;
-            if (cause instanceof RuntimeException re) throw re;
-            throw new CustomException(ErrorCode.COUPON_ISSUE_TEMPORARILY_UNAVAILABLE);
         }
     }
 
