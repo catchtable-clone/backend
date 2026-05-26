@@ -8,6 +8,8 @@ import com.catchtable.coupon.dto.read.CouponTemplateActiveResponse;
 import com.catchtable.coupon.entity.Coupon;
 import com.catchtable.coupon.entity.CouponStatus;
 import com.catchtable.coupon.entity.CouponTemplate;
+import com.catchtable.coupon.redis.RedisCouponIssuer;
+import com.catchtable.coupon.redis.RedisCouponIssuer.IssueResult;
 import com.catchtable.coupon.repository.CouponRepository;
 import com.catchtable.coupon.repository.CouponTemplateRepository;
 import com.catchtable.global.exception.CustomException;
@@ -23,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -33,37 +36,77 @@ public class CouponService {
     private final CouponRepository couponRepository;
     private final CouponTemplateRepository couponTemplateRepository;
     private final UserRepository userRepository;
+    private final RedisCouponIssuer redisCouponIssuer;
 
-    // 쿠폰 템플릿 생성
+    // 쿠폰 템플릿 생성 + Redis 재고 워밍업
     @Transactional
     public CouponTemplateCreateResponse createTemplate(Long userId, CouponTemplateCreateRequest request) {
         userRepository.getAdminOrThrow(userId, ErrorCode.ADMIN_ONLY_COUPON_CREATE);
         CouponTemplate template = request.toEntity();
         CouponTemplate saved = couponTemplateRepository.save(template);
+
+        // Lua가 참조할 재고 카운터와 발급자 SET을 만료 시각까지 유지.
+        // 워밍업 없이는 첫 Lua 호출이 NOT_AVAILABLE 로 떨어진다.
+        redisCouponIssuer.warmUp(saved.getId(), saved.getRemain(), saved.getExpiredAt());
         return CouponTemplateCreateResponse.from(saved);
     }
 
-    // 쿠폰 발급 (비관적 락)
+    /**
+     * 선착순 발급.
+     *
+     * 1) Redis Lua: 재고/중복/차감/SADD 를 단일 EVAL 로 원자 결정.
+     *    - @TimeLimiter + @CircuitBreaker 로 Redis 장애가 톰캣 워커를 점령하지 않게 격리.
+     * 2) Lua 통과 = 발급 확정. 같은 트랜잭션 안에서 coupons row 1건 INSERT.
+     * 3) DB INSERT 실패 시 Redis 상태 보상(stock INCR + issued SREM).
+     */
     @Transactional
     public CouponIssueResponse issueCoupon(Long templateId, Long userId) {
-        User user = userRepository.getById(userId);
-
-        CouponTemplate template = couponTemplateRepository.findByIdWithLock(templateId)
-                .orElseThrow(() -> new CustomException(ErrorCode.COUPON_TEMPLATE_NOT_FOUND));
-
-        if (couponRepository.existsByUserIdAndCouponTemplateId(userId, templateId)) {
-            throw new CustomException(ErrorCode.DUPLICATE_COUPON);
+        IssueResult result = unwrapIssueResult(templateId, userId);
+        switch (result) {
+            case DUPLICATE -> throw new CustomException(ErrorCode.DUPLICATE_COUPON);
+            case EXHAUSTED -> throw new CustomException(ErrorCode.COUPON_EXHAUSTED);
+            case NOT_AVAILABLE -> throw new CustomException(ErrorCode.COUPON_TEMPLATE_NOT_FOUND);
+            case UNAVAILABLE -> throw new CustomException(ErrorCode.COUPON_ISSUE_TEMPORARILY_UNAVAILABLE);
+            case SUCCESS -> { /* fall through */ }
         }
 
-        template.decreaseRemain();
+        try {
+            User user = userRepository.getById(userId);
+            CouponTemplate template = couponTemplateRepository.findById(templateId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.COUPON_TEMPLATE_NOT_FOUND));
 
-        Coupon coupon = Coupon.builder()
-                .user(user)
-                .couponTemplate(template)
-                .build();
+            Coupon saved = couponRepository.save(
+                    Coupon.builder()
+                            .user(user)
+                            .couponTemplate(template)
+                            .build()
+            );
+            return CouponIssueResponse.from(saved);
+        } catch (RuntimeException e) {
+            // Redis 는 발급 확정 상태인데 DB INSERT 실패 → 보상.
+            try {
+                redisCouponIssuer.compensate(templateId, userId);
+            } catch (Exception compEx) {
+                log.error("쿠폰 발급 Redis 보상 실패. templateId={}, userId={}", templateId, userId, compEx);
+            }
+            throw e;
+        }
+    }
 
-        Coupon saved = couponRepository.save(coupon);
-        return CouponIssueResponse.from(saved);
+    /**
+     * @TimeLimiter 가 요구하는 CompletableFuture 시그니처를 동기 값으로 풀어낸다.
+     * 인프라 장애로 폴백된 경우 UNAVAILABLE 이 그대로 흘러나오고,
+     * 비즈니스 예외(ignore-exceptions 통과)는 그대로 던져진다.
+     */
+    private IssueResult unwrapIssueResult(Long templateId, Long userId) {
+        try {
+            return redisCouponIssuer.tryIssue(templateId, userId).join();
+        } catch (CompletionException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof CustomException ce) throw ce;
+            if (cause instanceof RuntimeException re) throw re;
+            throw new CustomException(ErrorCode.COUPON_ISSUE_TEMPORARILY_UNAVAILABLE);
+        }
     }
 
     // 내 쿠폰 목록 조회

@@ -42,6 +42,7 @@ public enum ErrorCode implements ResponseCode {
     COUPON_EXPIRED(HttpStatus.BAD_REQUEST, "만료된 쿠폰입니다."),
     COUPON_NOT_RETURNABLE(HttpStatus.BAD_REQUEST, "사용된 쿠폰만 반환할 수 있습니다."),
     COUPON_EXHAUSTED(HttpStatus.BAD_REQUEST, "쿠폰이 모두 소진되었습니다."),
+    COUPON_ISSUE_TEMPORARILY_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "쿠폰 발급이 일시적으로 불가합니다. 잠시 후 다시 시도해주세요."),
 
     // Menu
     MENU_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 메뉴입니다."),
