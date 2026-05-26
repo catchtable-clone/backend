@@ -151,7 +151,7 @@ class CouponServiceTest {
         CouponTemplate template = createTemplate(10, LocalDateTime.now().plusDays(30));
 
         given(redisCouponIssuer.tryIssue(1L, 1L)).willReturn(IssueResult.SUCCESS);
-        given(userRepository.getById(1L)).willReturn(user);
+        given(userRepository.getReferenceById(1L)).willReturn(user);
         given(couponTemplateRepository.findById(1L)).willReturn(Optional.of(template));
         given(couponRepository.save(any(Coupon.class))).willAnswer(invocation -> {
             Coupon coupon = invocation.getArgument(0);
@@ -206,7 +206,7 @@ class CouponServiceTest {
         CouponTemplate template = createTemplate(10, LocalDateTime.now().plusDays(30));
 
         given(redisCouponIssuer.tryIssue(1L, 1L)).willReturn(IssueResult.SUCCESS);
-        given(userRepository.getById(1L)).willReturn(user);
+        given(userRepository.getReferenceById(1L)).willReturn(user);
         given(couponTemplateRepository.findById(1L)).willReturn(Optional.of(template));
         given(couponRepository.save(any(Coupon.class)))
                 .willThrow(new RuntimeException("DB INSERT 실패 시뮬레이션"));

@@ -76,7 +76,8 @@ public class CouponService {
 
         try {
             return transactionTemplate.execute(status -> {
-                User user = userRepository.getById(userId);
+                // 응답에 user 필드 미사용 — SELECT 생략 위해 프록시 사용.
+                User user = userRepository.getReferenceById(userId);
                 CouponTemplate template = couponTemplateRepository.findById(templateId)
                         .orElseThrow(() -> new CustomException(ErrorCode.COUPON_TEMPLATE_NOT_FOUND));
 
