@@ -6,32 +6,28 @@ import com.catchtable.notification.event.ReservationChangedEvent;
 import com.catchtable.notification.event.ReservationConfirmedEvent;
 import com.catchtable.notification.event.ReservationVisitedEvent;
 import com.catchtable.notification.event.VacancyEvent;
+import com.catchtable.remain.entity.StoreRemain;
+import com.catchtable.remain.repository.StoreRemainRepository;
 import com.catchtable.user.entity.User;
 import com.catchtable.user.repository.UserRepository;
+import com.catchtable.vacancy.service.VacancyService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.kafka.annotation.DltHandler;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.annotation.RetryableTopic;
+import org.springframework.kafka.retrytopic.DltStrategy;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;
-import org.springframework.kafka.retrytopic.DltStrategy;
-
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Optional;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
-/**
- * Kafka 알림 메시지를 수신하고 처리하는 컨슈머 클래스.
- * 모든 리스너는 'catchtable-notification-group' 그룹에 속합니다.
- *
- * @RetryableTopic: 메시지 처리 실패 시 재시도 및 DLQ(Dead Letter Queue) 처리를 자동으로 구성합니다.
- *  - attempts: 최대 시도 횟수 (기본값 3)
- *  - backoff: 재시도 간격 설정 (2초 간격)
- *  - dltStrategy: DLQ 처리 전략. ALWAYS_RETRY_ON_ERROR는 모든 예외에 대해 재시도 후 DLQ로 보냅니다.
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -39,11 +35,11 @@ public class NotificationKafkaConsumer {
 
     private final NotificationService notificationService;
     private final UserRepository userRepository;
+    private final StoreRemainRepository storeRemainRepository;
+    private final StringRedisTemplate redisTemplate;
+    private final VacancyService vacancyService;
 
-    @RetryableTopic(
-            attempts = "3",
-            dltStrategy = DltStrategy.ALWAYS_RETRY_ON_ERROR
-    )
+    @RetryableTopic(attempts = "3", dltStrategy = DltStrategy.ALWAYS_RETRY_ON_ERROR)
     @KafkaListener(topics = "notification.reservation.confirmed", groupId = "catchtable-notification-group")
     @Transactional
     public void handleReservationConfirmed(@Payload ReservationConfirmedEvent event) {
@@ -135,25 +131,52 @@ public class NotificationKafkaConsumer {
     @KafkaListener(topics = "notification.vacancy.opened", groupId = "catchtable-notification-group")
     @Transactional
     public void handleVacancyOpened(@Payload VacancyEvent event) {
-        // 이 부분은 Redis 도입 후, Redis에서 구독자 목록을 가져와서 처리해야 합니다.
-        // 현재는 구현하지 않고 로그만 남깁니다.
         log.info("[Kafka Consumer] 빈자리 발생 이벤트 수신: remainId={}", event.getRemainId());
-        // TODO: Redis에서 remainId에 해당하는 구독자(userId) 목록 조회
-        // TODO: 각 구독자에게 알림 생성 (notificationService.createNotification)
+
+        StoreRemain storeRemain = storeRemainRepository.findById(event.getRemainId()).orElse(null);
+        if (storeRemain == null) {
+            log.warn("[Kafka Consumer] 빈자리 알림 처리 실패: 존재하지 않는 remainId={}", event.getRemainId());
+            return;
+        }
+
+        String redisKey = vacancyService.generateRedisKey(storeRemain);
+        Set<String> subscriberIds = redisTemplate.opsForSet().members(redisKey);
+
+        if (subscriberIds == null || subscriberIds.isEmpty()) {
+            log.info("[Kafka Consumer] 빈자리 알림 구독자가 없습니다. key={}", redisKey);
+            return;
+        }
+
+        List<Long> userIds = subscriberIds.stream().map(Long::parseLong).collect(Collectors.toList());
+        List<User> users = userRepository.findAllById(userIds);
+
+        String title = "빈자리 알림";
+        String content = String.format("'%s' 매장 %s %s에 빈자리가 발생했습니다! 지금 바로 예약하세요.",
+                storeRemain.getStore().getStoreName(),
+                storeRemain.getRemainDate(),
+                storeRemain.getRemainTime());
+
+        for (User user : users) {
+            notificationService.createNotification(
+                    user,
+                    NotificationType.VACANCY,
+                    title,
+                    content,
+                    storeRemain.getStore().getId()
+            );
+        }
+
+        log.info("[Kafka Consumer] {}명에게 빈자리 알림을 생성했습니다. key={}", users.size(), redisKey);
     }
 
     @DltHandler
     public void handleDlt(Object message, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
         log.error("[DLT] 메시지 처리 최종 실패. Topic: {}, Message: {}", topic, message.toString());
-        // TODO: 운영자에게 슬랙(Slack) 알림 발송 등의 후속 조치 구현
     }
 
     private User findUserOrThrow(Long userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> {
-                    // 존재하지 않는 사용자는 재시도해도 성공할 수 없으므로,
-                    // 무한 재시도를 유발하지 않도록 Non-Retryable 예외를 던지는 것이 더 좋지만,
-                    // 여기서는 일관성을 위해 일단 모든 예외를 재시도하도록 둡니다.
                     log.error("[Kafka Consumer] 사용자 정보를 찾을 수 없습니다. userId={}", userId);
                     return new RuntimeException("사용자를 찾을 수 없음: " + userId);
                 });
