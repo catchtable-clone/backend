@@ -24,6 +24,7 @@ import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -32,6 +33,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class NotificationKafkaConsumer {
+
+    private static final Duration COOLDOWN_DURATION = Duration.ofMinutes(5);
 
     private final NotificationService notificationService;
     private final UserRepository userRepository;
@@ -132,6 +135,15 @@ public class NotificationKafkaConsumer {
     @Transactional
     public void handleVacancyOpened(@Payload VacancyEvent event) {
         log.info("[Kafka Consumer] 빈자리 발생 이벤트 수신: remainId={}", event.getRemainId());
+
+        // 1. 쿨다운 키 확인
+        String cooldownKey = "cooldown:vacancy:" + event.getRemainId();
+        Boolean isNew = redisTemplate.opsForValue().setIfAbsent(cooldownKey, "locked", COOLDOWN_DURATION);
+
+        if (Boolean.FALSE.equals(isNew)) {
+            log.info("[Kafka Consumer] 쿨다운 적용 중, 빈자리 알림을 건너뜁니다. remainId={}", event.getRemainId());
+            return;
+        }
 
         StoreRemain storeRemain = storeRemainRepository.findById(event.getRemainId()).orElse(null);
         if (storeRemain == null) {
