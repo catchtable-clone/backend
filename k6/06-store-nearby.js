@@ -80,7 +80,7 @@ export default function () {
   group(`근처 매장 조회 (PostGIS nearby) - ${loc.name}`, () => {
     const res = http.get(
       `${BASE_URL}/api/v1/stores/nearby?latitude=${lat}&longitude=${lng}&page=0&size=10`,
-      { headers: HEADERS_JSON, timeout: '15s' },
+      { headers: HEADERS_JSON, timeout: 15000 },
     );
 
     nearbyDuration.add(res.timings.duration);
@@ -104,7 +104,7 @@ export default function () {
       `&minLng=${loc.minLng}&maxLng=${loc.maxLng}` +
       `&centerLat=${lat}&centerLng=${lng}&limit=50`;
 
-    const res = http.get(url, { headers: HEADERS_JSON, timeout: '15s' });
+    const res = http.get(url, { headers: HEADERS_JSON, timeout: 15000 });
     inBoundsDuration.add(res.timings.duration);
 
     if (res.timings.duration > 15000 || res.status === 0) {

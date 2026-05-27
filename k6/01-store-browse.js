@@ -48,7 +48,7 @@ const STORE_IDS = [1, 2, 3, 4, 5];
 
 export default function () {
   const storeId = STORE_IDS[Math.floor(Math.random() * STORE_IDS.length)];
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split('T')[0];
 
   group('매장 목록 조회', () => {
     const res = http.get(`${BASE_URL}/api/v1/stores?page=0&size=10`, { headers: HEADERS_JSON });

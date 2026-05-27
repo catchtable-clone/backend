@@ -48,7 +48,7 @@ export default function () {
   const storeId = STORE_IDS[Math.floor(Math.random() * STORE_IDS.length)];
 
   // 오늘 포함 향후 7일 중 랜덤 날짜 — 캐시 히트 방지 + 실제 사용 패턴 재현
-  const today     = new Date();
+  const today     = new Date(Date.now() + 9 * 60 * 60 * 1000);
   const dayOffset = Math.floor(Math.random() * 7); // 0~6일 후
   today.setDate(today.getDate() + dayOffset);
   const date = today.toISOString().split('T')[0];

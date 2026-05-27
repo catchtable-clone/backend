@@ -61,7 +61,7 @@ export default function () {
       errorRate.add(false);
       check(res, { '예약 성공 (201)': (r) => r.status === 201 });
     } else if (res.status === 400 || res.status === 409) {
-      const body = res.json();
+      const body = (() => { try { return res.json(); } catch { return {}; } })();
       const code = body?.code || '';
 
       if (code === 'REMAIN_EXHAUSTED') {

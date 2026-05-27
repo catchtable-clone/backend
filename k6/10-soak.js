@@ -60,7 +60,7 @@ export const options = {
 
 export default function () {
   const storeId = STORE_IDS[Math.floor(Math.random() * STORE_IDS.length)];
-  const today   = new Date().toISOString().split('T')[0];
+  const today   = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split('T')[0];
   const isLatePhase = (Date.now() - START_TIME) > LATE_PHASE_MS;
 
   // 일반 사용자 행동 믹스 — 읽기 위주로 구성 (쓰기는 10% 확률)

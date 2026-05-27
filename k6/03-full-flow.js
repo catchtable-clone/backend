@@ -38,7 +38,7 @@ const STORE_IDS = [1, 2, 3, 4, 5];
 export default function () {
   const start = Date.now();
   const storeId = STORE_IDS[Math.floor(Math.random() * STORE_IDS.length)];
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split('T')[0];
 
   group('1. 홈 - 인기 매장 조회', () => {
     const res = http.get(`${BASE_URL}/api/v1/stores/popular?limit=10`, {

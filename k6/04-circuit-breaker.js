@@ -83,7 +83,7 @@ export default function () {
   group('챗봇 메시지 전송', () => {
     const res = http.post(`${BASE_URL}/api/v1/chat/messages`, payload, {
       headers: HEADERS_AUTH,
-      timeout: '65s',  // LLM 응답 최대 대기
+      timeout: 65000,  // LLM 응답 최대 대기 (65초)
     });
 
     chatDuration.add(res.timings.duration);
