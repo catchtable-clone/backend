@@ -3,6 +3,7 @@ package com.catchtable.remain.repository;
 import com.catchtable.remain.dto.projection.StoreRemainTimeView;
 import com.catchtable.remain.entity.StoreRemain;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -38,4 +39,25 @@ public interface StoreRemainRepository extends JpaRepository<StoreRemain, Long> 
     List<StoreRemainTimeView> findStoreIdAndTimesByDateAndStoreIds(
             @Param("date") LocalDate date,
             @Param("storeIds") List<Long> storeIds);
+
+    /**
+     * 지난 날짜(remain_date < today)의 미참조 슬롯을 batchSize 단위로 물리 삭제한다.
+     * reservation / vacancy_subscriptions(→ payment 체인 포함)가 참조하는 슬롯은 보존한다
+     * — 참조 슬롯을 지우면 FK 위반이 나므로 NOT EXISTS로 제외한다.
+     * 대량 삭제 시 WAL 폭증·롱 락을 막기 위해 LIMIT 배치로 나눠 반복 호출한다.
+     *
+     * @return 이번 배치에서 삭제된 행 수
+     */
+    @Modifying
+    @Query(value = """
+            DELETE FROM store_remain
+            WHERE id IN (
+                SELECT sr.id FROM store_remain sr
+                WHERE sr.remain_date < :today
+                  AND NOT EXISTS (SELECT 1 FROM reservation r WHERE r.remain_id = sr.id)
+                  AND NOT EXISTS (SELECT 1 FROM vacancy_subscriptions v WHERE v.remain_id = sr.id)
+                LIMIT :batchSize
+            )
+            """, nativeQuery = true)
+    int deleteUnreferencedPastSlots(@Param("today") LocalDate today, @Param("batchSize") int batchSize);
 }

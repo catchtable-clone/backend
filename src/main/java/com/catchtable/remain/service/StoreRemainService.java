@@ -143,6 +143,18 @@ public class StoreRemainService {
     }
 
     /**
+     * 지난 날짜의 미참조 슬롯을 한 배치 물리 삭제한다 (배치당 독립 트랜잭션).
+     * 스케줄러가 반환값이 batchSize 미만이 될 때까지 반복 호출하여 롤링 윈도우를 유지한다.
+     * 참조 슬롯 보존·FK 안전성은 리포지토리 쿼리(deleteUnreferencedPastSlots)에서 보장한다.
+     *
+     * @return 이번 배치에서 삭제된 행 수
+     */
+    @Transactional
+    public int purgeUnreferencedPastSlotsBatch(LocalDate today, int batchSize) {
+        return storeRemainRepository.deleteUnreferencedPastSlots(today, batchSize);
+    }
+
+    /**
      * 매장 목록을 받아 매장별 슬롯 계획(영업시간 파싱 + 시간 슬롯 목록)을 1회 계산한다.
      * 스케줄러가 30일 루프 시작 전 1회 호출하면 동일 매장에 대한 반복 파싱을 제거할 수 있다.
      * 영업시간 파싱 실패 매장은 결과에서 제외한다.
