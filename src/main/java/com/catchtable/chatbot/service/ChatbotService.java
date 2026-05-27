@@ -34,6 +34,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -44,6 +46,8 @@ public class ChatbotService {
     private static final int MAX_HISTORY_SIZE = 20;
     private static final int SUMMARY_KEEP_RECENT = 10;
     private static final long AI_TIMEOUT_SECONDS = 10;
+    // Bulkhead max-concurrent-calls(20)와 동일한 크기로 격리된 전용 스레드풀
+    private static final int AI_THREAD_POOL_SIZE = 20;
 
     private final ChatClient chatClient;
     private final ChatbotDbService dbService;
@@ -54,6 +58,8 @@ public class ChatbotService {
     private final CircuitBreaker aiCircuitBreaker;
     private final Bulkhead aiBulkhead;
     private final Retry aiRetry;
+    // ForkJoinPool 공용 풀 대신 AI 호출 전용 스레드풀 사용
+    private final Executor aiExecutor;
 
     public ChatbotService(ChatClient chatClient, ChatbotDbService dbService,
                           ReservationService reservationService, CouponService couponService,
@@ -70,6 +76,7 @@ public class ChatbotService {
         this.aiCircuitBreaker = circuitBreakerRegistry.circuitBreaker("ai-api");
         this.aiBulkhead = bulkheadRegistry.bulkhead("ai-api");
         this.aiRetry = retryRegistry.retry("ai-api");
+        this.aiExecutor = Executors.newFixedThreadPool(AI_THREAD_POOL_SIZE);
     }
 
     public ChatMessageResponse sendMessage(Long userId, ChatMessageRequest request) {
@@ -113,6 +120,8 @@ public class ChatbotService {
 
         try {
             // 적용 순서: Bulkhead → Retry → CircuitBreaker → 실제 호출(타임아웃 포함)
+            // executeAiCallWithTimeout은 RuntimeException을 그대로 전파 → Retry가 재시도 판단
+            // 최종 실패 시 catch(Exception)에서 handleAiException → CustomException → fallback
             return aiBulkhead.executeSupplier(() ->
                     aiRetry.executeSupplier(() ->
                             aiCircuitBreaker.executeSupplier(() ->
@@ -127,14 +136,21 @@ public class ChatbotService {
             log.warn("AI Bulkhead 초과 — 동시 요청 한도 초과");
             return "현재 많은 요청이 몰려 있습니다. 잠시 후 다시 시도해 주세요.";
         } catch (CustomException e) {
+            // 재시도 불필요한 예외 (429, 인증 오류 등) — ignore-exceptions 설정으로 Retry 미통과
             return buildFallbackMessage(e);
         } catch (Exception e) {
-            log.error("AI API 호출 중 예상치 못한 예외", e);
+            // Retry 소진 후 최종 실패 → handleAiException으로 에러 분류 후 fallback
+            try {
+                handleAiException(e);
+            } catch (CustomException ce) {
+                return buildFallbackMessage(ce);
+            }
             return "AI 서비스를 일시적으로 이용할 수 없습니다. 잠시 후 다시 시도해 주세요.";
         }
     }
 
-    // 10초 타임아웃 적용 — 초과 시 CHAT_AI_TIMEOUT 예외 (Retry 제외 대상)
+    // RuntimeException을 그대로 전파 → Retry가 재시도 여부 판단 가능
+    // CustomException(429, 인증 오류 등)만 그대로 throw → Retry ignore-exceptions에서 제외
     private String executeAiCallWithTimeout(List<Message> messages, Map<String, Object> context) {
         try {
             return CompletableFuture.supplyAsync(() ->
@@ -143,30 +159,34 @@ public class ChatbotService {
                             .tools(reservationService, couponService, storeService, storeRemainService)
                             .toolContext(context)
                             .call()
-                            .content()
+                            .content(),
+                    aiExecutor  // ForkJoinPool 공용 풀 대신 AI 전용 스레드풀 사용
             ).get(AI_TIMEOUT_SECONDS, TimeUnit.SECONDS);
         } catch (TimeoutException e) {
+            // RuntimeException으로 전파 → Retry가 재시도, 최종 실패 시 callAi에서 CHAT_AI_TIMEOUT으로 분류
             log.warn("AI API 타임아웃 ({}초 초과)", AI_TIMEOUT_SECONDS);
-            throw new CustomException(ErrorCode.CHAT_AI_TIMEOUT);
+            throw new RuntimeException("AI API timed out", e);
         } catch (ExecutionException e) {
             Throwable cause = e.getCause();
+            // CustomException(429, 인증 오류)은 그대로 throw → Retry ignore-exceptions 적용
             if (cause instanceof CustomException ce) throw ce;
-            handleAiException(new RuntimeException(cause.getMessage(), cause));
-            return null;
+            // 그 외 실행 예외는 RuntimeException으로 전파 → Retry 재시도 대상
+            if (cause instanceof RuntimeException re) throw re;
+            throw new RuntimeException(cause);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new CustomException(ErrorCode.CHAT_AI_ERROR);
+            throw new RuntimeException("AI API interrupted", e);
         }
     }
 
     // 각 에러 유형별 사용자 노출 메시지 — 예외를 던지지 않고 fallback 문자열 반환
     private String buildFallbackMessage(CustomException e) {
         return switch (e.getErrorCode()) {
-            case CHAT_AI_TIMEOUT     -> "AI 응답이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.";
-            case CHAT_AI_RATE_LIMIT  -> "AI 서비스 요청 한도에 도달했습니다. 1분 후 다시 시도해 주세요.";
-            case CHAT_AI_AUTH_ERROR  -> "AI 서비스 인증에 문제가 발생했습니다. 관리자에게 문의해 주세요.";
+            case CHAT_AI_TIMEOUT      -> "AI 응답이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.";
+            case CHAT_AI_RATE_LIMIT   -> "AI 서비스 요청 한도에 도달했습니다. 1분 후 다시 시도해 주세요.";
+            case CHAT_AI_AUTH_ERROR   -> "AI 서비스 인증에 문제가 발생했습니다. 관리자에게 문의해 주세요.";
             case CHAT_AI_CIRCUIT_OPEN -> "AI 서비스가 일시적으로 점검 중입니다. 잠시 후 다시 시도해 주세요.";
-            default                  -> "AI 서비스를 일시적으로 이용할 수 없습니다. 잠시 후 다시 시도해 주세요.";
+            default                   -> "AI 서비스를 일시적으로 이용할 수 없습니다. 잠시 후 다시 시도해 주세요.";
         };
     }
 
