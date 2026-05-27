@@ -23,7 +23,7 @@ const errorRate       = new Rate('store_list_error_rate');
 // 테스트할 카테고리 필터 목록 — 실제 DB에 있는 값으로 교체
 const CATEGORIES = ['KOREAN', 'JAPANESE', 'CHINESE', 'WESTERN', 'CAFE'];
 // 테스트할 지역(district) 필터 목록
-const DISTRICTS = ['강남구', '마포구', '종로구', '용산구', '성동구'];
+const DISTRICTS = ['GANGNAM', 'MAPO', 'JONGNO', 'YONGSAN', 'SEONGDONG'];
 
 export const options = {
   scenarios: {
