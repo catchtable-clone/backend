@@ -49,7 +49,7 @@ export default function () {
   });
 
   group('2. 카테고리/지역 필터 검색', () => {
-    const categories = ['한식', '일식', '중식', '양식'];
+    const categories = ['KOREAN', 'JAPANESE', 'CHINESE', 'WESTERN'];
     const category = categories[Math.floor(Math.random() * categories.length)];
     const res = http.get(
       `${BASE_URL}/api/v1/stores?category=${encodeURIComponent(category)}&page=0&size=10`,
