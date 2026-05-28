@@ -61,7 +61,7 @@
       }
     ]
   },
-  "description": "CatchEat 諛깆뿏??紐⑤땲?곕쭅 - HTTP / JVM / DB / Redis / Kafka",
+  "description": "CatchEat 백엔드 모니터링 - HTTP / JVM / DB / Redis / Kafka",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -73,7 +73,7 @@
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
       "id": 1,
-      "title": "?붿빟",
+      "title": "요약",
       "type": "row"
     },
 
@@ -104,7 +104,7 @@
         "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
         "textMode": "auto"
       },
-      "title": "?꾩옱 RPS",
+      "title": "현재 RPS",
       "type": "stat",
       "targets": [
         {
@@ -144,7 +144,7 @@
         "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
         "textMode": "auto"
       },
-      "title": "5xx ?먮윭??,
+      "title": "5xx 에러율",
       "type": "stat",
       "targets": [
         {
@@ -184,7 +184,7 @@
         "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
         "textMode": "auto"
       },
-      "title": "p99 ?묐떟?쒓컙",
+      "title": "p99 응답시간",
       "type": "stat",
       "targets": [
         {
@@ -222,7 +222,7 @@
         "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
         "textMode": "auto"
       },
-      "title": "?낇???,
+      "title": "업타임",
       "type": "stat",
       "targets": [
         {
@@ -238,7 +238,7 @@
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
       "id": 6,
-      "title": "HTTP API ?꾪솴",
+      "title": "HTTP API 현황",
       "type": "row"
     },
 
@@ -278,7 +278,7 @@
         "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
         "tooltip": { "mode": "multi", "sort": "desc" }
       },
-      "title": "珥덈떦 ?붿껌??(?곹깭肄붾뱶蹂?",
+      "title": "초당 요청수 (상태코드별)",
       "type": "timeseries",
       "targets": [
         {
@@ -350,19 +350,19 @@
         "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
         "tooltip": { "mode": "multi", "sort": "desc" }
       },
-      "title": "?먮윭??(%)",
+      "title": "에러율 (%)",
       "type": "timeseries",
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "sum(rate(http_server_requests_seconds_count{job=\"catchtable-app\",status=~\"4..\"}[1m])) / sum(rate(http_server_requests_seconds_count{job=\"catchtable-app\"}[1m])) * 100",
-          "legendFormat": "4xx ?먮윭??,
+          "legendFormat": "4xx 에러율",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "sum(rate(http_server_requests_seconds_count{job=\"catchtable-app\",status=~\"5..\"}[1m])) / sum(rate(http_server_requests_seconds_count{job=\"catchtable-app\"}[1m])) * 100",
-          "legendFormat": "5xx ?먮윭??,
+          "legendFormat": "5xx 에러율",
           "refId": "B"
         }
       ]
@@ -404,7 +404,7 @@
         "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
         "tooltip": { "mode": "multi", "sort": "desc" }
       },
-      "title": "?묐떟?쒓컙 諛깅텇??(p50 / p95 / p99)",
+      "title": "응답시간 백분위 (p50 / p95 / p99)",
       "type": "timeseries",
       "targets": [
         {
@@ -450,7 +450,7 @@
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "?됯퇏 ?묐떟?쒓컙" },
+            "matcher": { "id": "byName", "options": "평균 응답시간" },
             "properties": [
               { "id": "unit", "value": "s" },
               { "id": "custom.width", "value": 130 }
@@ -466,7 +466,7 @@
         "showHeader": true,
         "sortBy": [{ "desc": true, "displayName": "RPS" }]
       },
-      "title": "?붾뱶?ъ씤?몃퀎 ?붿껌 ?꾪솴",
+      "title": "엔드포인트별 요청 현황",
       "transformations": [
         {
           "id": "merge",
@@ -477,7 +477,7 @@
           "options": {
             "renameByName": {
               "Value #A": "RPS",
-              "Value #B": "?됯퇏 ?묐떟?쒓컙",
+              "Value #B": "평균 응답시간",
               "method": "Method",
               "status": "Status",
               "uri": "URI"
@@ -510,7 +510,7 @@
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 22 },
       "id": 11,
-      "title": "JVM ?곹깭",
+      "title": "JVM 상태",
       "type": "row"
     },
 
@@ -550,19 +550,19 @@
         "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
         "tooltip": { "mode": "multi", "sort": "desc" }
       },
-      "title": "JVM Heap 硫붾え由?,
+      "title": "JVM Heap 메모리",
       "type": "timeseries",
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "sum(jvm_memory_used_bytes{job=\"catchtable-app\", area=\"heap\"}) by (id)",
-          "legendFormat": "?ъ슜以?- {{id}}",
+          "legendFormat": "사용중 - {{id}}",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "sum(jvm_memory_max_bytes{job=\"catchtable-app\", area=\"heap\"}) by (id)",
-          "legendFormat": "理쒕? - {{id}}",
+          "legendFormat": "최대 - {{id}}",
           "refId": "B"
         }
       ]
@@ -604,19 +604,19 @@
         "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
         "tooltip": { "mode": "multi", "sort": "desc" }
       },
-      "title": "JVM Non-Heap 硫붾え由?,
+      "title": "JVM Non-Heap 메모리",
       "type": "timeseries",
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "sum(jvm_memory_used_bytes{job=\"catchtable-app\", area=\"nonheap\"}) by (id)",
-          "legendFormat": "?ъ슜以?- {{id}}",
+          "legendFormat": "사용중 - {{id}}",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "sum(jvm_memory_committed_bytes{job=\"catchtable-app\", area=\"nonheap\"}) by (id)",
-          "legendFormat": "而ㅻ컠??- {{id}}",
+          "legendFormat": "커밋됨 - {{id}}",
           "refId": "B"
         }
       ]
@@ -658,7 +658,7 @@
         "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
         "tooltip": { "mode": "multi", "sort": "desc" }
       },
-      "title": "GC ?쇱떆?뺤? ?쒓컙",
+      "title": "GC 일시정지 시간",
       "type": "timeseries",
       "targets": [
         {
@@ -706,25 +706,25 @@
         "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
         "tooltip": { "mode": "multi", "sort": "desc" }
       },
-      "title": "JVM ?ㅻ젅????,
+      "title": "JVM 스레드 수",
       "type": "timeseries",
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "jvm_threads_live_threads{job=\"catchtable-app\"}",
-          "legendFormat": "?쇱씠釉?,
+          "legendFormat": "라이브",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "jvm_threads_daemon_threads{job=\"catchtable-app\"}",
-          "legendFormat": "?곕が",
+          "legendFormat": "데몬",
           "refId": "B"
         },
         {
           "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "jvm_threads_peak_threads{job=\"catchtable-app\"}",
-          "legendFormat": "?쇳겕",
+          "legendFormat": "피크",
           "refId": "C"
         }
       ]
@@ -774,19 +774,19 @@
         "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
         "tooltip": { "mode": "multi", "sort": "desc" }
       },
-      "title": "CPU ?ъ슜瑜?,
+      "title": "CPU 사용률",
       "type": "timeseries",
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "process_cpu_usage{job=\"catchtable-app\"} * 100",
-          "legendFormat": "?꾨줈?몄뒪 CPU",
+          "legendFormat": "프로세스 CPU",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "system_cpu_usage{job=\"catchtable-app\"} * 100",
-          "legendFormat": "?쒖뒪??CPU",
+          "legendFormat": "시스템 CPU",
           "refId": "B"
         }
       ]
@@ -796,7 +796,7 @@
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 39 },
       "id": 17,
-      "title": "DB 而ㅻ꽖??? (HikariCP)",
+      "title": "DB 커넥션 풀 (HikariCP)",
       "type": "row"
     },
 
@@ -836,31 +836,31 @@
         "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
         "tooltip": { "mode": "multi", "sort": "desc" }
       },
-      "title": "HikariCP 而ㅻ꽖???꾪솴",
+      "title": "HikariCP 커넥션 현황",
       "type": "timeseries",
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "hikaricp_connections_active{job=\"catchtable-app\"}",
-          "legendFormat": "?쒖꽦",
+          "legendFormat": "활성",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "hikaricp_connections_idle{job=\"catchtable-app\"}",
-          "legendFormat": "?좏쑕",
+          "legendFormat": "유휴",
           "refId": "B"
         },
         {
           "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "hikaricp_connections_pending{job=\"catchtable-app\"}",
-          "legendFormat": "?湲?,
+          "legendFormat": "대기",
           "refId": "C"
         },
         {
           "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "hikaricp_connections_max{job=\"catchtable-app\"}",
-          "legendFormat": "理쒕?",
+          "legendFormat": "최대",
           "refId": "D"
         }
       ]
@@ -902,13 +902,13 @@
         "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
         "tooltip": { "mode": "multi", "sort": "desc" }
       },
-      "title": "而ㅻ꽖???띾뱷 ?湲곗떆媛?,
+      "title": "커넥션 획득 대기시간",
       "type": "timeseries",
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "rate(hikaricp_connections_acquire_seconds_sum{job=\"catchtable-app\"}[1m]) / rate(hikaricp_connections_acquire_seconds_count{job=\"catchtable-app\"}[1m])",
-          "legendFormat": "?됯퇏 ?띾뱷 ?湲곗떆媛?,
+          "legendFormat": "평균 획득 대기시간",
           "refId": "A"
         }
       ]
@@ -944,7 +944,7 @@
         "showThresholdLabels": false,
         "showThresholdMarkers": true
       },
-      "title": "而ㅻ꽖??? ?ъ슜瑜?,
+      "title": "커넥션 풀 사용률",
       "type": "gauge",
       "targets": [
         {
@@ -960,7 +960,7 @@
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 48 },
       "id": 21,
-      "title": "Redis (Lettuce ?대씪?댁뼵??",
+      "title": "Redis (Lettuce 클라이언트)",
       "type": "row"
     },
 
@@ -1002,13 +1002,13 @@
         "legend": { "calcs": ["mean", "min"], "displayMode": "table", "placement": "bottom", "showLegend": true },
         "tooltip": { "mode": "multi", "sort": "desc" }
       },
-      "title": "罹먯떆 ?덊듃??(Spring Cache)",
+      "title": "캐시 히트율 (Spring Cache)",
       "type": "timeseries",
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "sum(rate(cache_gets_total{job=\"catchtable-app\",result=\"hit\"}[1m])) / (sum(rate(cache_gets_total{job=\"catchtable-app\",result=\"hit\"}[1m])) + sum(rate(cache_gets_total{job=\"catchtable-app\",result=\"miss\"}[1m]))) * 100",
-          "legendFormat": "?덊듃??,
+          "legendFormat": "히트율",
           "refId": "A"
         }
       ]
@@ -1050,7 +1050,7 @@
         "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
         "tooltip": { "mode": "multi", "sort": "desc" }
       },
-      "title": "Lettuce 紐낅졊 泥섎━??(珥덈떦)",
+      "title": "Lettuce 명령 처리량 (초당)",
       "type": "timeseries",
       "targets": [
         {
@@ -1098,7 +1098,7 @@
         "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
         "tooltip": { "mode": "multi", "sort": "desc" }
       },
-      "title": "Lettuce 紐낅졊 ?묐떟?쒓컙",
+      "title": "Lettuce 명령 응답시간",
       "type": "timeseries",
       "targets": [
         {
@@ -1172,7 +1172,7 @@
         {
           "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "sum(kafka_consumer_fetch_manager_records_lag{job=\"catchtable-app\"}) by (topic, partition)",
-          "legendFormat": "{{topic}} - ?뚰떚??{{partition}}",
+          "legendFormat": "{{topic}} - 파티션 {{partition}}",
           "refId": "A"
         }
       ]
@@ -1214,19 +1214,19 @@
         "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
         "tooltip": { "mode": "multi", "sort": "desc" }
       },
-      "title": "Kafka 硫붿떆吏 泥섎━??(珥덈떦)",
+      "title": "Kafka 메시지 처리량 (초당)",
       "type": "timeseries",
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "sum(rate(kafka_consumer_fetch_manager_records_consumed_total{job=\"catchtable-app\"}[1m])) by (topic)",
-          "legendFormat": "?뚮퉬 - {{topic}}",
+          "legendFormat": "소비 - {{topic}}",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "sum(rate(kafka_producer_record_send_total{job=\"catchtable-app\"}[1m])) by (topic)",
-          "legendFormat": "?앹궛 - {{topic}}",
+          "legendFormat": "생산 - {{topic}}",
           "refId": "B"
         }
       ]
@@ -1240,7 +1240,7 @@
   "time": { "from": "now-1h", "to": "now" },
   "timepicker": {},
   "timezone": "Asia/Seoul",
-  "title": "CatchEat Backend 紐⑤땲?곕쭅",
+  "title": "CatchEat Backend 모니터링",
   "uid": "catcheat-dongan-v1",
   "version": 1,
   "weekStart": ""
