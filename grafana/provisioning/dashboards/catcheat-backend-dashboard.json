@@ -78,7 +78,7 @@
     },
 
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "thresholds" },
@@ -108,7 +108,7 @@
       "type": "stat",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "sum(rate(http_server_requests_seconds_count{job=\"catchtable-app\"}[1m]))",
           "instant": true,
           "refId": "A"
@@ -117,7 +117,7 @@
     },
 
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "thresholds" },
@@ -148,7 +148,7 @@
       "type": "stat",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "sum(rate(http_server_requests_seconds_count{job=\"catchtable-app\",status=~\"5..\"}[1m])) / sum(rate(http_server_requests_seconds_count{job=\"catchtable-app\"}[1m])) * 100",
           "instant": true,
           "refId": "A"
@@ -157,7 +157,7 @@
     },
 
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "thresholds" },
@@ -188,7 +188,7 @@
       "type": "stat",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket{job=\"catchtable-app\"}[1m])) by (le))",
           "instant": true,
           "refId": "A"
@@ -197,7 +197,7 @@
     },
 
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "thresholds" },
@@ -226,7 +226,7 @@
       "type": "stat",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "process_uptime_seconds{job=\"catchtable-app\"}",
           "instant": true,
           "refId": "A"
@@ -243,7 +243,7 @@
     },
 
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -282,25 +282,25 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "sum(rate(http_server_requests_seconds_count{job=\"catchtable-app\",status=~\"2..\"}[1m]))",
           "legendFormat": "2xx",
           "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "sum(rate(http_server_requests_seconds_count{job=\"catchtable-app\",status=~\"3..\"}[1m]))",
           "legendFormat": "3xx",
           "refId": "B"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "sum(rate(http_server_requests_seconds_count{job=\"catchtable-app\",status=~\"4..\"}[1m]))",
           "legendFormat": "4xx",
           "refId": "C"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "sum(rate(http_server_requests_seconds_count{job=\"catchtable-app\",status=~\"5..\"}[1m]))",
           "legendFormat": "5xx",
           "refId": "D"
@@ -309,7 +309,7 @@
     },
 
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -354,13 +354,13 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "sum(rate(http_server_requests_seconds_count{job=\"catchtable-app\",status=~\"4..\"}[1m])) / sum(rate(http_server_requests_seconds_count{job=\"catchtable-app\"}[1m])) * 100",
           "legendFormat": "4xx 에러율",
           "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "sum(rate(http_server_requests_seconds_count{job=\"catchtable-app\",status=~\"5..\"}[1m])) / sum(rate(http_server_requests_seconds_count{job=\"catchtable-app\"}[1m])) * 100",
           "legendFormat": "5xx 에러율",
           "refId": "B"
@@ -369,7 +369,7 @@
     },
 
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -408,19 +408,19 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "histogram_quantile(0.50, sum(rate(http_server_requests_seconds_bucket{job=\"catchtable-app\"}[1m])) by (le))",
           "legendFormat": "p50",
           "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{job=\"catchtable-app\"}[1m])) by (le))",
           "legendFormat": "p95",
           "refId": "B"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket{job=\"catchtable-app\"}[1m])) by (le))",
           "legendFormat": "p99",
           "refId": "C"
@@ -429,7 +429,7 @@
     },
 
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "thresholds" },
@@ -488,7 +488,7 @@
       "type": "table",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "sum(rate(http_server_requests_seconds_count{job=\"catchtable-app\"}[5m])) by (uri, method, status)",
           "format": "table",
           "instant": true,
@@ -496,7 +496,7 @@
           "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "sum(rate(http_server_requests_seconds_sum{job=\"catchtable-app\"}[5m])) by (uri, method, status) / sum(rate(http_server_requests_seconds_count{job=\"catchtable-app\"}[5m])) by (uri, method, status)",
           "format": "table",
           "instant": true,
@@ -515,7 +515,7 @@
     },
 
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -554,13 +554,13 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "sum(jvm_memory_used_bytes{job=\"catchtable-app\", area=\"heap\"}) by (id)",
           "legendFormat": "사용중 - {{id}}",
           "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "sum(jvm_memory_max_bytes{job=\"catchtable-app\", area=\"heap\"}) by (id)",
           "legendFormat": "최대 - {{id}}",
           "refId": "B"
@@ -569,7 +569,7 @@
     },
 
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -608,13 +608,13 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "sum(jvm_memory_used_bytes{job=\"catchtable-app\", area=\"nonheap\"}) by (id)",
           "legendFormat": "사용중 - {{id}}",
           "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "sum(jvm_memory_committed_bytes{job=\"catchtable-app\", area=\"nonheap\"}) by (id)",
           "legendFormat": "커밋됨 - {{id}}",
           "refId": "B"
@@ -623,7 +623,7 @@
     },
 
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -662,7 +662,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "rate(jvm_gc_pause_seconds_sum{job=\"catchtable-app\"}[1m])",
           "legendFormat": "{{action}} - {{cause}}",
           "refId": "A"
@@ -671,7 +671,7 @@
     },
 
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -710,19 +710,19 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "jvm_threads_live_threads{job=\"catchtable-app\"}",
           "legendFormat": "라이브",
           "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "jvm_threads_daemon_threads{job=\"catchtable-app\"}",
           "legendFormat": "데몬",
           "refId": "B"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "jvm_threads_peak_threads{job=\"catchtable-app\"}",
           "legendFormat": "피크",
           "refId": "C"
@@ -731,7 +731,7 @@
     },
 
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -778,13 +778,13 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "process_cpu_usage{job=\"catchtable-app\"} * 100",
           "legendFormat": "프로세스 CPU",
           "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "system_cpu_usage{job=\"catchtable-app\"} * 100",
           "legendFormat": "시스템 CPU",
           "refId": "B"
@@ -801,7 +801,7 @@
     },
 
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -840,25 +840,25 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "hikaricp_connections_active{job=\"catchtable-app\"}",
           "legendFormat": "활성",
           "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "hikaricp_connections_idle{job=\"catchtable-app\"}",
           "legendFormat": "유휴",
           "refId": "B"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "hikaricp_connections_pending{job=\"catchtable-app\"}",
           "legendFormat": "대기",
           "refId": "C"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "hikaricp_connections_max{job=\"catchtable-app\"}",
           "legendFormat": "최대",
           "refId": "D"
@@ -867,7 +867,7 @@
     },
 
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -906,7 +906,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "rate(hikaricp_connections_acquire_seconds_sum{job=\"catchtable-app\"}[1m]) / rate(hikaricp_connections_acquire_seconds_count{job=\"catchtable-app\"}[1m])",
           "legendFormat": "평균 획득 대기시간",
           "refId": "A"
@@ -915,7 +915,7 @@
     },
 
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "thresholds" },
@@ -948,7 +948,7 @@
       "type": "gauge",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "hikaricp_connections_active{job=\"catchtable-app\"} / hikaricp_connections_max{job=\"catchtable-app\"} * 100",
           "instant": true,
           "refId": "A"
@@ -965,7 +965,7 @@
     },
 
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -1006,7 +1006,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "sum(rate(cache_gets_total{job=\"catchtable-app\",result=\"hit\"}[1m])) / (sum(rate(cache_gets_total{job=\"catchtable-app\",result=\"hit\"}[1m])) + sum(rate(cache_gets_total{job=\"catchtable-app\",result=\"miss\"}[1m]))) * 100",
           "legendFormat": "히트율",
           "refId": "A"
@@ -1015,7 +1015,7 @@
     },
 
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -1054,7 +1054,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "sum(rate(lettuce_command_completion_seconds_count{job=\"catchtable-app\"}[1m])) by (command)",
           "legendFormat": "{{command}}",
           "refId": "A"
@@ -1063,7 +1063,7 @@
     },
 
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -1102,7 +1102,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "sum(rate(lettuce_command_completion_seconds_sum{job=\"catchtable-app\"}[1m])) by (command) / sum(rate(lettuce_command_completion_seconds_count{job=\"catchtable-app\"}[1m])) by (command)",
           "legendFormat": "{{command}}",
           "refId": "A"
@@ -1119,7 +1119,7 @@
     },
 
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -1170,7 +1170,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "sum(kafka_consumer_fetch_manager_records_lag{job=\"catchtable-app\"}) by (topic, partition)",
           "legendFormat": "{{topic}} - 파티션 {{partition}}",
           "refId": "A"
@@ -1179,7 +1179,7 @@
     },
 
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -1218,13 +1218,13 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "sum(rate(kafka_consumer_fetch_manager_records_consumed_total{job=\"catchtable-app\"}[1m])) by (topic)",
           "legendFormat": "소비 - {{topic}}",
           "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
           "expr": "sum(rate(kafka_producer_record_send_total{job=\"catchtable-app\"}[1m])) by (topic)",
           "legendFormat": "생산 - {{topic}}",
           "refId": "B"
