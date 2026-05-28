@@ -8,7 +8,6 @@ import com.catchtable.user.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -42,7 +41,6 @@ class VacancyLoadTestTokenGenerator {
     private JwtTokenProvider jwtTokenProvider;
 
     @Test
-    @Transactional
     void generateTokens() throws IOException {
         // -DrunLoadTokenGen=true 일 때만 실행. CI/일반 test 실행 시 스킵.
         if (!"true".equals(System.getProperty("runLoadTokenGen"))) {

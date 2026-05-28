@@ -46,17 +46,13 @@
  * =============================================================================
  *
  * [사전 준비]
- *   1. 백엔드 코드 임시 수정 (테스트 끝나면 반드시 원복!)
- *      파일: backend/src/test/java/com/catchtable/loadtest/VacancyLoadTestTokenGenerator.java
- *      generateTokens() 위의 `@Transactional` 어노테이션을 주석 처리한다.
- *      ( @Transactional 이 살아있으면 시드 유저가 롤백되어 k6 요청에서 USER_NOT_FOUND 발생 )
- *
- *   2. 시드 유저 100명 + 토큰 100개 생성 (backend 디렉토리에서)
+ *   1. 시드 유저 100명 + 토큰 100개 생성 (backend 디렉토리에서)
  *      ./gradlew test \
  *        --tests "com.catchtable.loadtest.VacancyLoadTestTokenGenerator.generateTokens" \
  *        -DrunLoadTokenGen=true
+ *      ( -DrunLoadTokenGen=true 가드가 있어 일반 ./gradlew test 시 자동 스킵됨 )
  *
- *   3. 테스트 대상 StoreRemain 준비
+ *   2. 테스트 대상 StoreRemain 준비
  *      - remainTeam = 0 인 (잔여 0) StoreRemain 의 id 가 필요하다.
  *      - DB 에서 미리 하나 골라두고, 그 row 의 remainDate / remainTime 으로 Redis 키를 만든다.
  *
@@ -141,7 +137,6 @@
  * =============================================================================
  * 테스트 종료 후 정리 (필수)
  * =============================================================================
- *   - VacancyLoadTestTokenGenerator.java 의 `@Transactional` 주석 원복.
  *   - 시드 데이터 정리:
  *       DELETE FROM vacancy WHERE user_id IN (SELECT id FROM users WHERE google_id LIKE 'loadtest-google-%');
  *       DELETE FROM users  WHERE google_id LIKE 'loadtest-google-%';
@@ -177,11 +172,13 @@ const smembersSize = new Trend('smembers_set_size');
 
 // Redis 클라이언트 (smembers / ttl phase 에서만 사용)
 // URL 형식: redis://[:password@]host:port
+// subscribe phase 에서는 Redis 접근이 불필요하므로 조건부 초기화
+//   (Redis 접근 불가 환경에서도 subscribe phase 단독 실행 가능하게 함)
 const REDIS_URL = (() => {
     const auth = REDIS_PASSWORD ? `:${encodeURIComponent(REDIS_PASSWORD)}@` : '';
     return `redis://${auth}${REDIS_ADDR}`;
 })();
-const redisClient = new redis.Client(REDIS_URL);
+const redisClient = (PHASE === 'smembers' || PHASE === 'ttl') ? new redis.Client(REDIS_URL) : null;
 
 export const options = (() => {
     if (PHASE === 'subscribe') {
@@ -232,9 +229,11 @@ function subscribe() {
 async function smembers() {
     if (!REDIS_KEY) throw new Error('REDIS_KEY env required');
 
-    const start = Date.now();
+    // performance.now() 는 마이크로초 정밀도 (소수점 ms) 라 sub-ms 측정 가능.
+    // SMEMBERS 가 1ms 이하인 경우 Date.now() 로는 0 으로 측정되어 분포가 왜곡됨.
+    const start = performance.now();
     const members = await redisClient.smembers(REDIS_KEY);
-    const duration = Date.now() - start;
+    const duration = performance.now() - start;
 
     smembersDuration.add(duration);
     smembersSize.add(members.length);
