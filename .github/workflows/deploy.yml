@@ -108,17 +108,17 @@ jobs:
             # 6. app만 교체 (nginx/certbot은 그대로 유지 — 무중단 가까움)
             sudo docker compose -f "$COMPOSE" up -d --no-deps app
 
-            # 7. 헬스체크 (Docker healthcheck 상태 polling, 최대 180초)
-            # OTel Agent + JPA 16개 repo + Tomcat 등으로 부팅에 약 90초 소요됨
+            # 7. 헬스체크 (Docker healthcheck 상태 polling, 최대 300초)
+            # OTel Agent + JPA repo + Tomcat 등으로 부팅에 약 90~120초 소요. 콜드/지연 대비 여유 확보.
             echo "Waiting for app to become healthy..."
-            for i in $(seq 1 36); do
+            for i in $(seq 1 60); do
               STATUS=$(sudo docker inspect --format='{{.State.Health.Status}}' catchtable-app 2>/dev/null || echo "starting")
               if [ "$STATUS" = "healthy" ]; then
                 echo "✅ App is healthy"
                 sudo docker image prune -f
                 exit 0
               fi
-              echo "  ($i/36) status=$STATUS"
+              echo "  ($i/60) status=$STATUS"
               sleep 5
             done
 

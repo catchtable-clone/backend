@@ -18,6 +18,7 @@ java {
 dependencyManagement {
     imports {
         mavenBom "org.springframework.ai:spring-ai-bom:1.1.4"
+        mavenBom "org.testcontainers:testcontainers-bom:1.20.6"
     }
 }
 
@@ -32,6 +33,7 @@ repositories {
 }
 
 dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     implementation 'org.springframework.kafka:spring-kafka'
     implementation 'org.springframework.ai:spring-ai-starter-model-google-genai'
     implementation 'org.jetbrains.kotlin:kotlin-reflect'
@@ -58,6 +60,8 @@ dependencies {
 //    testImplementation 'org.springframework.boot:spring-boot-starter-security-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-validation-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+    testImplementation 'org.testcontainers:junit-jupiter'
+    testImplementation 'org.testcontainers:postgresql'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.0'
     implementation 'io.github.resilience4j:resilience4j-spring-boot3:2.3.0'

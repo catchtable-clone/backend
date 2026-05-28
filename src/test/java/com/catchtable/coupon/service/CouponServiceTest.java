@@ -3,6 +3,8 @@ package com.catchtable.coupon.service;
 import com.catchtable.coupon.entity.Coupon;
 import com.catchtable.coupon.entity.CouponStatus;
 import com.catchtable.coupon.entity.CouponTemplate;
+import com.catchtable.coupon.redis.RedisCouponIssuer;
+import com.catchtable.coupon.redis.RedisCouponIssuer.IssueResult;
 import com.catchtable.coupon.repository.CouponRepository;
 import com.catchtable.coupon.repository.CouponTemplateRepository;
 import com.catchtable.global.exception.CustomException;
@@ -10,12 +12,16 @@ import com.catchtable.global.exception.ErrorCode;
 import com.catchtable.user.entity.User;
 import com.catchtable.user.entity.UserRole;
 import com.catchtable.user.repository.UserRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -23,6 +29,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 class CouponServiceTest {
@@ -36,8 +43,26 @@ class CouponServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private RedisCouponIssuer redisCouponIssuer;
+
+    @Mock
+    private TransactionTemplate transactionTemplate;
+
     @InjectMocks
     private CouponService couponService;
+
+    @BeforeEach
+    void stubTransactionTemplate() {
+        // CouponService 가 TransactionTemplate.execute() 로 짧은 트랜잭션을 묶기 때문에
+        // 단위 테스트에서는 콜백을 즉시 실행하도록 stub 한다.
+        // lenient — 트랜잭션을 안 쓰는 테스트(쿠폰 사용/반환/조회 등)에서 미사용 경고 방지.
+        Mockito.lenient().when(transactionTemplate.execute(Mockito.any()))
+                .thenAnswer(invocation -> {
+                    TransactionCallback<?> callback = invocation.getArgument(0);
+                    return callback.doInTransaction(null);
+                });
+    }
 
     private User createUser(Long id) {
         return User.builder()
@@ -120,34 +145,42 @@ class CouponServiceTest {
     // === 쿠폰 발급 ===
 
     @Test
-    @DisplayName("쿠폰 발급 성공 - 수량 차감 확인")
+    @DisplayName("쿠폰 발급 성공 - Redis Lua 통과 후 coupons row INSERT")
     void issueCouponSuccess() {
         User user = createUser(1L);
         CouponTemplate template = createTemplate(10, LocalDateTime.now().plusDays(30));
 
-        given(userRepository.getById(1L)).willReturn(user);
-        given(couponTemplateRepository.findByIdWithLock(1L)).willReturn(Optional.of(template));
-        given(couponRepository.existsByUserIdAndCouponTemplateId(1L, 1L)).willReturn(false);
+        given(redisCouponIssuer.tryIssue(1L, 1L)).willReturn(IssueResult.SUCCESS);
+        given(userRepository.getReferenceById(1L)).willReturn(user);
+        given(couponTemplateRepository.findById(1L)).willReturn(Optional.of(template));
         given(couponRepository.save(any(Coupon.class))).willAnswer(invocation -> {
             Coupon coupon = invocation.getArgument(0);
             setField(coupon, "id", 1L);
             return coupon;
         });
 
-        couponService.issueCoupon(1L, 1L);
+        var response = couponService.issueCoupon(1L, 1L);
 
-        assertThat(template.getRemain()).isEqualTo(9);
+        assertThat(response.couponId()).isEqualTo(1L);
+        assertThat(response.couponName()).isEqualTo("10% 할인");
+        verify(couponRepository).save(any(Coupon.class));
     }
 
     @Test
-    @DisplayName("쿠폰 발급 실패 - 중복 발급")
-    void issueCouponFailDuplicate() {
-        User user = createUser(1L);
-        CouponTemplate template = createTemplate(10, LocalDateTime.now().plusDays(30));
+    @DisplayName("쿠폰 발급 실패 - Redis 장애로 회로 폴백 시 503 매핑")
+    void issueCouponFailRedisUnavailable() {
+        given(redisCouponIssuer.tryIssue(1L, 1L)).willReturn(IssueResult.UNAVAILABLE);
 
-        given(userRepository.getById(1L)).willReturn(user);
-        given(couponTemplateRepository.findByIdWithLock(1L)).willReturn(Optional.of(template));
-        given(couponRepository.existsByUserIdAndCouponTemplateId(1L, 1L)).willReturn(true);
+        assertThatThrownBy(() -> couponService.issueCoupon(1L, 1L))
+                .isInstanceOf(CustomException.class)
+                .satisfies(ex -> assertThat(((CustomException) ex).getErrorCode())
+                        .isEqualTo(ErrorCode.COUPON_ISSUE_TEMPORARILY_UNAVAILABLE));
+    }
+
+    @Test
+    @DisplayName("쿠폰 발급 실패 - 중복 발급 (Redis Lua 가 DUPLICATE 반환)")
+    void issueCouponFailDuplicate() {
+        given(redisCouponIssuer.tryIssue(1L, 1L)).willReturn(IssueResult.DUPLICATE);
 
         assertThatThrownBy(() -> couponService.issueCoupon(1L, 1L))
                 .isInstanceOf(CustomException.class)
@@ -156,19 +189,32 @@ class CouponServiceTest {
     }
 
     @Test
-    @DisplayName("쿠폰 발급 실패 - 수량 소진")
+    @DisplayName("쿠폰 발급 실패 - 수량 소진 (Redis Lua 가 EXHAUSTED 반환)")
     void issueCouponFailExhausted() {
-        User user = createUser(1L);
-        CouponTemplate template = createTemplate(0, LocalDateTime.now().plusDays(30));
-
-        given(userRepository.getById(1L)).willReturn(user);
-        given(couponTemplateRepository.findByIdWithLock(1L)).willReturn(Optional.of(template));
-        given(couponRepository.existsByUserIdAndCouponTemplateId(1L, 1L)).willReturn(false);
+        given(redisCouponIssuer.tryIssue(1L, 1L)).willReturn(IssueResult.EXHAUSTED);
 
         assertThatThrownBy(() -> couponService.issueCoupon(1L, 1L))
                 .isInstanceOf(CustomException.class)
                 .satisfies(ex -> assertThat(((CustomException) ex).getErrorCode())
                         .isEqualTo(ErrorCode.COUPON_EXHAUSTED));
+    }
+
+    @Test
+    @DisplayName("쿠폰 발급 - DB INSERT 실패 시 Redis 보상 호출")
+    void issueCouponDbFailureCompensatesRedis() {
+        User user = createUser(1L);
+        CouponTemplate template = createTemplate(10, LocalDateTime.now().plusDays(30));
+
+        given(redisCouponIssuer.tryIssue(1L, 1L)).willReturn(IssueResult.SUCCESS);
+        given(userRepository.getReferenceById(1L)).willReturn(user);
+        given(couponTemplateRepository.findById(1L)).willReturn(Optional.of(template));
+        given(couponRepository.save(any(Coupon.class)))
+                .willThrow(new RuntimeException("DB INSERT 실패 시뮬레이션"));
+
+        assertThatThrownBy(() -> couponService.issueCoupon(1L, 1L))
+                .isInstanceOf(RuntimeException.class);
+
+        verify(redisCouponIssuer).compensate(1L, 1L);
     }
 
     // === 쿠폰 사용 ===
