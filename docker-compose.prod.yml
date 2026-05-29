@@ -79,8 +79,9 @@ services:
       - '--storage.tsdb.retention.time=7d'
       - '--storage.tsdb.retention.size=1GB'
       - '--web.enable-lifecycle'
-    expose:
-      - "9090"
+      - '--web.enable-remote-write-receiver'
+    ports:
+      - "9090:9090"
     deploy:
       resources:
         limits:
