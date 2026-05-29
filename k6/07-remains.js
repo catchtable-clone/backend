@@ -82,10 +82,8 @@ export default function () {
   const isSpike   = exec.scenario.name === 'event_spike';
   const storeId   = STORE_IDS[Math.floor(Math.random() * STORE_IDS.length)];
   // +9h: 서버가 UTC로 실행될 경우 자정~오전9시 사이에 날짜가 하루 틀어지는 것 방지
-  const today     = new Date(Date.now() + 9 * 60 * 60 * 1000);
-  const dayOffset = Math.floor(Math.random() * 7);
-  today.setDate(today.getDate() + dayOffset);
-  const date = today.toISOString().split('T')[0];
+  const dayOffset = Math.floor(Math.random() * 7) * 24 * 60 * 60 * 1000;
+  const date = new Date(Date.now() + 9 * 60 * 60 * 1000 + dayOffset).toISOString().split('T')[0];
 
   group('잔여석 조회', () => {
     const res = http.get(

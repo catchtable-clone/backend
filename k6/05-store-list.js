@@ -95,7 +95,7 @@ export default function () {
     let url = `${BASE_URL}/api/v1/stores?page=${randomPage}&size=10`;
     if (useFilter) {
       if (Math.random() > 0.5) url += `&category=${randomCategory}`;
-      if (Math.random() > 0.5) url += `&district=${randomDistrict}`;
+      if (Math.random() > 0.5) url += `&district=${encodeURIComponent(randomDistrict)}`;
     }
     const res = http.get(url, { headers: HEADERS_JSON });
     listDuration.add(res.timings.duration);
