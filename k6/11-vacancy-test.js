@@ -145,7 +145,8 @@
  */
 
 import http from 'k6/http';
-import redis from 'k6/experimental/redis';
+// k6 v2.0+에서 'k6/experimental/redis'가 'k6/x/redis'로 이전됨 (자동 extension 빌드 — 첫 실행 시 ~15초 소요).
+import redis from 'k6/x/redis';
 import { check } from 'k6';
 import { Counter, Trend } from 'k6/metrics';
 

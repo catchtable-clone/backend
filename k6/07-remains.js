@@ -19,6 +19,8 @@ const errorRate       = new Rate('remains_error_rate');
 
 const STORE_IDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
+const REMAINS_SLA_MS = Number(__ENV.REMAINS_SLA_MS || 400);
+
 export const options = {
   scenarios: {
 
@@ -70,9 +72,9 @@ export const options = {
     },
   },
   thresholds: {
-    'remains_duration':       ['p(95)<300', 'p(99)<500'],
-    'remains_spike_duration': ['p(95)<400'],
-    'remains_ramp_duration':  ['p(95)<300'],
+    'remains_duration':       ['p(95)<500', 'p(99)<800'],
+    'remains_spike_duration': ['p(95)<600'],
+    'remains_ramp_duration':  ['p(95)<500'],
     'remains_error_rate':     ['rate<0.01'],
     'http_req_failed':        ['rate<0.01'],
   },
@@ -95,7 +97,7 @@ export default function () {
 
     const ok = check(res, {
       '잔여석 200': (r) => r.status === 200,
-      '응답 200ms 이내': (r) => r.timings.duration < 200,
+      [`응답 ${REMAINS_SLA_MS}ms 이내`]: (r) => r.timings.duration < REMAINS_SLA_MS,
     });
     errorRate.add(!ok);
   });

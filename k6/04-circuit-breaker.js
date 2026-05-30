@@ -2,6 +2,18 @@
  * 서킷브레이커 부하테스트 — 점진적 증가로 OPEN 전환 시점 탐색
  * 실행: .\k6\run.ps1 -Test 04 -AuthToken "eyJ..." -BaseUrl https://api.catcheat.kro.kr
  *
+ * ⚠️ ⚠️ ⚠️  비용 경고  ⚠️ ⚠️ ⚠️
+ *   이 시나리오는 실제 Gemini API를 호출합니다. 전체 5분 30초 동안 약 2,000~5,000 요청 발생.
+ *   서킷이 빨리 열리지 않으면 그만큼 외부 API 비용이 발생합니다.
+ *
+ *   안전 가드:
+ *     1. MAX_ITER_PER_VU 환경변수로 VU당 요청 상한 (기본 250 → 글로벌 추정 5000)
+ *        ⚠️ k6 VU는 isolated VM이라 이 가드는 "VU별" 상한임
+ *           글로벌 최대 = MAX_ITER_PER_VU × 시나리오 max VU 수(20)
+ *        예: MAX_ITER_PER_VU=25 ./k6/run.sh -t 04   (글로벌 ~500건)
+ *     2. 일일 메시지 제한(100회/사용자) — 동일 AUTH_TOKEN 사용 시 100건 후 자동 차단됨
+ *     3. mock LLM 사용 권장 — application.yml에서 spring.ai.* 를 mock provider로 변경 후 테스트
+ *
  * 목적:
  *   - LLM API(Spring AI)에 점진적으로 부하를 올려 서킷브레이커가 열리는 VU 수 확인
  *   - 서킷 CLOSED → OPEN → HALF-OPEN → CLOSED 전체 상태 전환 사이클 관찰
@@ -39,16 +51,31 @@
 import http from 'k6/http';
 import { sleep, check, group } from 'k6';
 import { Counter, Rate, Trend } from 'k6/metrics';
-import { BASE_URL, HEADERS_AUTH } from './config.js';
+import { BASE_URL, HEADERS_AUTH, requireAuthToken } from './config.js';
+
+// 빈 AUTH_TOKEN 즉시 fail-fast — 401 사일런트 실패 시 Gemini 비용은 안 들지만 측정 무의미
+export function setup() {
+  requireAuthToken('04');
+}
 
 const circuitOpenCount   = new Counter('circuit_open_responses');   // 빠른 실패 (서킷 OPEN)
 const circuitClosedCount = new Counter('circuit_closed_responses'); // 정상 응답 (서킷 CLOSED)
 const llmErrorRate       = new Rate('llm_error_rate');
 const chatDuration       = new Trend('chat_duration', true);
+const skippedSafeguard   = new Counter('skipped_by_safeguard');     // 안전 가드로 차단된 요청
 
 // 서킷 OPEN 판별 기준: 500ms 미만이면서 에러 → 서킷이 즉시 차단한 것
 // LLM 정상 처리는 최소 수백ms~수초이므로 500ms 이하 빠른 실패 = OPEN 확실
 const CIRCUIT_OPEN_THRESHOLD_MS = 500;
+
+// 안전 가드: VU당 최대 요청 수 — Gemini API 비용 폭증 방지
+// k6는 각 VU가 isolated VM이라 module 변수가 VU별로 분리됨.
+// 따라서 이 값은 "VU당 상한"이며, 글로벌 최대 ≈ 값 × 최대 VU 수.
+// 시나리오 04는 최대 20 VU 사용 → 글로벌 최대 = MAX_ITER_PER_VU × 20
+//   기본 250 × 20 = 5000건 (Gemini 무료 티어 일일 한도 보호)
+const MAX_ITER_PER_VU = Number(__ENV.MAX_ITER_PER_VU || 250);
+const MAX_VUS_IN_SCENARIO = 20; // 시나리오 옵션 변경 시 함께 갱신
+let vuIterCount = 0;
 
 export const options = {
   scenarios: {
@@ -117,6 +144,13 @@ const TEST_MESSAGES = [
 ];
 
 export default function () {
+  // 안전 가드 — 이 VU가 MAX_ITER_PER_VU 도달 시 추가 호출 중단 (Gemini 비용 차단)
+  vuIterCount++;
+  if (MAX_ITER_PER_VU > 0 && vuIterCount > MAX_ITER_PER_VU) {
+    skippedSafeguard.add(1);
+    return;
+  }
+
   const msg     = TEST_MESSAGES[Math.floor(Math.random() * TEST_MESSAGES.length)];
   const payload = JSON.stringify(msg);
 
@@ -155,13 +189,18 @@ export default function () {
 }
 
 export function handleSummary(data) {
-  const open   = data.metrics.circuit_open_responses?.values?.count   || 0;
-  const closed = data.metrics.circuit_closed_responses?.values?.count || 0;
-  const total  = open + closed;
-  const p95    = data.metrics.chat_duration?.values?.['p(95)']        || 0;
-  const p99    = data.metrics.chat_duration?.values?.['p(99)']        || 0;
+  const open    = data.metrics.circuit_open_responses?.values?.count   || 0;
+  const closed  = data.metrics.circuit_closed_responses?.values?.count || 0;
+  const skipped = data.metrics.skipped_by_safeguard?.values?.count     || 0;
+  const total   = open + closed;
+  const p95     = data.metrics.chat_duration?.values?.['p(95)']        || 0;
+  const p99     = data.metrics.chat_duration?.values?.['p(99)']        || 0;
 
   const openRate = total > 0 ? ((open / total) * 100).toFixed(1) : '0.0';
+  const globalEstimate = MAX_ITER_PER_VU * MAX_VUS_IN_SCENARIO;
+  const safeguardNote = skipped > 0
+    ? `\n[안전 가드] ${skipped}건이 MAX_ITER_PER_VU(=${MAX_ITER_PER_VU}, 글로벌 추정 ${globalEstimate}건) 도달로 차단됨 (Gemini 비용 보호)`
+    : `\n[안전 가드] 작동 가능: VU당 최대 ${MAX_ITER_PER_VU}건, 글로벌 추정 최대 ${globalEstimate}건`;
 
   return {
     stdout: `
@@ -169,7 +208,7 @@ export function handleSummary(data) {
 총 요청수              : ${total}건
 정상 응답 (CLOSED)     : ${closed}건
 즉시 차단  (OPEN)      : ${open}건
-서킷 OPEN 비율         : ${openRate}%
+서킷 OPEN 비율         : ${openRate}%${safeguardNote}
 
 p95 응답시간           : ${(p95 / 1000).toFixed(2)}초
 p99 응답시간           : ${(p99 / 1000).toFixed(2)}초

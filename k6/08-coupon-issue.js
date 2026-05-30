@@ -1,29 +1,57 @@
 /**
  * [단일 API] 쿠폰 선착순 발급 동시성 부하테스트
- * 실행: .\k6\run.ps1 -Test 08 -AuthToken "eyJ..." -CouponTemplateId 1 -BaseUrl https://api.catcheat.kro.kr
+ *
+ * 실행:
+ *   # 단일 토큰 (검증 의미 반감 — 첫 1건만 성공, 나머지는 "이미 발급" 에러)
+ *   .\k6\run.ps1 -Test 08 -AuthToken "eyJ..." -CouponTemplateId 1
+ *
+ *   # 다중 토큰 (권장 — 비관적 락 정확히 검증)
+ *   ./k6/run.sh -t 08 -c 1 -T build/tokens-1000.csv
  *
  * 목적:
  *   - POST /coupons/{templateId}/issue 에 100명 동시 요청
  *   - 비관적 락(SELECT FOR UPDATE)으로 초과 발급 방지 검증
  *   - 재고 소진 후 올바른 에러 응답 확인
  *
- * 기대 결과:
+ * 기대 결과 (다중 토큰 기준):
  *   - 쿠폰 재고(remainCount) 수만큼만 성공 (201)
  *   - 초과 요청은 400/409 에러 (COUPON_EXHAUSTED 등)
  *   - 성공 수가 재고를 초과하면 비관적 락 오작동 → 버그
  *
- * 주의:
- *   - 테스트 전 쿠폰 템플릿 restock 필요 (테스트용 재고 세팅)
- *   - 여러 사용자 JWT 토큰이 있어야 중복 발급 방지 로직 우회 가능
- *     (동일 토큰으로 요청 시 "이미 발급됨" 에러가 대부분 → 의미 반감)
+ * 토큰 풀 발급 (다중 토큰 사용 시):
+ *   cd backend
+ *   ./gradlew test \
+ *     --tests "com.catchtable.loadtest.VacancyLoadTestTokenGenerator.generateTokens" \
+ *     -DrunLoadTokenGen=true
+ *   # → build/load-test-tokens.csv 에 1000개 토큰 콤마구분 출력
  */
 import http from 'k6/http';
 import { sleep, check, group } from 'k6';
 import { Counter, Rate, Trend } from 'k6/metrics';
-import { BASE_URL, HEADERS_AUTH } from './config.js';
+import { BASE_URL, HEADERS_JSON, HEADERS_AUTH, AUTH_TOKEN, requireAuthToken } from './config.js';
+
+// 빈 AUTH_TOKEN + 빈 TOKENS 환경변수 → 즉시 fail-fast (사일런트 401 방지)
+export function setup() {
+  const hasMulti = (__ENV.TOKENS || '').split(',').filter(Boolean).length > 1;
+  if (!AUTH_TOKEN && !hasMulti) {
+    requireAuthToken('08');
+  }
+}
 
 // 발급할 쿠폰 템플릿 ID — run.ps1 -CouponTemplateId 로 주입
 const TEMPLATE_ID = __ENV.COUPON_TEMPLATE_ID || '1';
+
+// 다중 토큰 풀 (선택) — CSV 형식, 단일 토큰만 있으면 AUTH_TOKEN 사용 (검증 의미 반감)
+const TOKENS = (__ENV.TOKENS ? __ENV.TOKENS.split(',') : []).filter(Boolean);
+const USE_MULTI_TOKENS = TOKENS.length > 1;
+
+if (!USE_MULTI_TOKENS) {
+  console.warn(
+    '[WARN] 단일 토큰 모드 — 첫 1건 외 나머지는 "이미 발급" 에러로 처리됩니다.\n' +
+    '       비관적 락 검증을 정확히 하려면 TOKENS 환경변수 (CSV)로 다중 토큰을 주입하세요.\n' +
+    '       예: TOKENS=$(cat build/load-test-tokens.csv) k6 run ...'
+  );
+}
 
 const issuedCount    = new Counter('coupon_issued');      // 발급 성공
 const exhaustedCount = new Counter('coupon_exhausted');   // 재고 소진
@@ -55,11 +83,16 @@ export const options = {
 };
 
 export default function () {
+  // 다중 토큰 모드면 VU별로 다른 토큰 사용 → 사용자당 1건 발급 제약을 우회해 비관적 락만 검증
+  const headers = USE_MULTI_TOKENS
+    ? { ...HEADERS_JSON, Authorization: `Bearer ${TOKENS[(__VU - 1) % TOKENS.length]}` }
+    : HEADERS_AUTH;
+
   group('쿠폰 발급 (선착순 동시성)', () => {
     const res = http.post(
       `${BASE_URL}/api/v1/coupons/${TEMPLATE_ID}/issue`,
       null, // body 없음 — POST 요청만으로 발급
-      { headers: HEADERS_AUTH },
+      { headers },
     );
 
     issueDuration.add(res.timings.duration);

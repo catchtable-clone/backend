@@ -11,7 +11,17 @@
 import http from 'k6/http';
 import { sleep, check, group } from 'k6';
 import { Counter, Rate, Trend } from 'k6/metrics';
-import { BASE_URL, HEADERS_AUTH, REMAIN_ID, THRESHOLDS } from './config.js';
+import { BASE_URL, HEADERS_JSON, HEADERS_AUTH, AUTH_TOKEN, REMAIN_ID, THRESHOLDS, requireAuthToken } from './config.js';
+
+// 다중 토큰 풀 (선택). 운영 환경과 더 비슷한 검증을 원하면 TOKENS CSV 주입.
+const TOKENS = (__ENV.TOKENS ? __ENV.TOKENS.split(',') : []).filter(Boolean);
+const USE_MULTI_TOKENS = TOKENS.length > 1;
+
+export function setup() {
+  if (!AUTH_TOKEN && !USE_MULTI_TOKENS) {
+    requireAuthToken('02');
+  }
+}
 
 const successCount   = new Counter('reservation_success');
 const exhaustedCount = new Counter('reservation_exhausted');
@@ -44,15 +54,18 @@ export const options = {
 };
 
 export default function () {
+  const headers = USE_MULTI_TOKENS
+    ? { ...HEADERS_JSON, Authorization: `Bearer ${TOKENS[(__VU - 1) % TOKENS.length]}` }
+    : HEADERS_AUTH;
+
   group('예약 생성 (동시성)', () => {
     const payload = JSON.stringify({
       remainId: parseInt(REMAIN_ID),
       member: 2,
+      couponId: null,
     });
 
-    const res = http.post(`${BASE_URL}/api/v1/reservations`, payload, {
-      headers: HEADERS_AUTH,
-    });
+    const res = http.post(`${BASE_URL}/api/v1/reservations`, payload, { headers });
 
     reserveDuration.add(res.timings.duration);
 
