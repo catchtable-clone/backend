@@ -202,6 +202,12 @@ services:
 
       # 메모리 제한 설정 (서버 스펙에 맞게 조정 가능, 최소 256m~512m 추천)
       KAFKA_HEAP_OPTS: "-Xms256m -Xmx256m"
+
+      # 단일 broker 운영용 internal topic 설정.
+      # default(3)면 __consumer_offsets/__transaction_state 가 영원히 생성 실패 → consumer group join 불가.
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
     # 임시 폴더인 /tmp 대신 컨테이너가 내려가도 데이터와 오프셋 장부가 보존되도록 볼륨 볼륨 마운트 경로 고정
     volumes:
       - kafka-prod-data:/var/lib/kafka/data
