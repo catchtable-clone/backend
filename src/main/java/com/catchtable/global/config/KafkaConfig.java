@@ -11,9 +11,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.*;
-import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
-import org.springframework.kafka.listener.DefaultErrorHandler;
-import org.springframework.util.backoff.FixedBackOff;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -47,20 +44,13 @@ public class KafkaConfig {
         return factory;
     }
 
+    // @RetryableTopic 이 retry/dlt 토픽 라우팅과 ErrorHandler 를 자체 관리한다.
+    // 여기서 commonErrorHandler 를 강제하면 RetryTopicConfigurer 의 ErrorHandler swap 이
+    // 차단되어 main listener container 가 partition assignment 단계 진입에 실패한다.
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, Object> kafkaListenerContainerFactory(KafkaTemplate<String, Object> kafkaTemplate) {
+    public ConcurrentKafkaListenerContainerFactory<String, Object> kafkaListenerContainerFactory() {
         ConcurrentKafkaListenerContainerFactory<String, Object> factory = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory());
-
-        // DLQ 설정을 위한 ErrorHandler 추가
-        // 2초 간격으로 최대 3번 재시도 (총 4번 시도)
-        FixedBackOff backOff = new FixedBackOff(2000L, 3L);
-        // 재시도 후에도 실패하면 원래 토픽 이름 뒤에 ".DLT"를 붙인 토픽으로 메시지 전송
-        DeadLetterPublishingRecoverer recoverer = new DeadLetterPublishingRecoverer(kafkaTemplate);
-        DefaultErrorHandler errorHandler = new DefaultErrorHandler(recoverer, backOff);
-
-        factory.setCommonErrorHandler(errorHandler);
-
         return factory;
     }
 
