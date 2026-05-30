@@ -14,12 +14,7 @@ import com.catchtable.vacancy.service.VacancyService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.kafka.annotation.DltHandler;
 import org.springframework.kafka.annotation.KafkaListener;
-import org.springframework.kafka.annotation.RetryableTopic;
-import org.springframework.kafka.retrytopic.DltStrategy;
-import org.springframework.kafka.support.KafkaHeaders;
-import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,7 +37,6 @@ public class NotificationKafkaConsumer {
     private final StringRedisTemplate redisTemplate;
     private final VacancyService vacancyService;
 
-    @RetryableTopic(attempts = "3", dltStrategy = DltStrategy.ALWAYS_RETRY_ON_ERROR)
     @KafkaListener(topics = "notification.reservation.confirmed", groupId = "catchtable-notification-group")
     @Transactional
     public void handleReservationConfirmed(@Payload ReservationConfirmedEvent event) {
@@ -64,7 +58,6 @@ public class NotificationKafkaConsumer {
         );
     }
 
-    @RetryableTopic(attempts = "3", dltStrategy = DltStrategy.ALWAYS_RETRY_ON_ERROR)
     @KafkaListener(topics = "notification.reservation.canceled", groupId = "catchtable-notification-group")
     @Transactional
     public void handleReservationCanceled(@Payload ReservationCanceledEvent event) {
@@ -86,7 +79,6 @@ public class NotificationKafkaConsumer {
         );
     }
 
-    @RetryableTopic(attempts = "3", dltStrategy = DltStrategy.ALWAYS_RETRY_ON_ERROR)
     @KafkaListener(topics = "notification.reservation.changed", groupId = "catchtable-notification-group")
     @Transactional
     public void handleReservationChanged(@Payload ReservationChangedEvent event) {
@@ -110,7 +102,6 @@ public class NotificationKafkaConsumer {
         );
     }
 
-    @RetryableTopic(attempts = "3", dltStrategy = DltStrategy.ALWAYS_RETRY_ON_ERROR)
     @KafkaListener(topics = "notification.reservation.visited", groupId = "catchtable-notification-group")
     @Transactional
     public void handleReservationVisited(@Payload ReservationVisitedEvent event) {
@@ -130,7 +121,6 @@ public class NotificationKafkaConsumer {
         );
     }
 
-    @RetryableTopic(attempts = "3", dltStrategy = DltStrategy.ALWAYS_RETRY_ON_ERROR)
     @KafkaListener(topics = "notification.vacancy.opened", groupId = "catchtable-notification-group")
     @Transactional
     public void handleVacancyOpened(@Payload VacancyEvent event) {
@@ -179,11 +169,6 @@ public class NotificationKafkaConsumer {
         }
 
         log.info("[Kafka Consumer] {}명에게 빈자리 알림을 생성했습니다. key={}", users.size(), redisKey);
-    }
-
-    @DltHandler
-    public void handleDlt(Object message, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
-        log.error("[DLT] 메시지 처리 최종 실패. Topic: {}, Message: {}", topic, message.toString());
     }
 
     private User findUserOrThrow(Long userId) {
