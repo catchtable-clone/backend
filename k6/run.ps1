@@ -18,15 +18,18 @@
 
 param(
     [Parameter(Mandatory=$true)]
-    [ValidateSet('01', '02', '03', '04', '05', '06', '07', '08', '10')]
+    [ValidateSet('01', '02', '03', '04', '05', '06', '07', '08', '10', '11')]
     [string]$Test,
 
     [string]$AuthToken        = "",
     [string]$RemainId         = "1",
     [string]$CouponTemplateId = "1",
-    [string]$BaseUrl          = "https://api.catcheat.kro.kr",
-    [string]$PrometheusUrl    = "http://54.116.98.27:9090/api/v1/write",
-    [string]$GrafanaUrl       = "http://54.116.98.27:3001"
+    # 기본값을 로컬로 — prod 도메인에 실수로 부하 쏘는 사고 방지.
+    # prod 또는 staging 대상 시 명시적으로 -BaseUrl 지정.
+    [string]$BaseUrl          = "http://localhost:8080",
+    # remote_write 미지정 시 콘솔만 — 사용자가 의식적으로 지정해야 prod Prometheus로 전송.
+    [string]$PrometheusUrl    = "",
+    [string]$GrafanaUrl       = "http://localhost:3001"
 )
 
 $scriptMap = @{
@@ -39,6 +42,15 @@ $scriptMap = @{
     '07' = 'k6/07-remains.js'
     '08' = 'k6/08-coupon-issue.js'
     '10' = 'k6/10-soak.js'
+    '11' = 'k6/11-vacancy-test.js'   # PHASE 인자 별도 필요 — README 참고
+}
+
+# prod 도메인 감지 시 경고
+if ($BaseUrl -match "catcheat\.kro\.kr|api\.catchtable") {
+    Write-Host ""
+    Write-Host "⚠️  prod 도메인 감지: $BaseUrl" -ForegroundColor Yellow
+    Write-Host "    5초 후 실행됩니다. 취소하려면 Ctrl+C." -ForegroundColor Yellow
+    Start-Sleep -Seconds 5
 }
 
 $scriptName = $scriptMap[$Test]
@@ -51,12 +63,26 @@ Write-Host "대상 서버 : $BaseUrl"
 Write-Host "Grafana   : $GrafanaUrl (실시간 모니터링)"
 Write-Host ""
 
-$env:K6_PROMETHEUS_RW_SERVER_URL = $PrometheusUrl
+# k6 v2.0+ 호환 — 기본은 p99만 노출하므로 p50/p90/p95도 명시 push
+# 대시보드 Row A/B의 백분위 패널이 작동하려면 필수
+$env:K6_PROMETHEUS_RW_TREND_STATS = 'p(50),p(90),p(95),p(99),min,max,avg'
 
-k6 run `
-    --out "experimental-prometheus-rw" `
-    -e "BASE_URL=$BaseUrl" `
-    -e "AUTH_TOKEN=$AuthToken" `
-    -e "REMAIN_ID=$RemainId" `
-    -e "COUPON_TEMPLATE_ID=$CouponTemplateId" `
-    $scriptName
+# PrometheusUrl 지정 시에만 remote_write 사용. 미지정 시 콘솔 출력만.
+if ($PrometheusUrl) {
+    $env:K6_PROMETHEUS_RW_SERVER_URL = $PrometheusUrl
+    k6 run `
+        --out "experimental-prometheus-rw" `
+        -e "BASE_URL=$BaseUrl" `
+        -e "AUTH_TOKEN=$AuthToken" `
+        -e "REMAIN_ID=$RemainId" `
+        -e "COUPON_TEMPLATE_ID=$CouponTemplateId" `
+        $scriptName
+} else {
+    Write-Host "[info] PrometheusUrl 미지정 — 콘솔 출력만 (Grafana 연동 안 함)" -ForegroundColor Cyan
+    k6 run `
+        -e "BASE_URL=$BaseUrl" `
+        -e "AUTH_TOKEN=$AuthToken" `
+        -e "REMAIN_ID=$RemainId" `
+        -e "COUPON_TEMPLATE_ID=$CouponTemplateId" `
+        $scriptName
+}

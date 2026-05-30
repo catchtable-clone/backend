@@ -103,11 +103,11 @@ export default function () {
   group(`근처 매장 조회 (nearby) - ${loc.name}`, () => {
     const res = http.get(
       `${BASE_URL}/api/v1/stores/nearby?latitude=${lat}&longitude=${lng}&page=0&size=10`,
-      { headers: HEADERS_JSON, timeout: 15000 },
+      { headers: HEADERS_JSON, timeout: '15s' },
     );
     nearbyDuration.add(res.timings.duration);
     record(res.timings.duration);
-    if (res.timings.duration > 15000 || res.status === 0) timeoutCount.add(1);
+    if (res.timings.duration >= 15000 || res.status === 0) timeoutCount.add(1);
     const ok = check(res, {
       'nearby 200': (r) => r.status === 200,
       'nearby 15s 이내': (r) => r.timings.duration < 15000,
@@ -124,7 +124,7 @@ export default function () {
     const res = http.get(url, { headers: HEADERS_JSON, timeout: '15s' });
     inBoundsDuration.add(res.timings.duration);
     record(res.timings.duration);
-    if (res.timings.duration > 15000 || res.status === 0) timeoutCount.add(1);
+    if (res.timings.duration >= 15000 || res.status === 0) timeoutCount.add(1);
     check(res, {
       'in-bounds 200': (r) => r.status === 200,
       'in-bounds 15s 이내': (r) => r.timings.duration < 15000,

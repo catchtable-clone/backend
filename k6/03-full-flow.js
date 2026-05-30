@@ -12,7 +12,7 @@ import http from 'k6/http';
 import { sleep, check, group } from 'k6';
 import exec from 'k6/execution';
 import { Trend, Rate } from 'k6/metrics';
-import { BASE_URL, HEADERS_JSON, HEADERS_AUTH, THRESHOLDS } from './config.js';
+import { BASE_URL, HEADERS_JSON, HEADERS_AUTH, AUTH_TOKEN, THRESHOLDS } from './config.js';
 
 const flowDuration = new Trend('full_flow_duration', true);
 
@@ -178,7 +178,8 @@ export default function () {
     sleep(0.5);
   });
 
-  if (HEADERS_AUTH.Authorization !== 'Bearer ') {
+  // AUTH_TOKEN 있을 때만 로그인 step 실행 (config.js v1.4: 빈 토큰이면 Authorization 헤더 자체 제거)
+  if (AUTH_TOKEN) {
     group('7. 북마크 폴더 조회 (로그인)', () => {
       const res = http.get(`${BASE_URL}/api/v1/bookmark-folders`, { headers: HEADERS_AUTH });
       const ok  = check(res, { '북마크 200': (r) => r.status === 200 });
