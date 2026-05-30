@@ -53,11 +53,13 @@ class VacancyLoadTestTokenGenerator {
 
         for (int i = 1; i <= userCount; i++) {
             String googleId = GOOGLE_ID_PREFIX + i;
+            String email = EMAIL_PREFIX + i + EMAIL_DOMAIN;
+            String nickname = NICKNAME_PREFIX + i;
             User user = userRepository.findByGoogleId(googleId)
                     .orElseGet(() -> userRepository.save(User.builder()
                             .googleId(googleId)
-                            .email(EMAIL_PREFIX + i + EMAIL_DOMAIN)
-                            .nickname(NICKNAME_PREFIX + i)
+                            .email(email)
+                            .nickname(nickname)
                             .profileImage(null)
                             .role(UserRole.USER)
                             .status(UserStatus.ACTIVE)
