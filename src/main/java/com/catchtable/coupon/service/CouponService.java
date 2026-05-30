@@ -112,8 +112,14 @@ public class CouponService {
     @Transactional(readOnly = true)
     public List<CouponTemplateActiveResponse> getActiveTemplates() {
         return couponTemplateRepository.findActiveTemplates(LocalDateTime.now()).stream()
-                .map(CouponTemplateActiveResponse::from)
+                .map(template -> CouponTemplateActiveResponse.from(template, resolveStock(template)))
+                .filter(response -> response.remain() != null && response.remain() > 0)
                 .toList();
+    }
+
+    private Integer resolveStock(CouponTemplate template) {
+        Integer stock = redisCouponIssuer.getStock(template.getId());
+        return stock != null ? stock : template.getRemain();
     }
 
     // 쿠폰 사용 (예약 생성 시 호출)

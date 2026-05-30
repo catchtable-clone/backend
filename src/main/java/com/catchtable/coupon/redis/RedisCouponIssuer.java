@@ -112,6 +112,22 @@ public class RedisCouponIssuer {
     }
 
     /**
+     * Redis 가 보유한 현재 재고. 키가 없으면 null.
+     * 워밍업 누락/만료 상황과 stock=0 을 호출자가 구분할 수 있도록 null 을 보존.
+     */
+    public Integer getStock(Long templateId) {
+        var bucket = redissonClient.getBucket(stockKey(templateId), StringCodec.INSTANCE);
+        Object value = bucket.get();
+        if (value == null) return null;
+        try {
+            return Integer.parseInt(value.toString());
+        } catch (NumberFormatException e) {
+            log.warn("쿠폰 stock 키 값이 정수가 아님: templateId={}, value={}", templateId, value);
+            return null;
+        }
+    }
+
+    /**
      * 서버 부팅 시 호출. 이미 키가 있으면(Redis 운영 중 상태 유지 중) 건드리지 않는다.
      * Redis 콜드 스타트일 때만 DB 의 remain 으로 워밍업.
      */
