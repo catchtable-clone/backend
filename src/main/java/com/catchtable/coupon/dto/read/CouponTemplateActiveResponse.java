@@ -14,12 +14,16 @@ public record CouponTemplateActiveResponse(
         LocalDateTime expiredAt
 ) {
     public static CouponTemplateActiveResponse from(CouponTemplate template) {
+        return from(template, template.getRemain());
+    }
+
+    public static CouponTemplateActiveResponse from(CouponTemplate template, Integer remain) {
         return new CouponTemplateActiveResponse(
                 template.getId(),
                 template.getCouponName(),
                 template.getDiscountRate(),
                 template.getAmount(),
-                template.getRemain(),
+                remain,
                 template.getStartedAt(),
                 template.getExpiredAt()
         );

@@ -48,4 +48,8 @@ public class CouponTemplate {
     @Column(name = "is_deleted", nullable = false)
     @Builder.Default
     private Boolean isDeleted = false;
+
+    public void syncRemain(int stock) {
+        this.remain = stock;
+    }
 }
