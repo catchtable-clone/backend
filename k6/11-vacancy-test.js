@@ -206,7 +206,7 @@ function subscribe() {
 
     const res = http.post(
         `${BASE_URL}/api/v1/vacancy`,
-        JSON.stringify({ remainId: REMAIN_ID }),
+        JSON.stringify({ remainId: parseInt(REMAIN_ID, 10) }),
         {
             headers: {
                 'Content-Type': 'application/json',
@@ -230,11 +230,11 @@ function subscribe() {
 async function smembers() {
     if (!REDIS_KEY) throw new Error('REDIS_KEY env required');
 
-    // performance.now() 는 마이크로초 정밀도 (소수점 ms) 라 sub-ms 측정 가능.
-    // SMEMBERS 가 1ms 이하인 경우 Date.now() 로는 0 으로 측정되어 분포가 왜곡됨.
-    const start = performance.now();
+    // k6 v2 런타임에 performance 객체가 없어서 Date.now() 사용.
+    // 밀리초 정밀도라 sub-ms 호출은 0 으로 잡혀 분포가 약간 왜곡될 수 있다.
+    const start = Date.now();
     const members = await redisClient.smembers(REDIS_KEY);
-    const duration = performance.now() - start;
+    const duration = Date.now() - start;
 
     smembersDuration.add(duration);
     smembersSize.add(members.length);
