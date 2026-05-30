@@ -108,8 +108,9 @@ public class CouponService {
                 .toList();
     }
 
-    // 현재 발급 가능한 쿠폰 템플릿 목록 (홈 배너용) — 글로벌 데이터, 인증 불필요
-    @Transactional(readOnly = true)
+    // 트랜잭션 없음: stream 안의 resolveStock 이 Redis I/O 라 트랜잭션이 길어지면
+    // 풀이 압박을 받는다. CouponTemplate 에 lazy 연관관계가 없어 트랜잭션 밖에서도 안전.
+    // (lazy 필드를 추가하려면 이 메서드의 트랜잭션 범위도 함께 재검토할 것.)
     public List<CouponTemplateActiveResponse> getActiveTemplates() {
         return couponTemplateRepository.findActiveTemplates(LocalDateTime.now()).stream()
                 .map(template -> CouponTemplateActiveResponse.from(template, resolveStock(template)))
