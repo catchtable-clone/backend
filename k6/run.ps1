@@ -1,20 +1,21 @@
 # k6 부하테스트 실행 스크립트
 #
 # 사용법:
-#   .\k6\run.ps1 -Test 01                              # 기본 (운영서버 + 서버 Grafana)
+#   .\k6\run.ps1 -Test 01                              # 기본 (로컬 서버)
 #   .\k6\run.ps1 -Test 02 -AuthToken "eyJ..." -RemainId 5
 #   .\k6\run.ps1 -Test 01 -BaseUrl http://localhost:8080  # 로컬 서버 테스트
 #
 # 테스트 번호 목록:
-#   01 - 매장 전체 탐색 플로우 (constant_50 + ramp_up)
+#   01 - 매장 전체 탐색 플로우 (event_spike + ramp_up)
 #   02 - 예약 동시성 (분산락 + 낙관적락 검증)
-#   03 - 전체 사용자 플로우 (constant_50 + ramp_up)
-#   04 - AI 챗봇 서킷브레이커 (ramp_up)
-#   05 - [단일] 매장 목록 조회 (constant_50 + ramp_up)
-#   06 - [단일] PostGIS 지리 쿼리 (constant_50 + ramp_up)
-#   07 - [단일] 잔여석 조회 (constant_50 + ramp_up)
+#   03 - 전체 사용자 플로우 (event_spike + ramp_up)
+#   04 - AI 챗봇 서킷브레이커 (step: flood + recover) ⚠ Gemini 비용 — MAX_ITER_PER_VU 가드 권장
+#   05 - [단일] 매장 목록 조회 (event_spike + ramp_up)
+#   06 - [단일] PostGIS 지리 쿼리 (event_spike + ramp_up)
+#   07 - [단일] 잔여석 조회 (event_spike + ramp_up)
 #   08 - [단일] 쿠폰 선착순 발급 동시성
 #   10 - [내구성] Soak 테스트 (10VU × 30분)
+#   11 - 빈자리 SADD/SMEMBERS — PHASE 인자 별도 (11-vacancy-test.js 헤더 참고)
 
 param(
     [Parameter(Mandatory=$true)]

@@ -2,7 +2,7 @@
 # k6 부하테스트 실행 스크립트 (bash, run.ps1과 동일 인터페이스)
 #
 # 사용법:
-#   ./k6/run.sh -t 01                              # 기본 (운영서버 + 서버 Grafana)
+#   ./k6/run.sh -t 01                              # 기본 (로컬 서버)
 #   ./k6/run.sh -t 02 -a "eyJ..." -r 5             # 예약 동시성
 #   ./k6/run.sh -t 08 -a "eyJ..." -c 1             # 쿠폰 선착순
 #   ./k6/run.sh -t 01 -b http://localhost:8080     # 로컬 서버
@@ -11,7 +11,7 @@
 #   01 - 매장 전체 탐색 플로우 (event_spike + ramp_up)
 #   02 - 예약 동시성 (분산락 + 낙관적락 검증)
 #   03 - 전체 사용자 플로우 (event_spike + ramp_up)
-#   04 - AI 챗봇 서킷브레이커 (ramp_up) ⚠ Gemini 비용 발생 — 4-MAX_REQUESTS 가드 사용 권장
+#   04 - AI 챗봇 서킷브레이커 (step: flood + recover) ⚠ Gemini 비용 — MAX_ITER_PER_VU 가드 사용 권장
 #   05 - [단일] 매장 목록 조회
 #   06 - [단일] PostGIS 지리 쿼리
 #   07 - [단일] 잔여석 조회

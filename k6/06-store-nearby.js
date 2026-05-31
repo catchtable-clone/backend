@@ -5,9 +5,9 @@
  * 이전 테스트 결과: 50VU에서 nearby p95=10.33s, in-bounds p95=8.36s
  * → GIST 공간 인덱스 미적용 의심 → 이 테스트로 수치 재확인
  *
- * 전체 소요 시간: 약 9분
+ * 전체 소요 시간: 약 5분
  *   [0s ~ ~2m50s] event_spike — 워밍업 후 50명 즉시 점프
- *   [3m20s ~ ~9m] ramp_up    — 0→50명 단계적 증가
+ *   [3m ~ ~5m]    ramp_up     — 0→50명 단축 단계 (10→30→50, 임계점 1차 탐색)
  */
 import http from 'k6/http';
 import { sleep, check, group } from 'k6';
@@ -34,23 +34,8 @@ const LOCATIONS = [
 export const options = {
   scenarios: {
 
-    // ── SCENARIO A: 이벤트 스파이크 ────────────────────────────────────────
-    // 실제 상황: 오전 10시 이벤트 오픈, 좌석 공개처럼 특정 시각에 트래픽이 몰리는 상황
-    //
-    // [워밍업을 추가한 이유]
-    // 실제 서비스에서 이벤트가 오픈되는 시점의 서버는 이미 운영 중인 상태.
-    // JVM JIT 컴파일과 DB 커넥션풀이 확보된 상태에서 갑자기 50명이 몰리는 것이 현실적.
-    // 워밍업 없이 바로 50명을 붙이면 JVM 콜드 스타트 비용이 포함되어
-    // 실제 이벤트 상황의 성능과 다른 결과가 나옴.
-    //
-    // [ramping-vus를 쓴 이유]
-    // warmup(10명) + constant(50명)을 별도 시나리오로 돌리면 동시 실행되어
-    // 실제로는 10 + 50 = 60명이 되는 문제가 생김.
-    // ramping-vus 하나로 합쳐야 정확히 50명으로 제어 가능.
-    //
-    // [체크포인트]
-    //   GIST 인덱스 없으면 점프 직후 타임아웃 폭발 → timeoutCount 급증
-    //   GIST 인덱스 있으면 50명에서도 p95 < 2s 유지
+    // SCENARIO A: 이벤트 스파이크 — 50명 즉시 점프로 이벤트 오픈 순간 재현 (패턴 근거는 01-store-browse.js 헤더)
+    // 체크: GIST 인덱스 없으면 점프 직후 timeoutCount 급증, 있으면 50명에서도 p95 < 2s
     event_spike: {
       executor: 'ramping-vus',
       startVUs: 0,
@@ -63,17 +48,14 @@ export const options = {
       tags: { scenario: 'event_spike' },
     },
 
-    // ── SCENARIO B: 점진적 증가 ────────────────────────────────────────────
-    // 목적: 몇 명부터 타임아웃이 발생하는지 → 인덱스 없는 서버의 한계 탐색
+    // SCENARIO B: 점진적 증가 — 임계점 1차 탐색 (몇 명부터 타임아웃 = GIST 없는 서버의 한계)
     ramp_up: {
       executor: 'ramping-vus',
       startVUs: 0,
-      startTime: '3m20s',
+      startTime: '3m',
       stages: [
         { duration: '30s', target: 10 },
-        { duration: '30s', target: 20 },
-        { duration: '30s', target: 35 },
-        { duration: '1m',  target: 50 },
+        { duration: '30s', target: 30 },
         { duration: '30s', target: 50 },
         { duration: '30s', target: 0  },
       ],

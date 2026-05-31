@@ -2,9 +2,9 @@
  * [단일 API] 잔여석 조회 부하테스트 — 이벤트 스파이크 vs 점진적 증가
  * 실행: .\k6\run.ps1 -Test 07
  *
- * 전체 소요 시간: 약 9분
+ * 전체 소요 시간: 약 5분
  *   [0s ~ ~2m50s] event_spike — 워밍업 후 50명 즉시 점프
- *   [3m20s ~ ~9m] ramp_up    — 0→50명 단계적 증가
+ *   [3m ~ ~5m]    ramp_up     — 0→50명 단축 단계 (10→30→50, 임계점 1차 탐색)
  */
 import http from 'k6/http';
 import { sleep, check, group } from 'k6';
@@ -24,23 +24,8 @@ const REMAINS_SLA_MS = Number(__ENV.REMAINS_SLA_MS || 400);
 export const options = {
   scenarios: {
 
-    // ── SCENARIO A: 이벤트 스파이크 ────────────────────────────────────────
-    // 실제 상황: 오전 10시 이벤트 오픈, 좌석 공개처럼 특정 시각에 트래픽이 몰리는 상황
-    //
-    // [워밍업을 추가한 이유]
-    // 실제 서비스에서 이벤트가 오픈되는 시점의 서버는 이미 운영 중인 상태.
-    // JVM JIT 컴파일과 DB 커넥션풀이 확보된 상태에서 갑자기 50명이 몰리는 것이 현실적.
-    // 워밍업 없이 바로 50명을 붙이면 JVM 콜드 스타트 비용이 포함되어
-    // 실제 이벤트 상황의 성능과 다른 결과가 나옴.
-    //
-    // [ramping-vus를 쓴 이유]
-    // warmup(10명) + constant(50명)을 별도 시나리오로 돌리면 동시 실행되어
-    // 실제로는 10 + 50 = 60명이 되는 문제가 생김.
-    // ramping-vus 하나로 합쳐야 정확히 50명으로 제어 가능.
-    //
-    // [체크포인트]
-    //   잔여석은 단순 인덱스 조회라 점프 후에도 p95 300ms 이내가 정상
-    //   넘으면 → (store_id, remain_date) 복합 인덱스 미적용 또는 Row Lock 경합
+    // SCENARIO A: 이벤트 스파이크 — 50명 즉시 점프로 이벤트 오픈 순간 재현 (패턴 근거는 01-store-browse.js 헤더)
+    // 체크: 점프 후 p95 > 300ms = (store_id, remain_date) 복합 인덱스 미적용 또는 Row Lock 경합
     event_spike: {
       executor: 'ramping-vus',
       startVUs: 0,
@@ -53,18 +38,14 @@ export const options = {
       tags: { scenario: 'event_spike' },
     },
 
-    // ── SCENARIO B: 점진적 증가 ────────────────────────────────────────────
-    // 목적: p95가 VU 수와 비례해서 증가하는지 확인
-    // 인덱스가 제대로 걸리면 VU 수와 무관하게 p95가 일정해야 함
+    // SCENARIO B: 점진적 증가 — p95가 VU 수와 비례해 증가하는가 (인덱스 OK면 VU와 무관하게 일정해야 함)
     ramp_up: {
       executor: 'ramping-vus',
       startVUs: 0,
-      startTime: '3m20s',
+      startTime: '3m',
       stages: [
         { duration: '30s', target: 10 },
-        { duration: '30s', target: 20 },
-        { duration: '30s', target: 35 },
-        { duration: '1m',  target: 50 },
+        { duration: '30s', target: 30 },
         { duration: '30s', target: 50 },
         { duration: '30s', target: 0  },
       ],
@@ -72,9 +53,10 @@ export const options = {
     },
   },
   thresholds: {
-    'remains_duration':       ['p(95)<500', 'p(99)<800'],
-    'remains_spike_duration': ['p(95)<600'],
-    'remains_ramp_duration':  ['p(95)<500'],
+    // REMAINS_SLA_MS와 정합: 기본 400ms → p95 SLA, p99는 2배 마진
+    'remains_duration':       [`p(95)<${REMAINS_SLA_MS}`, `p(99)<${REMAINS_SLA_MS * 2}`],
+    'remains_spike_duration': [`p(95)<${REMAINS_SLA_MS + 200}`],
+    'remains_ramp_duration':  [`p(95)<${REMAINS_SLA_MS}`],
     'remains_error_rate':     ['rate<0.01'],
     'http_req_failed':        ['rate<0.01'],
   },
