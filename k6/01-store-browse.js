@@ -10,9 +10,9 @@
  *   - GET /stores/{id}     (상세)
  *   - GET /remains         (시간대별 좌석)
  *
- * 전체 소요 시간: 약 9분
+ * 전체 소요 시간: 약 5분
  *   [0s ~ ~2m50s] event_spike — 워밍업 후 50명 즉시 점프
- *   [3m20s ~ ~9m] ramp_up    — 0→50명 단계적 증가
+ *   [3m ~ ~5m]    ramp_up     — 0→50명 단축 단계 (10→30→50, 임계점 1차 탐색)
  *
  * [두 시나리오 비교 포인트]
  *   - nearby / in-bounds: PostGIS 쿼리는 GIST 인덱스가 없으면 spike 구간에서 타임아웃
@@ -74,16 +74,14 @@ export const options = {
     // ── SCENARIO B: 점진적 증가 ────────────────────────────────────────────
     // 목적: 몇 명부터 응답시간이 꺾이는지 임계점 탐색
     // event_spike와 달리 서버가 단계적으로 적응하면서 50명에 도달
-    // 체크: 10→20→35→50 각 단계에서 nearby p95 변화량 확인
+    // 체크: 10→30→50 각 단계에서 nearby p95 변화량 확인
     ramp_up: {
       executor: 'ramping-vus',
       startVUs: 0,
-      startTime: '3m20s',
+      startTime: '3m',
       stages: [
         { duration: '30s', target: 10 },
-        { duration: '30s', target: 20 },
-        { duration: '30s', target: 35 },
-        { duration: '1m',  target: 50 },
+        { duration: '30s', target: 30 },
         { duration: '30s', target: 50 },
         { duration: '30s', target: 0  },
       ],

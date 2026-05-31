@@ -434,7 +434,7 @@
       "title": "CB 호출 결과 (성공/실패/차단)",
       "description": "failed 비율 50% + 5초 지속 시 OPEN 임박. not_permitted 증가 = CB가 OPEN 상태에서 차단 중.",
       "type": "timeseries",
-      "targets": [ { "expr": "sum by (name, kind) (rate(resilience4j_circuitbreaker_calls_total[5m]))", "legendFormat": "{{name}} {{kind}}", "refId": "A", "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" } } ]
+      "targets": [ { "expr": "sum by (name, kind) (rate(resilience4j_circuitbreaker_calls_seconds_count[5m])) or label_replace(sum by (name) (rate(resilience4j_circuitbreaker_not_permitted_calls_total[5m])), \"kind\", \"not_permitted\", \"\", \"\")", "legendFormat": "{{name}} {{kind}}", "refId": "A", "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" } } ]
     },
 
     { "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 68 }, "id": 900, "title": "Row 9 — 시스템 자원", "type": "row" },

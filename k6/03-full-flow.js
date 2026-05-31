@@ -4,9 +4,9 @@
  *
  * 시나리오: 홈 진입 → 매장 검색 → 상세 조회 → 메뉴/리뷰 확인 → 좌석 확인
  *
- * 전체 소요 시간: 약 9분
+ * 전체 소요 시간: 약 5분
  *   [0s ~ ~2m50s] event_spike — 워밍업 후 50명 즉시 점프
- *   [3m20s ~ ~9m] ramp_up    — 0→50명 단계적 증가
+ *   [3m ~ ~5m]    ramp_up     — 0→50명 단축 단계 (10→30→50, 임계점 1차 탐색)
  */
 import http from 'k6/http';
 import { sleep, check, group } from 'k6';
@@ -35,23 +35,8 @@ const errorRate = new Rate('flow_error_rate');
 export const options = {
   scenarios: {
 
-    // ── SCENARIO A: 이벤트 스파이크 ────────────────────────────────────────
-    // 실제 상황: 오전 10시 이벤트 오픈, 좌석 공개처럼 특정 시각에 트래픽이 몰리는 상황
-    //
-    // [워밍업을 추가한 이유]
-    // 실제 서비스에서 이벤트가 오픈되는 시점의 서버는 이미 운영 중인 상태.
-    // JVM JIT 컴파일과 DB 커넥션풀이 확보된 상태에서 갑자기 50명이 몰리는 것이 현실적.
-    // 워밍업 없이 바로 50명을 붙이면 JVM 콜드 스타트 비용이 포함되어
-    // 실제 이벤트 상황의 성능과 다른 결과가 나옴.
-    //
-    // [ramping-vus를 쓴 이유]
-    // warmup(10명) + constant(50명)을 별도 시나리오로 돌리면 동시 실행되어
-    // 실제로는 10 + 50 = 60명이 되는 문제가 생김.
-    // ramping-vus 하나로 합쳐야 정확히 50명으로 제어 가능.
-    //
-    // [체크포인트]
-    //   점프 직후(30~35s) Step별 p95 중 어느 step이 먼저 터지는지 확인
-    //   → 가장 먼저 급등하는 step = 이벤트 상황에서의 첫 번째 병목
+    // SCENARIO A: 이벤트 스파이크 — 50명 즉시 점프로 이벤트 오픈 순간 재현 (패턴 근거는 01-store-browse.js 헤더)
+    // 체크: 점프 직후 Step별 p95 — 가장 먼저 급등하는 step = 첫 번째 병목
     event_spike: {
       executor: 'ramping-vus',
       startVUs: 0,
@@ -64,17 +49,14 @@ export const options = {
       tags: { scenario: 'event_spike' },
     },
 
-    // ── SCENARIO B: 점진적 증가 ────────────────────────────────────────────
-    // 목적: 몇 명부터 어느 step이 먼저 나빠지는지 임계점 탐색
+    // SCENARIO B: 점진적 증가 — 임계점 1차 탐색 (몇 명부터 어느 step이 먼저 나빠지는가)
     ramp_up: {
       executor: 'ramping-vus',
       startVUs: 0,
-      startTime: '3m20s',
+      startTime: '3m',
       stages: [
         { duration: '30s', target: 10 },
-        { duration: '30s', target: 20 },
-        { duration: '30s', target: 35 },
-        { duration: '1m',  target: 50 },
+        { duration: '30s', target: 30 },
         { duration: '30s', target: 50 },
         { duration: '30s', target: 0  },
       ],
