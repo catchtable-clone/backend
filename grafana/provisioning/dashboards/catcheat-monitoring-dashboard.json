@@ -412,7 +412,7 @@
       "title": "Circuit Breaker 상태",
       "description": "closed=정상, half_open=복구시도, open=차단됨. AI API 등 외부 의존성 보호.",
       "type": "stat",
-      "targets": [ { "expr": "resilience4j_circuitbreaker_state == 1", "legendFormat": "{{name}} ({{state}})", "refId": "A", "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" } } ]
+      "targets": [ { "expr": "sum by (name) (resilience4j_circuitbreaker_state{state=\"closed\"} * 0) + sum by (name) (resilience4j_circuitbreaker_state{state=\"half_open\"} * 1) + sum by (name) (resilience4j_circuitbreaker_state{state=\"open\"} * 2)", "legendFormat": "{{name}}", "refId": "A", "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" } } ]
     },
     {
       "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
