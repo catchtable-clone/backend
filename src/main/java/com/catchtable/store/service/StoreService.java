@@ -69,7 +69,9 @@ public class StoreService {
     }
 
     // 인기 매장 — Redis 캐시(TTL 5분) 적용, Cache Stampede 방지
-    @Cacheable(value = "popularStores", key = "#limit", sync = true)
+    // RedisCacheManager는 sync = true 를 일관되게 지원하지 않음 (UnsupportedOperationException 가능).
+    // Cache stampede 방지가 필요하면 Redisson 분산락으로 별도 구현해야 함.
+    @Cacheable(value = "popularStores", key = "#limit")
     @Transactional(readOnly = true)
     public List<StoreListResponse> getPopularStores(int limit) {
         return storeRepository.findPopular(PageRequest.of(0, limit)).stream()

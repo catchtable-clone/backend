@@ -278,8 +278,17 @@ public class ReservationService {
             // 결제 미완료: PAYMENT_FAILED로 기록 (사용자 예약 취소 내역과 구분)
             handlePendingFailure(reservation);
         } else {
-            // 결제 완료(CONFIRMED): PortOne 환불 후 CANCELED로 변경
-            paymentService.refundPayment(reservation);
+            // 결제 완료(CONFIRMED): PortOne 환불 후 CANCELED로 변경.
+            // 결제 정보가 없는 비정상 상태(과거 cleanup 흔적 등)에서도 취소가 가능하도록
+            // PAYMENT_NOT_FOUND 는 graceful 처리. PortOne API 자체 실패는 그대로 전파한다.
+            try {
+                paymentService.refundPayment(reservation);
+            } catch (CustomException e) {
+                if (e.getErrorCode() != ErrorCode.PAYMENT_NOT_FOUND) {
+                    throw e;
+                }
+                log.warn("환불 대상 결제 없음 — 취소 진행: reservationId={}", reservationId);
+            }
             restoreInventory(reservation);
             reservation.changeStatus(ReservationStatus.CANCELED);
             eventPublisher.publishEvent(new ReservationCanceledEvent(
@@ -306,6 +315,16 @@ public class ReservationService {
 
                 Reservation newReservation = createReservationCore(userId, request.newRemainId(), request.newMember(), request.couponId());
                 newReservation.changeStatus(ReservationStatus.CONFIRMED);
+
+                // payment.reservation_id 에 UNIQUE 제약 — 새 reservation 에 이미 잔존 payment 가 있으면
+                // transferToReservation 시점 flush 에서 UNIQUE 위반. 사전 정리해 idempotent 보장.
+                paymentRepository.findByReservation_Id(newReservation.getId()).ifPresent(stale -> {
+                    if (stale.getStatus() == PaymentStatus.PAID) {
+                        throw new CustomException(ErrorCode.PAYMENT_ALREADY_PAID);
+                    }
+                    paymentRepository.delete(stale);
+                    paymentRepository.flush();
+                });
 
                 if (oldPayment != null) {
                     oldPayment.transferToReservation(newReservation);
