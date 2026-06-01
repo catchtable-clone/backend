@@ -1,6 +1,7 @@
 package com.catchtable.global.exception;
 
 import com.catchtable.global.common.ApiResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 // 엔드포인트의 예외까지 이 advice가 가로채면, ApiResponse(JSON)를 openmetrics 응답으로
 // 직렬화하려다 HttpMessageNotWritableException → 스크랩 500 → 모니터링 DOWN 오표시가 발생.
 // 본인 컨트롤러(com.catchtable.*)로만 적용 범위를 한정해 액추에이터를 건드리지 않게 한다.
+@Slf4j
 @RestControllerAdvice(basePackages = "com.catchtable")
 public class GlobalExceptionHandler {
 
@@ -55,9 +57,11 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(ErrorCode.OPTIMISTIC_LOCK_CONFLICT));
     }
 
-    // 500 - 서버 내부 오류
+    // 500 - 서버 내부 오류 (Unhandled)
+    // log.error 로 클래스/메시지/스택트레이스를 남겨야 원인 추적 가능.
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleException(Exception e) {
+        log.error("Unhandled exception → INTERNAL_ERROR: {}", e.getMessage(), e);
         return ResponseEntity
                 .status(ErrorCode.INTERNAL_ERROR.getHttpStatus())
                 .body(ApiResponse.error(ErrorCode.INTERNAL_ERROR));
