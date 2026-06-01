@@ -12,6 +12,7 @@ import com.catchtable.notification.event.ReservationChangedEvent;
 import com.catchtable.notification.event.ReservationVisitedEvent;
 import com.catchtable.notification.event.VacancyEvent;
 import com.catchtable.payment.entity.Payment;
+import com.catchtable.payment.entity.PaymentStatus;
 import com.catchtable.payment.repository.PaymentRepository;
 import com.catchtable.payment.service.PaymentService;
 import com.catchtable.remain.entity.StoreRemain;
@@ -124,6 +125,16 @@ public class ReservationService {
                         currentUserId, remainId, member, couponId);
 
                 // Payment 레코드 생성 (결제창 호출을 위해 orderId 필요)
+                // 같은 reservation_id에 잔존 payment(FAILED/PENDING) 있으면 UNIQUE 위반 → 결제 재시도 시나리오에서 충돌
+                // INSERT 전 기존 row 정리해 idempotent 보장. PAID 상태면 비즈니스 예외.
+                paymentRepository.findByReservation_Id(saved.getId()).ifPresent(existing -> {
+                    if (existing.getStatus() == PaymentStatus.PAID) {
+                        throw new CustomException(ErrorCode.PAYMENT_ALREADY_PAID);
+                    }
+                    paymentRepository.delete(existing);
+                    paymentRepository.flush();
+                });
+
                 String orderId = "CATCH-" + saved.getId() + "-" + System.currentTimeMillis();
                 Payment payment = Payment.builder()
                         .reservation(saved)
@@ -220,6 +231,16 @@ public class ReservationService {
             return tx.execute(status -> {
                 Reservation saved = createReservationCore(
                         userId, request.remainId(), request.member(), request.couponId());
+
+                // 같은 reservation_id에 잔존 payment(FAILED/PENDING) 있으면 UNIQUE 위반.
+                // INSERT 전 기존 row 정리해 idempotent 보장. PAID 상태면 비즈니스 예외.
+                paymentRepository.findByReservation_Id(saved.getId()).ifPresent(existing -> {
+                    if (existing.getStatus() == PaymentStatus.PAID) {
+                        throw new CustomException(ErrorCode.PAYMENT_ALREADY_PAID);
+                    }
+                    paymentRepository.delete(existing);
+                    paymentRepository.flush();
+                });
 
                 // ConfirmedEvent는 결제 완료 시점(PaymentService.confirmPayment)에서 발행한다.
                 String orderId = "CATCH-" + saved.getId() + "-" + System.currentTimeMillis();
