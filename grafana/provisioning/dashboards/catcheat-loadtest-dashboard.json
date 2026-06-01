@@ -2164,6 +2164,40 @@
           "legendFormat": "SMEMBERS p95 (k6)"
         }
       ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "lineInterpolation": "smooth"
+          },
+          "unit": "ops",
+          "min": 0
+        }
+      },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 200 },
+      "id": 999,
+      "options": {
+        "legend": { "calcs": ["last", "max", "mean"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "title": "D.5 Kafka 메시지 처리량 (Topic별)",
+      "description": "Consumer가 처리한 메시지 속도. 빈자리 시연 시 notification.vacancy.opened 라인 잠깐 솟구침.",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum by (topic) (rate(kafka_consumer_fetch_manager_records_consumed_total[1m]))",
+          "legendFormat": "{{topic}}",
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" }
+        }
+      ]
     }
   ],
   "refresh": "5s",
