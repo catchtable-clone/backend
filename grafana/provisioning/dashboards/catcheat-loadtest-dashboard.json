@@ -2192,7 +2192,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum by (topic) (rate(kafka_consumer_fetch_manager_records_consumed_total[1m]))",
+          "expr": "sum by (topic) (rate(kafka_consumer_fetch_manager_records_consumed_total{topic!~\".*_.*\"}[1m]))",
           "legendFormat": "{{topic}}",
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" }
