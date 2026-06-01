@@ -39,6 +39,7 @@ const START_TIME = Date.now();
 const LATE_PHASE_MS = 20 * 60 * 1000;
 
 export const options = {
+  summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(90)', 'p(95)', 'p(99)'],
   scenarios: {
     // 3분 워밍업 후 10VU 유지 → 30분 장시간 운영
     soak: {

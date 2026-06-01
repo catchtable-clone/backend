@@ -18,7 +18,13 @@ import java.time.LocalDateTime;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
-@Table(name = "reviews")
+@Table(
+        name = "reviews",
+        indexes = {
+                @Index(name = "idx_review_store_deleted",  columnList = "store_id, is_deleted"),
+                @Index(name = "idx_review_user_deleted",   columnList = "user_id, is_deleted")
+        }
+)
 public class Review {
 
     @Id

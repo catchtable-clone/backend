@@ -19,6 +19,8 @@ import com.catchtable.global.exception.CustomException;
 import com.catchtable.global.exception.ErrorCode;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.ai.chat.model.ToolContext;
@@ -57,20 +59,28 @@ public class StoreService {
      */
     @Transactional(readOnly = true)
     public List<StoreListResponse> getStores(String name, Category category, District district, int page, int size) {
+        int limitedSize = Math.min(size, 100);
         String trimmedName = (name == null || name.isBlank()) ? null : name.trim();
         Specification<Store> spec = buildStoreSpec(trimmedName, category, district);
-        Pageable pageable = PageRequest.of(page, size, popularitySort());
+        Pageable pageable = PageRequest.of(page, limitedSize, popularitySort());
         return storeRepository.findAll(spec, pageable).getContent().stream()
                 .map(StoreListResponse::from)
                 .toList();
     }
 
-    // 인기 매장 (averageStar DESC → reviewCount DESC → bookmarkCount DESC) — DB 정렬 + LIMIT
+    // 인기 매장 — Redis 캐시(TTL 5분) 적용, Cache Stampede 방지
+    @Cacheable(value = "popularStores", key = "#limit", sync = true)
     @Transactional(readOnly = true)
     public List<StoreListResponse> getPopularStores(int limit) {
         return storeRepository.findPopular(PageRequest.of(0, limit)).stream()
                 .map(StoreListResponse::from)
                 .toList();
+    }
+
+    @CacheEvict(value = "popularStores", allEntries = true)
+    @Transactional
+    public void evictPopularStoresCache() {
+        // 매장 등록/수정/리뷰 생성 등 인기도 변동 시 호출
     }
 
     @Tool(description = "사용자 주변의 인기 매장을 조회합니다. '내 주변 맛집', '근처 인기 매장', '주변 맛집 추천' 등의 요청에 사용하세요. 위치 정보가 없으면 사용할 수 없습니다.")
@@ -101,12 +111,19 @@ public class StoreService {
                 .collect(Collectors.joining("\n"));
     }
 
-    // 내 주변 매장 (좌표 거리 정렬 + DB 페이지네이션)
+    // 내 주변 매장 (바운딩박스 선필터 + 거리 정렬)
     @Transactional(readOnly = true)
     public List<StoreListResponse> getNearbyStores(double latitude, double longitude, int page, int size) {
-        return storeRepository.findNearby(latitude, longitude, PageRequest.of(page, size)).stream()
-                .map(StoreListResponse::from)
-                .toList();
+        int limitedSize = Math.min(size, 100);
+        // 반경 5km를 위경도 델타로 변환 (1도 ≈ 111km, 한국 위도 기준 경도 1도 ≈ 88km)
+        double deltaLat = 5000.0 / 111_000.0;
+        double deltaLng = 5000.0 / 88_000.0;
+        return storeRepository.findNearby(
+                latitude, longitude,
+                latitude - deltaLat, latitude + deltaLat,
+                longitude - deltaLng, longitude + deltaLng,
+                PageRequest.of(page, limitedSize)
+        ).stream().map(StoreListResponse::from).toList();
     }
 
     /**

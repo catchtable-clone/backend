@@ -10,7 +10,7 @@
  *
  * 목적:
  *   - POST /coupons/{templateId}/issue 에 100명 동시 요청
- *   - 비관적 락(SELECT FOR UPDATE)으로 초과 발급 방지 검증
+ *   - Redis Lua 원자 발급(Redisson)으로 초과 발급 방지 검증
  *   - 재고 소진 후 올바른 에러 응답 확인
  *
  * 기대 결과 (다중 토큰 기준):
@@ -60,8 +60,7 @@ const issueDuration  = new Trend('coupon_issue_duration', true);
 const errorRate      = new Rate('coupon_error_rate');
 
 export const options = {
-  // stdout 메트릭에 p99 노출 (기본은 p95까지만 → 결과 출력에서 p99=0 표시 버그 해소)
-  summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(95)', 'p(99)'],
+  summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(90)', 'p(95)', 'p(99)'],
   scenarios: {
     // 선착순 스파이크: 5초 만에 50명 동시 요청
     spike: {
@@ -78,9 +77,11 @@ export const options = {
     },
   },
   thresholds: {
-    coupon_issue_duration: ['p(95)<2000'],  // 비관적 락 대기 포함 2초 기준
-    coupon_error_rate:     ['rate<0.01'],   // 5xx 에러만 실패 (재고 소진은 정상)
-    http_req_failed:       ['rate<0.01'],
+    coupon_issue_duration: ['p(95)<2000'],  // Redis Lua 발급 대기 포함 2초 기준
+    coupon_error_rate:     ['rate<0.01'],   // 5xx 에러만 실패 (재고 소진/중복은 정상 4xx)
+    // http_req_failed 제거: 재고 소진(400)/중복 방지(409)가 정상 응답이므로
+    // k6 빌트인 http_req_failed가 이를 전부 실패로 집계해 오탐 발생
+    // 실제 장애 판단은 coupon_error_rate(5xx 전용)로만 평가
   },
 };
 

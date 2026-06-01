@@ -14,10 +14,12 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -25,6 +27,15 @@ import lombok.NoArgsConstructor;
 
 @Getter
 @Entity
+@Table(
+        name = "reservations",
+        indexes = {
+                @Index(name = "idx_reservation_user_id",     columnList = "user_id"),
+                @Index(name = "idx_reservation_user_status", columnList = "user_id, status"),
+                @Index(name = "idx_reservation_remain_id",   columnList = "remain_id"),
+                @Index(name = "idx_reservation_status",      columnList = "status")
+        }
+)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Reservation {
 
