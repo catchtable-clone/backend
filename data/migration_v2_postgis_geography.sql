@@ -18,13 +18,14 @@ WHERE location IS NULL
   AND longitude IS NOT NULL;
 
 -- 4. GIST 공간 인덱스 생성
+--    findNearbyWithGist()의 ST_DWithin + KNN 정렬용. ddl-auto는 geometry/GIST를 못 만들므로
+--    이 마이그레이션이 유일한 생성 경로.
 CREATE INDEX IF NOT EXISTS idx_stores_location_gist
     ON stores USING GIST (location);
 
--- 5. nearby 바운딩박스 선필터용 복합 B-tree 인덱스
-CREATE INDEX IF NOT EXISTS idx_stores_lat_lng
-    ON stores (latitude, longitude)
-    WHERE is_deleted = false;
+-- NOTE: (latitude, longitude) B-tree 인덱스는 Store 엔티티의 @Index(idx_store_lat_lng) 로 이미
+-- ddl-auto 가 생성/유지하므로 여기서 별도 추가하지 않는다. 과거 버전에서 idx_stores_lat_lng
+-- 라는 다른 이름으로 중복 생성되던 문제를 방지.
 
 -- 검증
 -- SELECT pg_typeof(location) FROM stores LIMIT 1;           -- geography 이어야 정상
