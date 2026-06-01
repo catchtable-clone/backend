@@ -111,17 +111,12 @@ public class StoreService {
                 .collect(Collectors.joining("\n"));
     }
 
-    // 내 주변 매장 (바운딩박스 선필터 + 거리 정렬)
+    // 내 주변 매장 (PostGIS GIST 인덱스 + ST_DWithin + KNN 거리 정렬)
     @Transactional(readOnly = true)
     public List<StoreListResponse> getNearbyStores(double latitude, double longitude, int page, int size) {
         int limitedSize = Math.min(size, 100);
-        // 반경 5km를 위경도 델타로 변환 (1도 ≈ 111km, 한국 위도 기준 경도 1도 ≈ 88km)
-        double deltaLat = 5000.0 / 111_000.0;
-        double deltaLng = 5000.0 / 88_000.0;
-        return storeRepository.findNearby(
-                latitude, longitude,
-                latitude - deltaLat, latitude + deltaLat,
-                longitude - deltaLng, longitude + deltaLng,
+        return storeRepository.findNearbyWithGist(
+                latitude, longitude, 5000.0,
                 PageRequest.of(page, limitedSize)
         ).stream().map(StoreListResponse::from).toList();
     }
@@ -135,10 +130,11 @@ public class StoreService {
     public List<StoreListResponse> getStoresInBounds(
             double minLat, double maxLat, double minLng, double maxLng,
             Double centerLat, Double centerLng, int limit) {
+        int limitedLimit = Math.min(limit, 100);
         double cLat = centerLat != null ? centerLat : (minLat + maxLat) / 2.0;
         double cLng = centerLng != null ? centerLng : (minLng + maxLng) / 2.0;
         return storeRepository
-                .findInBounds(minLat, maxLat, minLng, maxLng, cLat, cLng, PageRequest.of(0, limit))
+                .findInBounds(minLat, maxLat, minLng, maxLng, cLat, cLng, PageRequest.of(0, limitedLimit))
                 .stream()
                 .map(StoreListResponse::from)
                 .toList();
