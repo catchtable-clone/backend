@@ -32,6 +32,7 @@ const LOCATIONS = [
 ];
 
 export const options = {
+  summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(90)', 'p(95)', 'p(99)'],
   scenarios: {
 
     // SCENARIO A: 이벤트 스파이크 — 50명 즉시 점프로 이벤트 오픈 순간 재현 (패턴 근거는 01-store-browse.js 헤더)

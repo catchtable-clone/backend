@@ -20,6 +20,7 @@ import com.catchtable.user.entity.User;
 import com.catchtable.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -81,7 +82,8 @@ public class ReviewService {
             throw new CustomException(ErrorCode.STORE_NOT_FOUND);
         }
 
-        List<Review> reviews = reviewRepository.findAllByStoreIdAndIsDeletedFalseOrderByCreatedAtDesc(storeId);
+        List<Review> reviews = reviewRepository.findAllByStoreIdAndIsDeletedFalseOrderByCreatedAtDesc(
+                storeId, PageRequest.of(0, 20));
         return reviews.stream()
                 .map(ReviewResponseDto::from)
                 .toList();
@@ -93,7 +95,8 @@ public class ReviewService {
             throw new CustomException(ErrorCode.USER_NOT_FOUND);
         }
 
-        List<Review> reviews = reviewRepository.findAllByUserIdAndIsDeletedFalseOrderByCreatedAtDesc(userId);
+        List<Review> reviews = reviewRepository.findAllByUserIdAndIsDeletedFalseOrderByCreatedAtDesc(
+                userId, PageRequest.of(0, 20));
         return reviews.stream()
                 .map(ReviewResponseDto::from)
                 .toList();
