@@ -28,7 +28,7 @@ public interface StoreRepository extends JpaRepository<Store, Long>, JpaSpecific
                      s.reviewCount DESC,
                      s.bookmarkCount DESC,
                      s.id ASC
-            """,
+            """)
     List<Store> findPopular(Pageable pageable);
 
     /**
