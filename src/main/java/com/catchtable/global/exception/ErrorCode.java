@@ -107,7 +107,8 @@ public enum ErrorCode implements ResponseCode {
     PAYMENT_VERIFICATION_FAILED(HttpStatus.BAD_REQUEST, "결제 검증에 실패했습니다."),
     PAYMENT_AMOUNT_MISMATCH(HttpStatus.BAD_REQUEST, "결제 금액이 일치하지 않습니다."),
     PAYMENT_PORTONE_API_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "포트원 API 호출 중 오류가 발생했습니다."),
-    PAYMENT_REFUND_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "결제 환불 처리 중 오류가 발생했습니다.");
+    PAYMENT_REFUND_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "결제 환불 처리 중 오류가 발생했습니다."),
+    PAYMENT_ALREADY_PAID(HttpStatus.CONFLICT, "이미 결제 완료된 예약입니다.");
 
     private final HttpStatus httpStatus;
     private final String message;
