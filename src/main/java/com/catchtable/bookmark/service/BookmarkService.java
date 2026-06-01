@@ -95,8 +95,7 @@ public class BookmarkService {
     public BookmarkFolderDeleteResponse deleteFolder(Long userId, Long folderId) {
         BookmarkFolder folder = getEditableFolder(userId, folderId);
 
-        bookmarkRepository.findByFolderIdAndIsDeletedFalse(folderId)
-                .forEach(Bookmark::softDelete);
+        bookmarkRepository.softDeleteAllByFolderId(folderId);
 
         folder.softDelete();
 

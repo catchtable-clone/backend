@@ -21,14 +21,15 @@ public interface StoreRepository extends JpaRepository<Store, Long>, JpaSpecific
      * - averageStar는 NULL일 수 있어 COALESCE로 0 처리
      * - 모든 통계 값이 동률일 때 ID 오름차순(=먼저 등록된 순)으로 결정성 보장
      */
-    @Query("""
+    @Query(value = """
             SELECT s FROM Store s
             WHERE s.isDeleted = false
             ORDER BY COALESCE(s.averageStar, 0) DESC,
                      s.reviewCount DESC,
                      s.bookmarkCount DESC,
                      s.id ASC
-            """)
+            """,
+           countQuery = "SELECT COUNT(s) FROM Store s WHERE s.isDeleted = false")
     List<Store> findPopular(Pageable pageable);
 
     /**
@@ -39,9 +40,16 @@ public interface StoreRepository extends JpaRepository<Store, Long>, JpaSpecific
      *
      * NOTE: Native query — H2 등 PostGIS 미지원 DB에서는 동작하지 않으므로 통합 테스트 시 주의.
      */
+    /**
+     * 바운딩박스 선필터(BETWEEN) → 후보 좁힌 뒤 거리 정렬.
+     * (latitude, longitude) B-tree 인덱스가 BETWEEN 필터를 가속한다.
+     * deltaLat/deltaLng는 호출부에서 반경(m)을 각도로 변환해 전달.
+     */
     @Query(value = """
             SELECT * FROM stores s
             WHERE s.is_deleted = false
+              AND s.latitude  BETWEEN :minLat AND :maxLat
+              AND s.longitude BETWEEN :minLng AND :maxLng
             ORDER BY ST_DistanceSphere(
                        ST_MakePoint(s.longitude, s.latitude),
                        ST_MakePoint(:lon, :lat)
@@ -51,6 +59,10 @@ public interface StoreRepository extends JpaRepository<Store, Long>, JpaSpecific
            nativeQuery = true)
     List<Store> findNearby(@Param("lat") double latitude,
                            @Param("lon") double longitude,
+                           @Param("minLat") double minLat,
+                           @Param("maxLat") double maxLat,
+                           @Param("minLng") double minLng,
+                           @Param("maxLng") double maxLng,
                            Pageable pageable);
 
     /**
@@ -79,6 +91,28 @@ public interface StoreRepository extends JpaRepository<Store, Long>, JpaSpecific
                                        @Param("lon") double longitude,
                                        @Param("radiusMeters") double radiusMeters,
                                        Pageable pageable);
+
+    /**
+     * ST_DWithin + GIST 인덱스 — 반경 내 매장을 공간 인덱스로 빠르게 필터링 후 거리순 정렬.
+     * migration_v2_postgis_geometry.sql 실행 후 location 컬럼과 GIST 인덱스가 존재해야 동작.
+     * 기존 findNearby(바운딩박스)의 장기 대체용.
+     */
+    @Query(value = """
+            SELECT * FROM stores s
+            WHERE s.is_deleted = false
+              AND ST_DWithin(
+                    s.location::geography,
+                    ST_SetSRID(ST_MakePoint(:lon, :lat), 4326)::geography,
+                    :radiusMeters
+                  )
+            ORDER BY s.location <-> ST_SetSRID(ST_MakePoint(:lon, :lat), 4326) ASC,
+                     s.id ASC
+            """,
+           nativeQuery = true)
+    List<Store> findNearbyWithGist(@Param("lat") double latitude,
+                                   @Param("lon") double longitude,
+                                   @Param("radiusMeters") double radiusMeters,
+                                   Pageable pageable);
 
     @Query("SELECT s.storeName FROM Store s WHERE s.isDeleted = false AND LOWER(s.storeName) LIKE LOWER(CONCAT('%', :name, '%')) ORDER BY s.storeName ASC")
     List<String> findNamesByNameContaining(@Param("name") String name, Pageable pageable);

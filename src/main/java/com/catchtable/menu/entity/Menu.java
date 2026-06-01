@@ -9,7 +9,12 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "menu")
+@Table(
+        name = "menu",
+        indexes = {
+                @Index(name = "idx_menu_store_deleted", columnList = "store_id, is_deleted")
+        }
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Menu {

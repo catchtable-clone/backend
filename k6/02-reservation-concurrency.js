@@ -30,6 +30,7 @@ const errorRate      = new Rate('reservation_error_rate');
 const reserveDuration = new Trend('reservation_duration', true);
 
 export const options = {
+  summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(90)', 'p(95)', 'p(99)'],
   scenarios: {
     // 100명이 동시에 한꺼번에 예약 요청 — 스파이크 시나리오
     spike: {

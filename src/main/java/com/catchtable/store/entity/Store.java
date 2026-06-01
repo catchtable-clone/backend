@@ -4,13 +4,21 @@ import com.catchtable.global.exception.CustomException;
 import com.catchtable.global.exception.ErrorCode;
 import jakarta.persistence.*;
 import lombok.*;
+import org.locationtech.jts.geom.Point;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "stores")
+@Table(
+        name = "stores",
+        indexes = {
+                @Index(name = "idx_store_lat_lng",         columnList = "latitude, longitude"),
+                @Index(name = "idx_store_deleted_category", columnList = "is_deleted, category"),
+                @Index(name = "idx_store_deleted_district", columnList = "is_deleted, district")
+        }
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
@@ -36,6 +44,11 @@ public class Store {
 
     @Column(nullable = false)
     private Double longitude;
+
+    // PostGIS geometry 컬럼 — ST_DWithin/KNN 공간 인덱스 활용
+    // migration_v2_postgis_geometry.sql 실행 후 GIST 인덱스 적용됨
+    @Column(columnDefinition = "geometry(Point, 4326)", insertable = false, updatable = false)
+    private Point location;
 
     @Column(nullable = false)
     private String address;

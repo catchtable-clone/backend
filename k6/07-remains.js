@@ -22,6 +22,7 @@ const STORE_IDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 const REMAINS_SLA_MS = Number(__ENV.REMAINS_SLA_MS || 400);
 
 export const options = {
+  summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(90)', 'p(95)', 'p(99)'],
   scenarios: {
 
     // SCENARIO A: 이벤트 스파이크 — 50명 즉시 점프로 이벤트 오픈 순간 재현 (패턴 근거는 01-store-browse.js 헤더)
@@ -77,11 +78,11 @@ export default function () {
     remainsDuration.add(res.timings.duration);
     isSpike ? spikeDuration.add(res.timings.duration) : rampDuration.add(res.timings.duration);
 
-    const ok = check(res, {
-      '잔여석 200': (r) => r.status === 200,
-      [`응답 ${REMAINS_SLA_MS}ms 이내`]: (r) => r.timings.duration < REMAINS_SLA_MS,
-    });
+    // HTTP 성공 여부만 errorRate에 반영 — SLA 초과는 에러가 아닌 별도 지표로 관찰
+    const ok = check(res, { '잔여석 200': (r) => r.status === 200 });
     errorRate.add(!ok);
+    // SLA 체크: threshold 위반 여부는 remains_duration p95/p99로 판단
+    check(res, { [`응답 ${REMAINS_SLA_MS}ms 이내`]: (r) => r.timings.duration < REMAINS_SLA_MS });
   });
 
   sleep(0.5);
