@@ -1219,13 +1219,13 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
-          "expr": "sum(rate(kafka_consumer_fetch_manager_records_consumed_total{job=\"catchtable-app\"}[1m])) by (topic)",
+          "expr": "sum(rate(kafka_consumer_fetch_manager_records_consumed_total{job=\"catchtable-app\", topic!~\".*_.*\"}[1m])) by (topic)",
           "legendFormat": "소비 - {{topic}}",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "DS_PROMETHEUS" },
-          "expr": "sum(rate(kafka_producer_record_send_total{job=\"catchtable-app\"}[1m])) by (topic)",
+          "expr": "sum(rate(kafka_producer_record_send_total{job=\"catchtable-app\", topic!~\".*_.*\"}[1m])) by (topic)",
           "legendFormat": "생산 - {{topic}}",
           "refId": "B"
         }
