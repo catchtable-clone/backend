@@ -183,7 +183,10 @@ const redisClient = (PHASE === 'smembers' || PHASE === 'ttl') ? new redis.Client
 
 export const options = (() => {
     if (PHASE === 'subscribe') {
-        return { vus: N, iterations: N };
+        // per-vu-iterations: 각 VU가 정확히 1 iter씩 → N개 토큰이 1:1로 사용됨.
+        // 기존 { vus: N, iterations: N } shared 모드는 빠른 VU가 추가 iter를 가져가
+        // TOKENS 분배가 불균등해짐 (실측: VU 1~10만 사용되어 SCARD가 10).
+        return { scenarios: { default: { executor: 'per-vu-iterations', vus: N, iterations: 1 } } };
     }
     if (PHASE === 'smembers') {
         // 단일 VU 가 N 번 반복 - SMEMBERS 자체 응답시간 분포만 본다.
