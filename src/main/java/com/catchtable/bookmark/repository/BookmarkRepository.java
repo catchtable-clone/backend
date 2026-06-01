@@ -15,7 +15,7 @@ public interface BookmarkRepository extends JpaRepository<Bookmark, Long> {
     List<Bookmark> findByFolderIdAndIsDeletedFalse(@Param("folderId") Long folderId);
 
     // 폴더 삭제 시 벌크 소프트 삭제 — forEach UPDATE N번 → UPDATE 1번
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("UPDATE Bookmark b SET b.isDeleted = true WHERE b.folder.id = :folderId AND b.isDeleted = false")
     void softDeleteAllByFolderId(@Param("folderId") Long folderId);
 

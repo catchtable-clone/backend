@@ -29,7 +29,6 @@ public interface StoreRepository extends JpaRepository<Store, Long>, JpaSpecific
                      s.bookmarkCount DESC,
                      s.id ASC
             """,
-           countQuery = "SELECT COUNT(s) FROM Store s WHERE s.isDeleted = false")
     List<Store> findPopular(Pageable pageable);
 
     /**
@@ -101,11 +100,11 @@ public interface StoreRepository extends JpaRepository<Store, Long>, JpaSpecific
             SELECT * FROM stores s
             WHERE s.is_deleted = false
               AND ST_DWithin(
-                    s.location::geography,
+                    s.location,
                     ST_SetSRID(ST_MakePoint(:lon, :lat), 4326)::geography,
                     :radiusMeters
                   )
-            ORDER BY s.location <-> ST_SetSRID(ST_MakePoint(:lon, :lat), 4326) ASC,
+            ORDER BY s.location <-> ST_SetSRID(ST_MakePoint(:lon, :lat), 4326)::geography ASC,
                      s.id ASC
             """,
            nativeQuery = true)

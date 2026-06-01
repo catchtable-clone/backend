@@ -47,7 +47,7 @@ public class Store {
 
     // PostGIS geometry 컬럼 — ST_DWithin/KNN 공간 인덱스 활용
     // migration_v2_postgis_geometry.sql 실행 후 GIST 인덱스 적용됨
-    @Column(columnDefinition = "geometry(Point, 4326)", insertable = false, updatable = false)
+    @Column(columnDefinition = "geography(Point, 4326)", insertable = false, updatable = false)
     private Point location;
 
     @Column(nullable = false)

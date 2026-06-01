@@ -69,7 +69,7 @@ public class StoreService {
     }
 
     // 인기 매장 — Redis 캐시(TTL 5분) 적용, Cache Stampede 방지
-    @Cacheable(value = "popularStores", key = "#limit")
+    @Cacheable(value = "popularStores", key = "#limit", sync = true)
     @Transactional(readOnly = true)
     public List<StoreListResponse> getPopularStores(int limit) {
         return storeRepository.findPopular(PageRequest.of(0, limit)).stream()
