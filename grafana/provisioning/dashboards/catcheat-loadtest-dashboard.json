@@ -898,18 +898,18 @@
             "type": "prometheus",
             "uid": "DS_PROMETHEUS"
           },
-          "expr": "{__name__=~\"k6_.*_spike_duration_p95\"} * 1000",
+          "expr": "label_replace({__name__=~\"k6_.*_spike_duration_p95\"} * 1000, \"scenario\", \"$1\", \"__name__\", \"k6_(.*)_spike_duration_p95\")",
           "refId": "A",
-          "legendFormat": "spike p95 ({{__name__}})"
+          "legendFormat": "{{scenario}} spike p95"
         },
         {
           "datasource": {
             "type": "prometheus",
             "uid": "DS_PROMETHEUS"
           },
-          "expr": "{__name__=~\"k6_.*_ramp_duration_p95\"} * 1000",
+          "expr": "label_replace({__name__=~\"k6_.*_ramp_duration_p95\"} * 1000, \"scenario\", \"$1\", \"__name__\", \"k6_(.*)_ramp_duration_p95\")",
           "refId": "B",
-          "legendFormat": "ramp p95 ({{__name__}})"
+          "legendFormat": "{{scenario}} ramp p95"
         }
       ]
     },
@@ -2070,7 +2070,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum by (kind) (rate(resilience4j_circuitbreaker_calls_total{name=~\"ai-api|chatbot\"}[1m]))",
+          "expr": "sum by (kind) (rate(resilience4j_circuitbreaker_calls_seconds_count{name=~\"ai-api|chatbot\"}[1m])) or label_replace(sum(rate(resilience4j_circuitbreaker_not_permitted_calls_total{name=~\"ai-api|chatbot\"}[1m])), \"kind\", \"not_permitted\", \"\", \"\")",
           "legendFormat": "{{kind}}",
           "refId": "A",
           "datasource": {
