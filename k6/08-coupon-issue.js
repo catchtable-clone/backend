@@ -60,6 +60,8 @@ const issueDuration  = new Trend('coupon_issue_duration', true);
 const errorRate      = new Rate('coupon_error_rate');
 
 export const options = {
+  // stdout 메트릭에 p99 노출 (기본은 p95까지만 → 결과 출력에서 p99=0 표시 버그 해소)
+  summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(95)', 'p(99)'],
   scenarios: {
     // 선착순 스파이크: 5초 만에 50명 동시 요청
     spike: {
