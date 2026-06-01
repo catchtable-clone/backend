@@ -66,7 +66,8 @@ Write-Host ""
 
 # k6 v2.0+ 호환 — 기본은 p99만 노출하므로 p50/p90/p95도 명시 push
 # 대시보드 Row A/B의 백분위 패널이 작동하려면 필수
-$env:K6_PROMETHEUS_RW_TREND_STATS = 'p(50),p(90),p(95),p(99),min,max,avg'
+$env:K6_PROMETHEUS_RW_TREND_STATS    = 'p(50),p(90),p(95),p(99),min,max,avg'
+$env:K6_PROMETHEUS_RW_PUSH_INTERVAL = '2s'
 
 # PrometheusUrl 지정 시에만 remote_write 사용. 미지정 시 콘솔 출력만.
 if ($PrometheusUrl) {

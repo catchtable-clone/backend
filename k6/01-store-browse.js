@@ -35,6 +35,7 @@ const rampDuration  = new Trend('browse_ramp_duration', true);
 const errorRate = new Rate('browse_error_rate');
 
 export const options = {
+  summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(90)', 'p(95)', 'p(99)'],
   scenarios: {
 
     // ── SCENARIO A: 이벤트 스파이크 ────────────────────────────────────────

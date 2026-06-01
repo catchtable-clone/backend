@@ -9,7 +9,13 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "bookmarks")
+@Table(
+        name = "bookmarks",
+        indexes = {
+                @Index(name = "idx_bookmark_folder_deleted", columnList = "folder_id, is_deleted"),
+                @Index(name = "idx_bookmark_store_folder",   columnList = "store_id, folder_id")
+        }
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
