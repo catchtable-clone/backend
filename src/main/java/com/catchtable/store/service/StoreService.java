@@ -45,6 +45,7 @@ public class StoreService {
     private final StoreRemainRepository storeRemainRepository;
 
     // 매장 등록
+    @CacheEvict(value = "storeList", allEntries = true)
     @Transactional
     public StoreCreateResponse createStore(Long userId, StoreCreateRequest request) {
         userRepository.getAdminOrThrow(userId, ErrorCode.ADMIN_ONLY_STORE_CREATE);
@@ -57,6 +58,7 @@ public class StoreService {
      * 매장 목록 통합 조회 (이름·카테고리·지역 옵셔널 필터 + DB 페이지네이션 + 인기 정렬)
      * Specification 사용으로 PostgreSQL+enum 조합에서 :param IS NULL 회피.
      */
+    @Cacheable(value = "storeList", key = "T(String).valueOf(#category) + ':' + T(String).valueOf(#district) + ':' + #page + ':' + #size", condition = "#name == null")
     @Transactional(readOnly = true)
     public List<StoreListResponse> getStores(String name, Category category, District district, int page, int size) {
         int limitedSize = Math.min(size, 100);
@@ -79,10 +81,9 @@ public class StoreService {
                 .toList();
     }
 
-    @CacheEvict(value = "popularStores", allEntries = true)
+    @CacheEvict(value = {"popularStores", "storeList"}, allEntries = true)
     @Transactional
     public void evictPopularStoresCache() {
-        // 매장 등록/수정/리뷰 생성 등 인기도 변동 시 호출
     }
 
     @Tool(description = "사용자 주변의 인기 매장을 조회합니다. '내 주변 맛집', '근처 인기 매장', '주변 맛집 추천' 등의 요청에 사용하세요. 위치 정보가 없으면 사용할 수 없습니다.")
@@ -196,6 +197,7 @@ public class StoreService {
     }
 
     // 매장 정보 수정
+    @CacheEvict(value = "storeList", allEntries = true)
     @Transactional
     public StoreUpdateResponse updateStore(Long userId, Long storeId, StoreUpdateRequest request) {
         userRepository.getAdminOrThrow(userId, ErrorCode.ADMIN_ONLY_STORE_UPDATE);
@@ -210,6 +212,7 @@ public class StoreService {
     }
 
     // 매장 상태 변경
+    @CacheEvict(value = "storeList", allEntries = true)
     @Transactional
     public StoreStatusUpdateResponse updateStoreStatus(Long userId, Long storeId, StoreStatusUpdateRequest request) {
         userRepository.getAdminOrThrow(userId, ErrorCode.ADMIN_ONLY_STORE_STATUS);
@@ -223,6 +226,7 @@ public class StoreService {
      * 자체 리뷰 생성 시 호출 — 외부 시드된 별점/리뷰수를 base로 평균에 합산.
      * 리스너에서 비동기로 호출되므로 리뷰 작성 자체엔 영향을 주지 않는다.
      */
+    @CacheEvict(value = {"popularStores", "storeList"}, allEntries = true)
     @Transactional
     public void applyReviewCreated(Long storeId, int newStar) {
         Store store = storeRepository.findByIdAndIsDeletedFalse(storeId)
@@ -230,6 +234,7 @@ public class StoreService {
         store.applyReviewCreated(newStar);
     }
 
+    @CacheEvict(value = {"popularStores", "storeList"}, allEntries = true)
     @Transactional
     public void applyReviewDeleted(Long storeId, int deletedStar) {
         Store store = storeRepository.findByIdAndIsDeletedFalse(storeId)
@@ -237,6 +242,7 @@ public class StoreService {
         store.applyReviewDeleted(deletedStar);
     }
 
+    @CacheEvict(value = {"popularStores", "storeList"}, allEntries = true)
     @Transactional
     public void applyReviewUpdated(Long storeId, int oldStar, int newStar) {
         Store store = storeRepository.findByIdAndIsDeletedFalse(storeId)
