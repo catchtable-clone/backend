@@ -61,7 +61,7 @@ export const options = {
 };
 
 const CATEGORIES = ['KOREAN', 'JAPANESE', 'CHINESE', 'WESTERN', 'CAFE'];
-const DISTRICTS  = ['강남구', '마포구', '종로구', '용산구', '성동구'];
+const DISTRICTS  = ['GANGNAM', 'MAPO', 'JONGNO', 'YONGSAN', 'SEONGDONG'];
 
 export default function () {
   const isSpike        = exec.scenario.name === 'event_spike';
@@ -87,6 +87,7 @@ export default function () {
       '목록 조회 200': (r) => r.status === 200,
       '응답 body 존재': (r) => r.body && r.body.length > 0,
     });
+    if (!ok) console.log(`[ERROR] status=${res.status} url=${url} body=${res.body?.substring(0, 200)}`);
     errorRate.add(!ok);
   });
 
