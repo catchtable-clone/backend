@@ -45,6 +45,7 @@ public class StoreService {
     private final StoreRemainRepository storeRemainRepository;
 
     // 매장 등록
+    @CacheEvict(value = "storeList", allEntries = true)
     @Transactional
     public StoreCreateResponse createStore(Long userId, StoreCreateRequest request) {
         userRepository.getAdminOrThrow(userId, ErrorCode.ADMIN_ONLY_STORE_CREATE);
@@ -57,6 +58,7 @@ public class StoreService {
      * 매장 목록 통합 조회 (이름·카테고리·지역 옵셔널 필터 + DB 페이지네이션 + 인기 정렬)
      * Specification 사용으로 PostgreSQL+enum 조합에서 :param IS NULL 회피.
      */
+    @Cacheable(value = "storeList", key = "#name + ':' + #category + ':' + #district + ':' + #page + ':' + #size")
     @Transactional(readOnly = true)
     public List<StoreListResponse> getStores(String name, Category category, District district, int page, int size) {
         int limitedSize = Math.min(size, 100);
@@ -196,6 +198,7 @@ public class StoreService {
     }
 
     // 매장 정보 수정
+    @CacheEvict(value = "storeList", allEntries = true)
     @Transactional
     public StoreUpdateResponse updateStore(Long userId, Long storeId, StoreUpdateRequest request) {
         userRepository.getAdminOrThrow(userId, ErrorCode.ADMIN_ONLY_STORE_UPDATE);
@@ -210,6 +213,7 @@ public class StoreService {
     }
 
     // 매장 상태 변경
+    @CacheEvict(value = "storeList", allEntries = true)
     @Transactional
     public StoreStatusUpdateResponse updateStoreStatus(Long userId, Long storeId, StoreStatusUpdateRequest request) {
         userRepository.getAdminOrThrow(userId, ErrorCode.ADMIN_ONLY_STORE_STATUS);

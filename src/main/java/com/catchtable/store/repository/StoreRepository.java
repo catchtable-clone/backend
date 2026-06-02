@@ -121,12 +121,8 @@ public interface StoreRepository extends JpaRepository<Store, Long>, JpaSpecific
     @Query(value = """
             SELECT * FROM stores s
             WHERE s.is_deleted = false
-              AND s.latitude  BETWEEN :minLat AND :maxLat
-              AND s.longitude BETWEEN :minLng AND :maxLng
-            ORDER BY ST_DistanceSphere(
-                       ST_MakePoint(s.longitude, s.latitude),
-                       ST_MakePoint(:centerLng, :centerLat)
-                     ) ASC,
+              AND s.location::geometry && ST_MakeEnvelope(:minLng, :minLat, :maxLng, :maxLat, 4326)
+            ORDER BY s.location <-> ST_SetSRID(ST_MakePoint(:centerLng, :centerLat), 4326)::geography ASC,
                      s.id ASC
             """,
            nativeQuery = true)
