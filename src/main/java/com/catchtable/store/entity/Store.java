@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
                 @Index(name = "idx_store_lat_lng",           columnList = "latitude, longitude"),
                 @Index(name = "idx_store_deleted_category",  columnList = "is_deleted, category"),
                 @Index(name = "idx_store_deleted_district",  columnList = "is_deleted, district"),
-                @Index(name = "idx_store_popularity",        columnList = "is_deleted, average_star, review_count, bookmark_count, id")
+                @Index(name = "idx_store_popularity",        columnList = "is_deleted, average_star DESC, review_count DESC, bookmark_count DESC, id ASC")
         }
 )
 @Getter

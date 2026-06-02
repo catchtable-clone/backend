@@ -16,15 +16,10 @@ public interface StoreRepository extends JpaRepository<Store, Long>, JpaSpecific
 
     List<Store> findAllByIsDeletedFalse();
 
-    /**
-     * 인기 매장 정렬 — averageStar DESC → reviewCount DESC → bookmarkCount DESC → id ASC
-     * - averageStar는 NULL일 수 있어 COALESCE로 0 처리
-     * - 모든 통계 값이 동률일 때 ID 오름차순(=먼저 등록된 순)으로 결정성 보장
-     */
     @Query(value = """
             SELECT s FROM Store s
             WHERE s.isDeleted = false
-            ORDER BY COALESCE(s.averageStar, 0) DESC,
+            ORDER BY s.averageStar DESC,
                      s.reviewCount DESC,
                      s.bookmarkCount DESC,
                      s.id ASC
@@ -80,9 +75,9 @@ public interface StoreRepository extends JpaRepository<Store, Long>, JpaSpecific
                     ST_MakePoint(s.longitude, s.latitude),
                     ST_MakePoint(:lon, :lat)
                   ) <= :radiusMeters
-            ORDER BY COALESCE(s.average_star, 0) DESC,
-                     COALESCE(s.review_count, 0) DESC,
-                     COALESCE(s.bookmark_count, 0) DESC,
+            ORDER BY s.average_star DESC,
+                     s.review_count DESC,
+                     s.bookmark_count DESC,
                      s.id ASC
             """,
            nativeQuery = true)
@@ -121,7 +116,7 @@ public interface StoreRepository extends JpaRepository<Store, Long>, JpaSpecific
     @Query(value = """
             SELECT * FROM stores s
             WHERE s.is_deleted = false
-              AND s.location::geometry && ST_MakeEnvelope(:minLng, :minLat, :maxLng, :maxLat, 4326)
+              AND s.location && ST_MakeEnvelope(:minLng, :minLat, :maxLng, :maxLat, 4326)::geography
             ORDER BY s.location <-> ST_SetSRID(ST_MakePoint(:centerLng, :centerLat), 4326)::geography ASC,
                      s.id ASC
             """,
