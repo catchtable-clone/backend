@@ -159,19 +159,13 @@ public class CouponService {
             return "사용 가능한 쿠폰이 없습니다.";
         }
 
+        // discountRate 는 NOT NULL 이라 분기가 사실상 죽은 코드였고,
+        // else 분기는 amount(발급수량)를 "원 할인"으로 잘못 표시하던 버그.
         return availableCoupons.stream()
-                .map(coupon -> {
-                    String discountInfo;
-                    if (coupon.getCouponTemplate().getDiscountRate() != null) {
-                        discountInfo = coupon.getCouponTemplate().getDiscountRate() + "% 할인";
-                    } else {
-                        discountInfo = coupon.getCouponTemplate().getAmount() + "원 할인";
-                    }
-                    return String.format("%s (ID: %d, %s)",
-                            coupon.getCouponTemplate().getCouponName(),
-                            coupon.getId(),
-                            discountInfo);
-                })
+                .map(coupon -> String.format("%s (ID: %d, %d%% 할인)",
+                        coupon.getCouponTemplate().getCouponName(),
+                        coupon.getId(),
+                        coupon.getCouponTemplate().getDiscountRate()))
                 .collect(Collectors.joining(", "));
     }
 }
