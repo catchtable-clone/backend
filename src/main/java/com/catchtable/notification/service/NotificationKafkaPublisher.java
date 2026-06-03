@@ -3,6 +3,7 @@ package com.catchtable.notification.service;
 import com.catchtable.notification.event.ReservationCanceledEvent;
 import com.catchtable.notification.event.ReservationChangedEvent;
 import com.catchtable.notification.event.ReservationConfirmedEvent;
+import com.catchtable.notification.event.ReservationReminderEvent;
 import com.catchtable.notification.event.ReservationVisitedEvent;
 import com.catchtable.notification.event.VacancyEvent;
 import lombok.RequiredArgsConstructor;
@@ -54,5 +55,11 @@ public class NotificationKafkaPublisher {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void publishVacancyOpened(VacancyEvent event) {
         kafkaTemplate.send("notification.vacancy.opened", event);
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void publishReservationReminder(ReservationReminderEvent event) {
+        kafkaTemplate.send("notification.reservation.reminder", event);
     }
 }

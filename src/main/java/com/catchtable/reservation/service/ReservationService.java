@@ -1,6 +1,5 @@
 package com.catchtable.reservation.service;
 
-import com.catchtable.chatbot.dto.create.PendingPaymentHolder;
 import com.catchtable.chatbot.dto.create.PendingPaymentInfo;
 import com.catchtable.coupon.entity.Coupon;
 import com.catchtable.coupon.service.CouponService;
@@ -145,7 +144,10 @@ public class ReservationService {
 
                 log.info("AI 예약 성공: reservationId={}, orderId={}", saved.getId(), orderId);
 
-                PendingPaymentHolder.set(new PendingPaymentInfo(saved.getId(), orderId, DEPOSIT_AMOUNT));
+                // ToolContext의 mutable map에 결제 정보를 적재해 ChatbotService 가 .call() 후 회수.
+                // ThreadLocal 은 Spring AI tool 호출이 별도 스레드에서 실행돼 caller 가 못 읽음.
+                toolContext.getContext().put("pendingPayment",
+                        new PendingPaymentInfo(saved.getId(), orderId, DEPOSIT_AMOUNT));
 
                 return String.format(
                         "네, %s 레스토랑 %s %s 시간으로 %d명 예약이 완료되었습니다. " +

@@ -4,6 +4,7 @@ import com.catchtable.notification.entity.NotificationType;
 import com.catchtable.notification.event.ReservationCanceledEvent;
 import com.catchtable.notification.event.ReservationChangedEvent;
 import com.catchtable.notification.event.ReservationConfirmedEvent;
+import com.catchtable.notification.event.ReservationReminderEvent;
 import com.catchtable.notification.event.ReservationVisitedEvent;
 import com.catchtable.notification.event.VacancyEvent;
 import com.catchtable.remain.entity.StoreRemain;
@@ -99,6 +100,27 @@ public class NotificationKafkaConsumer {
                 title,
                 content,
                 event.getNewReservationId()
+        );
+    }
+
+    @KafkaListener(topics = "notification.reservation.reminder", groupId = "catchtable-notification-group")
+    @Transactional
+    public void handleReservationReminder(@Payload ReservationReminderEvent event) {
+        log.info("[Kafka Consumer] 예약 리마인더 이벤트 수신: reservationId={}", event.getReservationId());
+        User user = findUserOrThrow(event.getUserId());
+
+        String title = "예약 1시간 전입니다.";
+        String content = String.format("'%s' 매장 %s %s 예약이 1시간 후에 시작됩니다.",
+                event.getStoreName(),
+                event.getRemainDate(),
+                event.getRemainTime());
+
+        notificationService.createNotification(
+                user,
+                NotificationType.RESERVATION_REMINDER,
+                title,
+                content,
+                event.getReservationId()
         );
     }
 

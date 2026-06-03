@@ -2,7 +2,6 @@ package com.catchtable.chatbot.service;
 
 import com.catchtable.chatbot.dto.create.ChatMessageRequest;
 import com.catchtable.chatbot.dto.create.ChatMessageResponse;
-import com.catchtable.chatbot.dto.create.PendingPaymentHolder;
 import com.catchtable.chatbot.dto.create.PendingPaymentInfo;
 import com.catchtable.chatbot.dto.read.ChatMessageListResponse;
 import com.catchtable.chatbot.entity.ChatMessage;
@@ -86,14 +85,15 @@ public class ChatbotService {
         String summarySuffix = buildSummarySuffix(history);
         List<ChatMessage> trimmedHistory = trimHistory(history);
 
-        String reply;
-        PendingPaymentInfo paymentInfo;
-        try {
-            reply = callAi(trimmedHistory, userId, request.latitude(), request.longitude(), summarySuffix);
-            paymentInfo = PendingPaymentHolder.get();
-        } finally {
-            PendingPaymentHolder.clear();
-        }
+        // ToolContext 로 전달할 mutable map — tool(createReservationFromAi 등)이 결과를 적재해 caller 가 회수.
+        // ThreadLocal 사용 시 Spring AI tool 이 aiExecutor 별도 스레드에서 실행돼 caller 가 못 읽음.
+        Map<String, Object> toolContext = new java.util.HashMap<>();
+        toolContext.put("userId", userId);
+        if (request.latitude() != null) toolContext.put("latitude", request.latitude());
+        if (request.longitude() != null) toolContext.put("longitude", request.longitude());
+
+        String reply = callAi(trimmedHistory, toolContext, summarySuffix);
+        PendingPaymentInfo paymentInfo = (PendingPaymentInfo) toolContext.get("pendingPayment");
 
         if (reply == null || reply.isBlank()) {
             throw new CustomException(ErrorCode.CHAT_AI_ERROR);
@@ -111,12 +111,9 @@ public class ChatbotService {
     // 내부 유틸
     // ============================================================
 
-    private String callAi(List<ChatMessage> history, Long userId, Double latitude, Double longitude, String summarySuffix) {
+    private String callAi(List<ChatMessage> history, Map<String, Object> context, String summarySuffix) {
+        Long userId = (Long) context.get("userId");
         List<Message> messages = buildMessages(history, userId, summarySuffix);
-        Map<String, Object> context = new java.util.HashMap<>();
-        context.put("userId", userId);
-        if (latitude != null) context.put("latitude", latitude);
-        if (longitude != null) context.put("longitude", longitude);
 
         try {
             // 적용 순서: Bulkhead → Retry → CircuitBreaker → 실제 호출(타임아웃 포함)
