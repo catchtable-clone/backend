@@ -130,7 +130,8 @@ public class Store {
         }
         double total = this.averageStar * this.reviewCount - deletedStar;
         this.reviewCount -= 1;
-        this.averageStar = total / this.reviewCount;
+        // 부동소수점 누적 오차로 -0.0000... 같은 음수가 나올 수 있어 0 으로 클램프.
+        this.averageStar = Math.max(0.0, total / this.reviewCount);
     }
 
     public void applyReviewUpdated(int oldStar, int newStar) {

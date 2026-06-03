@@ -54,7 +54,7 @@ public interface StoreRemainRepository extends JpaRepository<StoreRemain, Long> 
             WHERE id IN (
                 SELECT sr.id FROM store_remain sr
                 WHERE sr.remain_date < :today
-                  AND NOT EXISTS (SELECT 1 FROM reservation r WHERE r.remain_id = sr.id)
+                  AND NOT EXISTS (SELECT 1 FROM reservations r WHERE r.remain_id = sr.id)
                   AND NOT EXISTS (SELECT 1 FROM vacancy_subscriptions v WHERE v.remain_id = sr.id)
                 LIMIT :batchSize
             )

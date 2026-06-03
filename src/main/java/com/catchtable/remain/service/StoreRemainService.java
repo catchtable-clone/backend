@@ -269,17 +269,20 @@ public class StoreRemainService {
 
     /**
      * 영업시간 범위로 1시간 단위 슬롯 시간 목록을 생성한다.
-     * 마지막 슬롯은 closeTime을 넘지 않아야 한다.
+     * 자정 가로지름(예: 22:00~02:00)도 처리하도록 분 단위로 변환해 계산한다.
+     * 마지막 슬롯은 closeTime 을 넘지 않는다.
      */
     private List<LocalTime> buildSlotTimes(LocalTime openTime, LocalTime closeTime) {
+        int openMinutes = openTime.getHour() * 60 + openTime.getMinute();
+        int closeMinutes = closeTime.getHour() * 60 + closeTime.getMinute();
+        // closeTime 이 openTime 보다 작거나 같으면 자정 가로지름 → 24h 가산
+        if (closeMinutes <= openMinutes) {
+            closeMinutes += 24 * 60;
+        }
+
         List<LocalTime> times = new ArrayList<>();
-        LocalTime current = openTime;
-        while (current.isBefore(closeTime)) {
-            if (current.plusHours(1).isAfter(closeTime)) {
-                break;
-            }
-            times.add(current);
-            current = current.plusHours(1);
+        for (int m = openMinutes; m + 60 <= closeMinutes; m += 60) {
+            times.add(LocalTime.of((m / 60) % 24, m % 60));
         }
         return times;
     }
