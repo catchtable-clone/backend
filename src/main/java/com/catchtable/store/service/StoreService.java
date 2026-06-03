@@ -58,7 +58,7 @@ public class StoreService {
      * 매장 목록 통합 조회 (이름·카테고리·지역 옵셔널 필터 + DB 페이지네이션 + 인기 정렬)
      * Specification 사용으로 PostgreSQL+enum 조합에서 :param IS NULL 회피.
      */
-    @Cacheable(value = "storeList", key = "T(String).valueOf(#category) + ':' + T(String).valueOf(#district) + ':' + #page + ':' + #size", condition = "#name == null")
+    @Cacheable(value = "storeList", key = "(#category?.name() ?: 'ALL') + ':' + (#district?.name() ?: 'ALL') + ':' + #page + ':' + #size", condition = "#name == null || #name.isBlank()")
     @Transactional(readOnly = true)
     public List<StoreListResponse> getStores(String name, Category category, District district, int page, int size) {
         int limitedSize = Math.min(size, 100);
