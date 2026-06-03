@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 // basePackages 제한: 액추에이터(/actuator/prometheus 등 org.springframework.boot.actuate.*)
 // 엔드포인트의 예외까지 이 advice가 가로채면, ApiResponse(JSON)를 openmetrics 응답으로
@@ -27,6 +28,20 @@ public class GlobalExceptionHandler {
             builder.header(HttpHeaders.RETRY_AFTER, "10");
         }
         return builder.body(ApiResponse.error(errorCode));
+    }
+
+    // 400 - 쿼리/path 파라미터 타입 불일치 (enum 변환 실패 등)
+    // 예: ?category=CAFE 에서 CAFE 가 Category enum 에 없으면 ConversionFailedException 발생.
+    // 핸들러 없을 시 Exception.class 로 잡혀 500 으로 응답되던 문제 해결.
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiResponse<Void>> handleTypeMismatch(MethodArgumentTypeMismatchException e) {
+        String message = String.format("파라미터 '%s' 의 값 '%s' 이(가) %s 타입으로 변환할 수 없습니다.",
+                e.getName(),
+                e.getValue(),
+                e.getRequiredType() != null ? e.getRequiredType().getSimpleName() : "?");
+        return ResponseEntity
+                .badRequest()
+                .body(ApiResponse.error(ErrorCode.BAD_REQUEST, message));
     }
 
     // 400 - 입력값 검증 실패 (@Valid 에러)

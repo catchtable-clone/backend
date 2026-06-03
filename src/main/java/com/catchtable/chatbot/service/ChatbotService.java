@@ -32,9 +32,11 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import jakarta.annotation.PreDestroy;
+
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -58,8 +60,8 @@ public class ChatbotService {
     private final CircuitBreaker aiCircuitBreaker;
     private final Bulkhead aiBulkhead;
     private final Retry aiRetry;
-    // ForkJoinPool 공용 풀 대신 AI 호출 전용 스레드풀 사용
-    private final Executor aiExecutor;
+    // ForkJoinPool 공용 풀 대신 AI 호출 전용 스레드풀 사용 — @PreDestroy 에서 shutdown 위해 ExecutorService 로 보관
+    private final ExecutorService aiExecutor;
 
     public ChatbotService(ChatClient chatClient, ChatbotDbService dbService,
                           ReservationService reservationService, CouponService couponService,
@@ -77,6 +79,23 @@ public class ChatbotService {
         this.aiBulkhead = bulkheadRegistry.bulkhead("ai-api");
         this.aiRetry = retryRegistry.retry("ai-api");
         this.aiExecutor = Executors.newFixedThreadPool(AI_THREAD_POOL_SIZE);
+    }
+
+    /**
+     * 애플리케이션 종료 시 aiExecutor 의 20개 스레드를 정리한다.
+     * 미정리 시 graceful shutdown 이 막혀 JVM 이 깨끗하게 종료되지 않음.
+     */
+    @PreDestroy
+    public void shutdown() {
+        aiExecutor.shutdown();
+        try {
+            if (!aiExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
+                aiExecutor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            aiExecutor.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
     }
 
     public ChatMessageResponse sendMessage(Long userId, ChatMessageRequest request) {

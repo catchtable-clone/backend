@@ -149,7 +149,19 @@ public class NotificationKafkaConsumer {
             return;
         }
 
-        List<Long> userIds = subscriberIds.stream().map(Long::parseLong).collect(Collectors.toList());
+        // Redis set 안에 비숫자 값이 섞여 있어도 Kafka consumer 가 죽지 않도록 가드.
+        // NumberFormatException 발생 시 해당 항목만 skip + 로그.
+        List<Long> userIds = subscriberIds.stream()
+                .map(id -> {
+                    try {
+                        return Long.parseLong(id);
+                    } catch (NumberFormatException e) {
+                        log.warn("[Kafka Consumer] Redis subscriber id 파싱 실패 — 건너뜀. value={}", id);
+                        return null;
+                    }
+                })
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toList());
         List<User> users = userRepository.findAllById(userIds);
 
         String title = "빈자리 알림";

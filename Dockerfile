@@ -36,9 +36,11 @@ USER spring
 
 COPY --from=builder /app/build/libs/*.jar app.jar
 
-# t3.small 환경 고려한 JVM 메모리 튜닝 + OTel Agent 자동 활성화
+# JVM 메모리 튜닝 + OTel Agent 자동 활성화
 # OTEL_EXPORTER_OTLP_ENDPOINT가 설정 안 되면 트레이스 전송만 실패할 뿐 앱은 정상 동작
-ENV JAVA_TOOL_OPTIONS="-javaagent:/opentelemetry-javaagent.jar -XX:MaxRAMPercentage=70.0 -XX:InitialRAMPercentage=50.0 -XX:+UseG1GC"
+# -XX:-OmitStackTraceInFastThrow: hot exception(NPE 등) 반복 발생 시 JIT 가 stacktrace 생성을
+# 생략하는 최적화를 끔. 디버깅 시 "Unhandled exception → null" 만 찍히고 stack 사라지는 문제 방지.
+ENV JAVA_TOOL_OPTIONS="-javaagent:/opentelemetry-javaagent.jar -XX:MaxRAMPercentage=70.0 -XX:InitialRAMPercentage=50.0 -XX:+UseG1GC -XX:-OmitStackTraceInFastThrow"
 
 EXPOSE 8080
 

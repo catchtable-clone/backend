@@ -124,24 +124,7 @@ public class ReservationService {
                 Reservation saved = createReservationCore(
                         currentUserId, remainId, member, couponId);
 
-                // Payment 레코드 생성 (결제창 호출을 위해 orderId 필요)
-                // 같은 reservation_id에 잔존 payment(FAILED/PENDING) 있으면 UNIQUE 위반 → 결제 재시도 시나리오에서 충돌
-                // INSERT 전 기존 row 정리해 idempotent 보장. PAID 상태면 비즈니스 예외.
-                paymentRepository.findByReservation_Id(saved.getId()).ifPresent(existing -> {
-                    if (existing.getStatus() == PaymentStatus.PAID) {
-                        throw new CustomException(ErrorCode.PAYMENT_ALREADY_PAID);
-                    }
-                    paymentRepository.delete(existing);
-                    paymentRepository.flush();
-                });
-
-                String orderId = "CATCH-" + saved.getId() + "-" + System.currentTimeMillis();
-                Payment payment = Payment.builder()
-                        .reservation(saved)
-                        .orderId(orderId)
-                        .amount(DEPOSIT_AMOUNT)
-                        .build();
-                paymentRepository.save(payment);
+                String orderId = createPaymentForReservation(saved);
 
                 log.info("AI 예약 성공: reservationId={}, orderId={}", saved.getId(), orderId);
 
@@ -232,24 +215,8 @@ public class ReservationService {
                 Reservation saved = createReservationCore(
                         userId, request.remainId(), request.member(), request.couponId());
 
-                // 같은 reservation_id에 잔존 payment(FAILED/PENDING) 있으면 UNIQUE 위반.
-                // INSERT 전 기존 row 정리해 idempotent 보장. PAID 상태면 비즈니스 예외.
-                paymentRepository.findByReservation_Id(saved.getId()).ifPresent(existing -> {
-                    if (existing.getStatus() == PaymentStatus.PAID) {
-                        throw new CustomException(ErrorCode.PAYMENT_ALREADY_PAID);
-                    }
-                    paymentRepository.delete(existing);
-                    paymentRepository.flush();
-                });
-
                 // ConfirmedEvent는 결제 완료 시점(PaymentService.confirmPayment)에서 발행한다.
-                String orderId = "CATCH-" + saved.getId() + "-" + System.currentTimeMillis();
-                Payment payment = Payment.builder()
-                        .reservation(saved)
-                        .orderId(orderId)
-                        .amount(DEPOSIT_AMOUNT)
-                        .build();
-                paymentRepository.save(payment);
+                String orderId = createPaymentForReservation(saved);
 
                 return new ReservationCreateResponseDto(saved.getId(), orderId, DEPOSIT_AMOUNT, saved.getStatus());
             });
@@ -478,6 +445,30 @@ public class ReservationService {
 
     // Internal core
     // ============================================================
+
+    /**
+     * 예약에 대한 결제 row 를 생성하고 orderId 를 반환한다.
+     * 같은 reservation_id 에 잔존 payment(FAILED/PENDING) 가 있으면 UNIQUE 위반이 나므로
+     * 사전 정리해 idempotent 보장한다. PAID 상태면 비즈니스 예외.
+     */
+    private String createPaymentForReservation(Reservation reservation) {
+        paymentRepository.findByReservation_Id(reservation.getId()).ifPresent(existing -> {
+            if (existing.getStatus() == PaymentStatus.PAID) {
+                throw new CustomException(ErrorCode.PAYMENT_ALREADY_PAID);
+            }
+            paymentRepository.delete(existing);
+            paymentRepository.flush();
+        });
+
+        String orderId = "CATCH-" + reservation.getId() + "-" + System.currentTimeMillis();
+        Payment payment = Payment.builder()
+                .reservation(reservation)
+                .orderId(orderId)
+                .amount(DEPOSIT_AMOUNT)
+                .build();
+        paymentRepository.save(payment);
+        return orderId;
+    }
 
     private Reservation createReservationCore(Long userId, Long remainId, Integer member, Long couponId) {
         User user = userRepository.findById(userId)
