@@ -60,7 +60,7 @@ export const options = {
   },
 };
 
-const CATEGORIES = ['KOREAN', 'JAPANESE', 'CHINESE', 'WESTERN', 'CAFE'];
+const CATEGORIES = ['KOREAN', 'JAPANESE', 'CHINESE', 'WESTERN', 'DESSERT'];
 const DISTRICTS  = ['GANGNAM', 'MAPO', 'JONGNO', 'YONGSAN', 'SEONGDONG'];
 
 export default function () {

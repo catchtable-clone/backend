@@ -119,7 +119,7 @@ public class StoreService {
     public List<StoreListResponse> getNearbyStores(double latitude, double longitude, int page, int size) {
         int limitedSize = Math.min(size, 100);
         return storeRepository.findNearbyWithGist(
-                latitude, longitude, 1000.0,
+                latitude, longitude, 3000.0,
                 PageRequest.of(page, limitedSize)
         ).stream().map(StoreListResponse::from).toList();
     }
