@@ -9,6 +9,7 @@ import com.catchtable.coupon.service.CouponService;
 import com.catchtable.global.common.ApiResponse;
 import com.catchtable.global.common.SuccessCode;
 import com.catchtable.global.security.CustomUserDetails;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.CacheControl;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Tag(name = "Coupon", description = "Coupon API")
 @RestController
 @RequestMapping("/api/v1/coupons")
 @RequiredArgsConstructor

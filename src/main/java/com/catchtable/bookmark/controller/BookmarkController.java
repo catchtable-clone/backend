@@ -26,7 +26,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Tag(name = "북마크", description = "북마크 폴더 및 북마크 관련 API")
+@Tag(name = "Bookmark", description = "Bookmark folder and bookmark API")
 @RestController
 @RequiredArgsConstructor
 public class BookmarkController {

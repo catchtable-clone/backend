@@ -5,6 +5,7 @@ import com.catchtable.global.common.SuccessCode;
 import com.catchtable.global.security.CustomUserDetails;
 import com.catchtable.notification.dto.read.NotificationListResponse;
 import com.catchtable.notification.service.NotificationService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
@@ -15,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "Notification", description = "Notification API")
 @RestController
 @RequestMapping("/api/v1/notifications")
 @RequiredArgsConstructor

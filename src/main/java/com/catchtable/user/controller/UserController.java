@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "사용자 컨트롤러", description = "사용자 관련 API")
+@Tag(name = "User", description = "User API")
 @RestController
 @RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
