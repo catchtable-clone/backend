@@ -18,7 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-@Tag(name = "결제", description = "결제 확인 및 검증 API")
+@Tag(name = "Payment", description = "Payment confirmation and validation API")
 @RestController
 @RequestMapping("/api/v1/payments")
 @RequiredArgsConstructor

@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Tag(name = "메뉴 컨트롤러", description = "가게 메뉴 관련 API")
+@Tag(name = "Menu", description = "Store menu API")
 @RestController
 @RequestMapping("/api/v1/stores/{storeId}/menu")
 @RequiredArgsConstructor

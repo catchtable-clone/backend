@@ -15,6 +15,7 @@ import com.catchtable.store.entity.Category;
 import com.catchtable.store.entity.District;
 import com.catchtable.store.service.StoreService;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "Store", description = "Store API")
 @RestController
 @RequestMapping("/api/v1/stores")
 @RequiredArgsConstructor

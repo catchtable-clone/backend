@@ -7,6 +7,7 @@ import com.catchtable.review.dto.create.ReviewCreateRequestDto;
 import com.catchtable.review.dto.read.ReviewResponseDto;
 import com.catchtable.review.dto.update.ReviewUpdateRequestDto;
 import com.catchtable.review.service.ReviewService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Tag(name = "Review", description = "Review API")
 @RestController
 @RequestMapping("/api/v1/reviews")
 @RequiredArgsConstructor
