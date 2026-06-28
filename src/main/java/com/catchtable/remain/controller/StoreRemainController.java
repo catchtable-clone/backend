@@ -5,6 +5,7 @@ import com.catchtable.global.common.SuccessCode;
 import com.catchtable.remain.dto.read.StoreRemainResponseDto;
 import com.catchtable.remain.dto.create.StoreRemainCreateRequestDto;
 import com.catchtable.remain.service.StoreRemainService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.util.List;
 
+@Tag(name = "Store Remain", description = "Store remaining capacity API")
 @RestController
 @RequestMapping("/api/v1/remains")
 @RequiredArgsConstructor

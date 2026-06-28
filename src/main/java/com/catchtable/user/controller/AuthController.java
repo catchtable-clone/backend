@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @Slf4j
-@Tag(name = "인증", description = "소셜 로그인 및 토큰 관련 API")
+@Tag(name = "Auth", description = "Social login and token API")
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor

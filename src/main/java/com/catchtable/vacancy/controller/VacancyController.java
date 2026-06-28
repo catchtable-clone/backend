@@ -7,6 +7,7 @@ import com.catchtable.vacancy.dto.create.VacancyRegisterRequest;
 import com.catchtable.vacancy.dto.create.VacancyRegisterResponse;
 import com.catchtable.vacancy.dto.write.VacancyListResponse;
 import com.catchtable.vacancy.service.VacancyService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Tag(name = "Vacancy", description = "Store vacancy API")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/vacancy")

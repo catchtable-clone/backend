@@ -23,7 +23,7 @@ import com.catchtable.reservation.service.ReservationService;
 
 import java.util.List;
 
-@Tag(name = "예약", description = "예약 생성 / 조회 / 변경 / 취소 API")
+@Tag(name = "Reservation", description = "Reservation create / read / update / cancel API")
 @RestController
 @RequestMapping("/api/v1/reservations")
 @RequiredArgsConstructor
