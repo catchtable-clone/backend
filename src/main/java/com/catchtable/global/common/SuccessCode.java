@@ -75,6 +75,14 @@ public enum SuccessCode implements ResponseCode {
     // Payment
     PAYMENT_CONFIRM_SUCCESS(HttpStatus.OK, "결제가 성공적으로 확인되었습니다."),
 
+    // Buddy
+    BUDDY_REQUEST_SENT(HttpStatus.CREATED, "버디 요청을 전송했습니다."),
+    BUDDY_REQUEST_LIST_OK(HttpStatus.OK, "버디 요청 목록을 조회했습니다."),
+    BUDDY_REQUEST_ACCEPTED(HttpStatus.OK, "버디 요청을 수락했습니다."),
+    BUDDY_REQUEST_REJECTED(HttpStatus.OK, "버디 요청을 거절했습니다."),
+    BUDDY_LIST_OK(HttpStatus.OK, "버디 목록을 조회했습니다."),
+    BUDDY_DELETED(HttpStatus.OK, "버디 관계가 삭제되었습니다."),
+
     // Notification
     NOTIFICATION_LOOKUP_SUCCESS(HttpStatus.OK, "알림 목록을 성공적으로 조회했습니다."),
     NOTIFICATION_UNREAD_COUNT_SUCCESS(HttpStatus.OK, "안 읽은 알림 개수를 조회했습니다."),

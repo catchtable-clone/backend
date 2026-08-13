@@ -98,6 +98,14 @@ public enum ErrorCode implements ResponseCode {
     FILE_TOO_LARGE(HttpStatus.BAD_REQUEST, "파일 크기는 5MB를 초과할 수 없습니다."),
     FILE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "파일 업로드 중 오류가 발생했습니다."),
 
+    // Buddy
+    BUDDY_REQUEST_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 버디 요청입니다."),
+    BUDDY_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 버디 요청을 보냈거나 버디 관계입니다."),
+    BUDDY_SELF_REQUEST(HttpStatus.BAD_REQUEST, "자기 자신에게 버디 요청을 보낼 수 없습니다."),
+    NOT_BUDDY_REQUEST_RECEIVER(HttpStatus.FORBIDDEN, "본인이 받은 버디 요청만 처리할 수 있습니다."),
+    NOT_BUDDY_PARTICIPANT(HttpStatus.FORBIDDEN, "본인의 버디 관계만 삭제할 수 있습니다."),
+    BUDDY_REQUEST_NOT_PENDING(HttpStatus.BAD_REQUEST, "대기 중인 버디 요청이 아닙니다."),
+
     // Notification
     NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 알림입니다."),
     NOT_NOTIFICATION_OWNER(HttpStatus.FORBIDDEN, "본인의 알림만 접근할 수 있습니다."),
